@@ -1,8 +1,8 @@
 /*
- * Sincronización entre móviles (opcional).
+ * Acceso privado y sincronización entre móviles.
  *
- * Déjalo en null para que cada móvil guarde sus datos por separado.
- * Para compartir la casa entre varias personas, pega aquí la configuración
+ * Mientras esté en null, la app no se abre (es privada).
+ * Pega aquí la configuración
  * de tu proyecto de Firebase (ver README.md, paso «Sincronizar»). Estos valores
  * no son secretos: la seguridad la ponen las reglas de Firestore.
  */

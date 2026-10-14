@@ -1034,7 +1034,7 @@ function render(){
   const keepScroll=$('#app').scrollTop;
   const keepVals={};['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
   document.body.dataset.view=ui.view;
-  $('#app').innerHTML=(syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button></p>`;
+  $('#app').innerHTML=(syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`;
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});
   $('#app').scrollTop=keepScroll;
   if(keepFocus&&['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist'].includes(keepFocus)){const el=$('#'+keepFocus);if(el)el.focus()}
@@ -1315,6 +1315,7 @@ const ACT={
   allToToday:()=>{const t0=today();let n=0;S.tasks.forEach(t=>{if(!t.done&&t.date&&t.date<t0){t.date=t0;n++}});if(!n)return;save();toastUndo(n+' tareas pasadas a hoy')},
   navPos:d=>{ui.navPos=d.v;ui.navAsked=true;if(prefRef)prefRef.set({navPos:d.v,at:Date.now()}).catch(()=>{});render();$('#app').scrollTop=0;toast(d.v==='top'?'Pestañas arriba en este móvil':'Pestañas abajo')},
   backups:()=>backupsSheet(),
+  logout:(d,el)=>{if(el.dataset.ok!=='1'){el.dataset.ok='1';el.textContent='¿Seguro? Se borrarán los datos de este móvil (no los de la casa). Pulsa otra vez';return}window.casaLogout()},
   calMode:d=>{ui.calMode=d.v;render()},
   month:d=>{const v=+d.v;ui.month=v===0?0:(ui.month||0)+v;ui.calDay=null;render()},
   calDay:d=>{ui.calDay=d.v;render()},
