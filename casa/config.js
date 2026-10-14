@@ -2,9 +2,8 @@
  * Acceso privado y sincronización entre móviles.
  *
  * Mientras esté en null, la app no se abre (es privada).
- * Pega aquí la configuración
- * de tu proyecto de Firebase (ver README.md, paso «Sincronizar»). Estos valores
- * no son secretos: la seguridad la ponen las reglas de Firestore.
+ * Pega aquí la configuración de tu proyecto de Firebase
+ * (ver README.md, paso «Acceso privado»). Estos valores no son secretos: la seguridad la ponen las reglas de Firestore.
  */
 window.CASA_FIREBASE = null;
 
