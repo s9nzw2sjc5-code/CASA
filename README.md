@@ -4,8 +4,6 @@ La app de la casa (tareas, compras, calendario, menú, Ringo y recordatorios),
 lista para usarla fuera de Claude como una web normal que se instala en el móvil.
 
 - `casa/` — la app (un solo `index.html`, funciona sin servidor propio).
-- `bingo/` — El bingo de mi boda, con nuestra configuración: **https://s9nzw2sjc5-code.github.io/Videos/bingo/**
-  (lo que se juegue se guarda solo en cada móvil; para cambiarlo, descarga otra vez la demo desde el bingo de Claude y sustituye `bingo/index.html`).
 - `.github/workflows/pages.yml` — la publica gratis en GitHub Pages en cada cambio.
 
 Dirección de la app: **https://s9nzw2sjc5-code.github.io/Videos/** (lleva a `casa/`)
