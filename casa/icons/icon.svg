@@ -13,31 +13,26 @@
     <path d="M108 252 L256 114 L404 252" fill="none" stroke="#fff" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M148 236 L256 136 L364 236 V388 a22 22 0 0 1 -22 22 H170 a22 22 0 0 1 -22 -22 Z"/>
   </g>
-  <!-- bichón maltés (de perfil, mirando a la izquierda) -->
+  <!-- cara de bichón maltés de frente, con las orejas largas -->
   <g fill="url(#dog)">
-    <!-- cuerpo: pelo largo y liso que cae hasta el suelo, con ondas abajo -->
-    <path d="M208 300 C236 290 292 290 320 296 C338 300 345 316 343 336
-             C345 356 352 378 356 394
-             Q346 405 334 396 Q322 406 310 396 Q298 406 286 396 Q274 406 262 396
-             Q250 406 238 396 Q226 406 214 396 Q206 401 198 394
-             C204 372 200 336 208 300 Z"/>
-    <!-- cola en penacho que cae sobre el lomo -->
-    <path d="M300 300 C292 268 316 248 342 256 C366 264 372 292 362 316
-             C358 330 352 344 348 358 C346 330 340 306 322 298 Z"/>
-    <!-- cabeza -->
-    <circle cx="204" cy="270" r="33"/>
-    <!-- hocico -->
-    <ellipse cx="170" cy="283" rx="17" ry="12.5"/>
+    <!-- orejas: pelo largo y liso que cae a los lados -->
+    <path d="M218 274 C190 288 178 340 182 384 Q190 400 201 389 Q210 402 221 389 Q232 398 238 382 C242 342 240 300 230 278 Z"/>
+    <path d="M 294 274 C 322 288 334 340 330 384 Q 322 400 311 389 Q 302 402 291 389 Q 280 398 274 382 C 270 342 272 300 282 278 Z"/>
+    <!-- cabeza esponjosa -->
+    <circle cx="256" cy="304" r="50"/>
+    <circle cx="216" cy="286" r="18"/><circle cx="232" cy="266" r="18"/><circle cx="256" cy="258" r="19"/>
+    <circle cx="280" cy="266" r="18"/><circle cx="296" cy="286" r="18"/>
+    <!-- hocico y barbilla con pelo -->
+    <ellipse cx="256" cy="342" rx="34" ry="28"/>
+    <path d="M226 352 Q236 378 246 368 Q256 382 266 368 Q276 378 286 352 Z"/>
     <!-- moño -->
-    <ellipse cx="202" cy="236" rx="11" ry="12"/>
-    <!-- orejas: pelo largo que cae desde la cabeza casi hasta el suelo -->
-    <path d="M194 262 C178 300 184 350 198 386 Q210 396 222 386 Q232 392 238 380
-             C248 348 246 298 228 262 Z"/>
+    <ellipse cx="256" cy="240" rx="14" ry="13"/>
   </g>
-  <!-- lacito, ojo y nariz -->
+  <!-- lacito, ojos y nariz -->
   <g fill="#fff">
-    <path d="M202 230 L189 222 L189 238 Z M202 230 L215 222 L215 238 Z"/><circle cx="202" cy="230" r="3.8"/>
-    <circle cx="189" cy="266" r="5"/>
-    <circle cx="155" cy="279" r="5.5"/>
+    <path d="M256 262 L241 253 L241 271 Z M256 262 L271 253 L271 271 Z"/><circle cx="256" cy="262" r="4.5"/>
+    <circle cx="234" cy="306" r="7.5"/><circle cx="278" cy="306" r="7.5"/>
+    <ellipse cx="256" cy="333" rx="11" ry="8"/>
+    <path d="M256 341 V350 M256 350 Q248 358 241 352 M256 350 Q264 358 271 352" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
   </g>
 </svg>
