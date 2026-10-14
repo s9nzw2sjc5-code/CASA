@@ -4,7 +4,7 @@
       <stop offset="0" stop-color="#FF6A2B"/><stop offset=".55" stop-color="#F0306F"/><stop offset="1" stop-color="#7B3FF2"/>
     </linearGradient>
     <linearGradient id="dog" gradientUnits="userSpaceOnUse" x1="160" y1="230" x2="360" y2="400">
-      <stop offset="0" stop-color="#F0306F"/><stop offset="1" stop-color="#9B3FE0"/>
+      <stop offset="0" stop-color="#D81B60"/><stop offset="1" stop-color="#6A2BC0"/>
     </linearGradient>
   </defs>
   <rect id="fondo" width="512" height="512" rx="112" fill="url(#bg)"/>
@@ -13,26 +13,17 @@
     <path d="M108 252 L256 114 L404 252" fill="none" stroke="#fff" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M148 236 L256 136 L364 236 V388 a22 22 0 0 1 -22 22 H170 a22 22 0 0 1 -22 -22 Z"/>
   </g>
-  <!-- cara de bichón maltés de frente, con las orejas largas -->
-  <g fill="url(#dog)">
-    <!-- orejas: pelo largo y liso que cae a los lados -->
-    <path d="M218 274 C190 288 178 340 182 384 Q190 400 201 389 Q210 402 221 389 Q232 398 238 382 C242 342 240 300 230 278 Z"/>
-    <path d="M 294 274 C 322 288 334 340 330 384 Q 322 400 311 389 Q 302 402 291 389 Q 280 398 274 382 C 270 342 272 300 282 278 Z"/>
-    <!-- cabeza esponjosa -->
-    <circle cx="256" cy="304" r="50"/>
-    <circle cx="216" cy="286" r="18"/><circle cx="232" cy="266" r="18"/><circle cx="256" cy="258" r="19"/>
-    <circle cx="280" cy="266" r="18"/><circle cx="296" cy="286" r="18"/>
-    <!-- hocico y barbilla con pelo -->
-    <ellipse cx="256" cy="342" rx="34" ry="28"/>
-    <path d="M226 352 Q236 378 246 368 Q256 382 266 368 Q276 378 286 352 Z"/>
-    <!-- moño -->
-    <ellipse cx="256" cy="240" rx="14" ry="13"/>
+  <!-- cara de bichón maltés con el pelo corto (inspirada en Ringo) -->
+  <g fill="#fff" stroke="url(#dog)" stroke-width="9" stroke-linejoin="round">
+    <path d="M226.0 262.0 Q222.3 258.0 217.2 255.8 L206.0 256.0 Q200.6 254.3 195.1 255.5 L186.0 264.0 Q178.2 267.0 173.4 271.8 L172.0 284.0 Q168.1 292.3 166.7 299.3 L170.0 308.0 Q172.1 313.6 175.5 317.1 L184.0 318.0 Q188.1 319.4 192.4 317.3 L200.0 306.0 Q205.3 302.1 209.1 296.9 L212.0 286.0 Q219.8 277.4 224.7 270.3 L226.0 262.0 Z"/><path d="M300.0 286.0 Q301.2 293.7 303.9 299.8 L312.0 306.0 Q316.7 312.0 321.2 316.0 L328.0 318.0 Q333.3 317.5 337.6 315.3 L342.0 308.0 Q344.4 302.6 344.5 296.2 L340.0 284.0 Q339.5 275.7 336.5 269.5 L326.0 264.0 Q320.2 259.0 314.7 256.1 L306.0 256.0 Q298.0 254.8 291.9 255.7 L286.0 262.0 Q286.2 267.0 289.2 273.2 L300.0 286.0 Z"/>
+    <path d="M256.0 264.0 Q264.8 260.3 272.5 260.1 L283.0 267.4 Q290.2 266.7 295.2 268.6 L299.0 277.3 Q306.1 278.8 309.8 282.6 L308.0 293.7 Q314.8 301.7 318.5 309.9 L317.7 324.2 Q321.0 332.5 320.5 339.5 L311.5 348.0 Q311.3 355.3 308.3 360.3 L297.2 363.3 Q293.0 369.0 287.3 372.0 L274.5 371.0 Q264.2 376.2 253.9 377.5 L237.5 371.0 Q229.1 372.4 222.3 371.1 L214.8 363.3 Q206.9 362.2 201.9 358.7 L200.5 348.0 Q194.8 342.7 192.1 336.5 L194.3 324.2 Q192.8 315.1 194.4 306.6 L204.0 293.7 Q202.4 286.4 203.8 281.1 L213.0 277.3 Q213.8 269.8 217.3 265.9 L229.0 267.4 Q235.4 262.3 242.6 260.3 L256.0 264.0 Z"/>
   </g>
-  <!-- lacito, ojos y nariz -->
-  <g fill="#fff">
-    <path d="M256 262 L241 253 L241 271 Z M256 262 L271 253 L271 271 Z"/><circle cx="256" cy="262" r="4.5"/>
-    <circle cx="234" cy="306" r="7.5"/><circle cx="278" cy="306" r="7.5"/>
-    <ellipse cx="256" cy="333" rx="11" ry="8"/>
-    <path d="M256 341 V350 M256 350 Q248 358 241 352 M256 350 Q264 358 271 352" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <!-- ojos, nariz y lengua -->
+  <g fill="#5B1A8C">
+    <ellipse cx="231" cy="302" rx="8.5" ry="9"/><ellipse cx="281" cy="302" rx="8.5" ry="9"/>
+    <path d="M240 322 Q256 312 272 322 Q274 340 256 344 Q238 340 240 322 Z"/>
   </g>
+  <circle cx="234" cy="299" r="2.6" fill="#fff"/><circle cx="284" cy="299" r="2.6" fill="#fff"/>
+  <path d="M244 352 Q256 346 268 352 L267 372 Q265 388 256 388 Q247 388 245 372 Z" fill="#FF8FB0" stroke="url(#dog)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M256 356 V374" stroke="#E0457A" stroke-width="3" stroke-linecap="round"/>
 </svg>
