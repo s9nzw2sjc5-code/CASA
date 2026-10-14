@@ -590,7 +590,9 @@ function vHoy(){
   const doneToday=S.tasks.filter(x=>x.done&&x.doneAt===t);
   const rems=S.reminders.filter(r=>!r.done&&r.date&&r.date<=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   // Recordatorios con fecha concreta (no se repiten): se destacan como importantes
-  const imp=rems.filter(r=>!isRep(r)),repRems=rems.filter(r=>isRep(r));
+  // (también los de mañana, para verlos con un día de antelación)
+  const tm=addDays(t,1);
+  const imp=[...rems.filter(r=>!isRep(r)),...S.reminders.filter(r=>!r.done&&!isRep(r)&&r.date===tm).sort((a,b)=>(a.time||'').localeCompare(b.time||''))],repRems=rems.filter(r=>isRep(r));
   const low=S.staples.filter(s=>stapleLow(s)&&!stapleInList(s));
   const pend=S.items.filter(i=>!i.done).length;
   const evs=S.events.filter(e=>occursOn(e,t)).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
