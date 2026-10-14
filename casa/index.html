@@ -619,12 +619,13 @@ function vHoy(){
   const C=113.1;
   const stat=(n,l,v)=>`<button class="hstat" data-act="tab" data-v="${v}"><b>${n}</b><small>${l}</small></button>`;
   const msg=!total&&!late.length?'Hoy no tienes tareas: día libre ✨':done===total&&!late.length?'¡Todo hecho por hoy! 🎉':late.length?`Tienes ${late.length} atrasada${late.length>1?'s':''} 👀`:`Te ${total-done===1?'queda':'quedan'} ${total-done} para hoy 💪`;
-  let h=noteBox()+`<div class="hoy-hero">
+  let h=`<div class="hoy-hero">
     <div class="hoy-top"><span class="hoy-greet">${greet} 👋</span>
       <div class="ring-box" aria-label="${done} de ${total} tareas de hoy hechas"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" stroke-dasharray="${(pct*C).toFixed(1)} ${C}"${pct?'':' style="opacity:0"'}/></svg><span class="ring-n">${done}/${total}</span></div></div>
     <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span></div>
     <div class="hoy-stats">${stat(now.length+late.length,'tareas','tareas')}${stat(evs.length,'eventos','semana')}${stat(rems.length,'avisos','recordar')}${stat(pend,'compras','compras')}</div>
     <p class="hoy-msg">${msg}</p></div>`;
+  h+=noteBox();
   if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${impN}</span></div>${ul([...imp.map(remRow),...tmRows])}</section>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;
   const sec=(ic,title,color,body,extra)=>`<section class="hsec" style="--sc:${color}"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">${ic}</span><h2>${title}</h2>${extra||''}</div>${body}</section>`;
