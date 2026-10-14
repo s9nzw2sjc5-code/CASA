@@ -3,7 +3,7 @@ name: Publicar la app Casa
 on:
   push:
     branches: [main, claude/deploy-app-outside-claude-ccdb78]
-    paths: ['casa/**', '.github/workflows/pages.yml']
+    paths: ['casa/**', 'index.html', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,8 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # La raíz redirige a casa/, así la dirección funciona igual que publicando desde la rama
+      - run: mkdir _site && cp -r index.html .nojekyll casa _site/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: casa
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

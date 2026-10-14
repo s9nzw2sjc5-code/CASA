@@ -6,7 +6,7 @@ lista para usarla fuera de Claude como una web normal que se instala en el móvi
 - `casa/` — la app (un solo `index.html`, funciona sin servidor propio).
 - `.github/workflows/pages.yml` — la publica gratis en GitHub Pages en cada cambio.
 
-Dirección de la app (cuando la publiques): **https://s9nzw2sjc5-code.github.io/Videos/**
+Dirección de la app: **https://s9nzw2sjc5-code.github.io/Videos/** (lleva a `casa/`)
 
 La app es **privada**: al abrirla pide email y contraseña y no enseña nada
 hasta entrar. Solo funcionan las cuentas que pongas en las reglas (tú y Juanma).
