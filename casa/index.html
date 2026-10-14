@@ -217,6 +217,10 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .hsec-ic{flex:none;width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:var(--sc);font-size:1rem;box-shadow:0 4px 10px color-mix(in srgb,var(--sc) 35%,transparent)}
 .hsec .list{box-shadow:none}
 .hsec .empty{background:var(--surface);border-color:transparent}
+.hsec.imp{margin:0 0 16px;background:color-mix(in srgb,var(--c-recordar) 24%,var(--bg));box-shadow:inset 0 0 0 2px var(--c-recordar),0 8px 22px color-mix(in srgb,var(--c-recordar) 30%,transparent)}
+.hsec.imp h2{font-size:1.15rem}
+.hsec.imp .row-title{font-weight:700}
+.imp-n{min-width:26px;height:26px;padding:0 8px;border-radius:99px;background:var(--c-recordar);color:#1A1530;font-weight:800;font-size:.85rem;display:grid;place-items:center}
 .sync{font-size:.75rem;color:var(--muted);text-align:center;margin-top:28px}
 
 /* ===== Diseño multicolor: un color por pestaña ===== */
@@ -585,6 +589,8 @@ function vHoy(){
   const now=S.tasks.filter(x=>!x.done&&x.date===t).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
   const doneToday=S.tasks.filter(x=>x.done&&x.doneAt===t);
   const rems=S.reminders.filter(r=>!r.done&&r.date&&r.date<=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  // Recordatorios con fecha concreta (no se repiten): se destacan como importantes
+  const imp=rems.filter(r=>!isRep(r)),repRems=rems.filter(r=>isRep(r));
   const low=S.staples.filter(s=>stapleLow(s)&&!stapleInList(s));
   const pend=S.items.filter(i=>!i.done).length;
   const evs=S.events.filter(e=>occursOn(e,t)).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
@@ -598,6 +604,7 @@ function vHoy(){
     <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span></div>
     <div class="hoy-stats">${stat(now.length+late.length,'tareas','tareas')}${stat(evs.length,'eventos','semana')}${stat(rems.length,'avisos','recordar')}${stat(pend,'compras','compras')}</div>
     <p class="hoy-msg">${msg}</p></div>`;
+  if(imp.length)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${imp.length}</span></div>${ul(imp.map(remRow))}</section>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;
   const sec=(ic,title,color,body,extra)=>`<section class="hsec" style="--sc:${color}"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">${ic}</span><h2>${title}</h2>${extra||''}</div>${body}</section>`;
   const nextEv=evs.find(e=>!e.time||(e.end||e.time)>=nowHM);
@@ -606,7 +613,7 @@ function vHoy(){
   if(otherEv.length)h+=sec('📅',nextEv?'Más eventos hoy':'Eventos de hoy','var(--c-evento)',ul(otherEv.map(e=>eventRow(e,t))));
   if(late.length)h+=sec('⚠️','Atrasadas','var(--danger)',ul(late.map(x=>taskRow(x))),late.length>1?'<button class="link" data-act="allToToday">Pasar todas</button>':'');
   h+=sec('✅','Para hoy','var(--c-tareas)',total?ul([...now,...doneToday].map(x=>taskRow(x,x.done?null:t))):`<div class="empty">Nada pendiente para hoy.</div>`);
-  if(rems.length)h+=sec('⏰','Recordatorios','var(--c-recordar)',ul(rems.map(remRow)));
+  if(repRems.length)h+=sec('⏰','Recordatorios','var(--c-recordar)',ul(repRems.map(remRow)));
   const petSoon=S.pet.filter(x=>{const dd=petDue(x);return dd&&dd<=addDays(t,3)}).sort((a,b)=>petDue(a).localeCompare(petDue(b)));
   if(petSoon.length)h+=sec('🐶','Ringo','var(--c-ringo)',ul(petSoon.map(petRow)),'<button class="link" data-act="tab" data-v="ringo">Ver todo</button>');
   const nd=S.tasks.filter(x=>!x.done&&!x.date),pnd=S.pet.filter(x=>!petDue(x));
