@@ -1294,7 +1294,7 @@ function noteBox(){
     card=`<div class="msg ${mine?'mine':''}"><div class="msg-h"><span>💌 ${who}</span><small>${ago(m.at)}</small></div><p>${esc(m.text)}</p><button class="msg-x" data-act="delMsg" aria-label="Borrar mensaje">✕</button></div>`;
   }
   return`<section class="notebox">${card}<textarea class="field" id="qNote" rows="1" placeholder="Nota rápida o mensaje…" enterkeyhint="done"></textarea>
-    <div class="nb-btns"><button class="btn sec" data-act="saveNote" data-v="qNote">📌 Guardar nota</button><button class="btn" data-act="sendMsg">💌 Enviar mensaje</button></div></section>`;
+    <div class="nb-btns"><button class="btn sec" data-act="saveNote" data-v="qNote">📌 Guardar nota</button><button class="btn" data-act="sendMsg">Enviar mensaje</button></div></section>`;
 }
 function saveNote(id){
   const el=$('#'+id);const v=el&&el.value.trim();if(!v)return;
