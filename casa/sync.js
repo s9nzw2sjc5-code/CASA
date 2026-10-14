@@ -114,7 +114,7 @@
       e.preventDefault();
       const f=e.target,err=g.querySelector('.err');err.textContent='';
       try{await auth.signInWithEmailAndPassword(f.email.value.trim(),f.password.value)}
-      catch(x){err.textContent=/wrong-password|invalid-credential|user-not-found|invalid-email|user-disabled/.test(x.code||'')?'Email o contraseña incorrectos':'No se ha podido entrar ('+(x.code||'sin conexión')+')'}
+      catch(x){const c=x.code||'';err.textContent=/too-many-requests/.test(c)?'Demasiados intentos seguidos: Firebase ha bloqueado el acceso un rato. Espera unos 15-30 minutos o cambia la contraseña con «¿Has olvidado la contraseña?»':/wrong-password|invalid-credential|user-not-found|invalid-email|user-disabled/.test(c)?'Email o contraseña incorrectos':'No se ha podido entrar ('+(c||'sin conexión')+')'}
     });
     g.querySelector('input').focus();
   }
