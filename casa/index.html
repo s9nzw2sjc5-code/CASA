@@ -220,6 +220,7 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .hsec.imp{margin:0 0 16px;background:color-mix(in srgb,var(--c-recordar) 24%,var(--bg));box-shadow:inset 0 0 0 2px var(--c-recordar),0 8px 22px color-mix(in srgb,var(--c-recordar) 30%,transparent)}
 .hsec.imp h2{font-size:1.15rem}
 .hsec.imp .row-title{font-weight:700}
+.ev-when{font-weight:700;color:var(--c-evento)}
 .imp-n{min-width:26px;height:26px;padding:0 8px;border-radius:99px;background:var(--c-recordar);color:#1A1530;font-weight:800;font-size:.85rem;display:grid;place-items:center}
 .sync{font-size:.75rem;color:var(--muted);text-align:center;margin-top:28px}
 
@@ -556,10 +557,10 @@ function taskRow(t,occ){
     <button class="check round ${t.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleTask" data-id="${t.id}" aria-label="Completar ${esc(t.title)}"`}></button>
     <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
 }
-function eventRow(e,occ){
+function eventRow(e,occ,label){
   const p=person(e.who);
   const tm=e.time?(e.end?e.time+'–'+e.end:e.time):'Todo el día';
-  const meta=[!occ&&e.date?`<span>${relDate(e.date)}</span>`:'',e.place?`<span>📍 ${esc(e.place)}</span>`:'',isRep(e)?`<span>${repLabel(e)}</span>`:'',p?`<span class="who">${esc(p.name)}</span>`:''].join('');
+  const meta=[label?`<span class="ev-when">${label}</span>`:'',!occ&&e.date?`<span>${relDate(e.date)}</span>`:'',e.place?`<span>📍 ${esc(e.place)}</span>`:'',isRep(e)?`<span>${repLabel(e)}</span>`:'',p?`<span class="who">${esc(p.name)}</span>`:''].join('');
   return`<li class="row ev-row"><span class="ev-time">${tm}</span>
     <div class="row-main" data-act="editEvent" data-id="${e.id}"><div class="row-title">${esc(e.title)}</div><div class="row-meta">${meta}</div></div></li>`;
 }
@@ -592,7 +593,13 @@ function vHoy(){
   // Recordatorios con fecha concreta (no se repiten): se destacan como importantes
   // (también los de mañana, para verlos con un día de antelación)
   const tm=addDays(t,1);
-  const imp=[...rems.filter(r=>!isRep(r)),...S.reminders.filter(r=>!r.done&&!isRep(r)&&r.date===tm).sort((a,b)=>(a.time||'').localeCompare(b.time||''))],repRems=rems.filter(r=>isRep(r));
+  const imp=rems.filter(r=>!isRep(r)),repRems=rems.filter(r=>isRep(r));
+  // Lo de mañana, para tenerlo presente el día de antes: recordatorios con fecha concreta y eventos del calendario
+  // (los eventos que se repiten cada día no se avisan)
+  const tmRows=[...S.reminders.filter(r=>!r.done&&!isRep(r)&&r.date===tm).map(r=>[r.time||'99:99',remRow(r)]),
+    ...S.events.filter(e=>e.repeat!=='daily'&&occursOn(e,tm)).map(e=>[e.time||'00:00',eventRow(e,tm,'Mañana')])]
+    .sort((a,b)=>a[0].localeCompare(b[0])).map(x=>x[1]);
+  const impN=imp.length+tmRows.length;
   const low=S.staples.filter(s=>stapleLow(s)&&!stapleInList(s));
   const pend=S.items.filter(i=>!i.done).length;
   const evs=S.events.filter(e=>occursOn(e,t)).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
@@ -606,7 +613,7 @@ function vHoy(){
     <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span></div>
     <div class="hoy-stats">${stat(now.length+late.length,'tareas','tareas')}${stat(evs.length,'eventos','semana')}${stat(rems.length,'avisos','recordar')}${stat(pend,'compras','compras')}</div>
     <p class="hoy-msg">${msg}</p></div>`;
-  if(imp.length)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${imp.length}</span></div>${ul(imp.map(remRow))}</section>`;
+  if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${impN}</span></div>${ul([...imp.map(remRow),...tmRows])}</section>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;
   const sec=(ic,title,color,body,extra)=>`<section class="hsec" style="--sc:${color}"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">${ic}</span><h2>${title}</h2>${extra||''}</div>${body}</section>`;
   const nextEv=evs.find(e=>!e.time||(e.end||e.time)>=nowHM);
