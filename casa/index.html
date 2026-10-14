@@ -220,6 +220,18 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .hsec.imp{margin:0 0 16px;background:color-mix(in srgb,var(--c-recordar) 24%,var(--bg));box-shadow:inset 0 0 0 2px var(--c-recordar),0 8px 22px color-mix(in srgb,var(--c-recordar) 30%,transparent)}
 .hsec.imp h2{font-size:1.15rem}
 .hsec.imp .row-title{font-weight:700}
+.notebox{background:var(--surface);border-radius:22px;padding:12px;margin:0 0 14px;box-shadow:var(--shadow)}
+.notebox textarea{resize:none;min-height:46px;max-height:140px;field-sizing:content}
+.nb-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.nb-btns .btn{padding:10px 8px;font-size:.9rem}
+.msg{position:relative;border-radius:18px;padding:12px 40px 12px 14px;margin:0 0 10px;background:linear-gradient(135deg,color-mix(in srgb,var(--c-menu) 22%,var(--surface)),color-mix(in srgb,var(--c-tareas) 16%,var(--surface)));box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c-menu) 55%,transparent)}
+.msg.mine{background:color-mix(in srgb,var(--c-menu) 8%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--line)}
+.msg-h{display:flex;justify-content:space-between;gap:8px;font-size:.82rem;font-weight:700;color:var(--c-menu)}
+.msg-h small{color:var(--muted);font-weight:500;white-space:nowrap}
+.msg p{margin:4px 0 0;font-size:1.15rem;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.mine p{font-size:1rem}
+.msg-x{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;color:var(--muted);font-size:.9rem}
+.note-t{white-space:pre-wrap}
 .ev-when{font-weight:700;color:var(--c-evento)}
 .imp-n{min-width:26px;height:26px;padding:0 8px;border-radius:99px;background:var(--c-recordar);color:#1A1530;font-weight:800;font-size:.85rem;display:grid;place-items:center}
 .sync{font-size:.75rem;color:var(--muted);text-align:center;margin-top:28px}
@@ -403,7 +415,7 @@ function fresh(){return{v:1,updated:0,
   tasks:[],
   lists:[{id:'super',name:'Súper'},{id:'farmacia',name:'Farmacia'},{id:'casa',name:'Para la casa'}],
   sections:['Despensa','Fruta y verdura','Frescos','Congelados','Limpieza','Higiene','Otros'],
-  items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[]}}
+  items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{}}}
 let S=fresh();
 try{const r=localStorage.getItem(LS);if(r)S=Object.assign(fresh(),JSON.parse(r))}catch(e){}
 let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
@@ -432,7 +444,7 @@ const J=JSON.stringify;
 let canWrite=true,base=null,pushing=false,pushAgain=false;
 try{const bs=localStorage.getItem(LS+'-base');if(bs)base=JSON.parse(bs)}catch(e){}
 function saveBase(){try{localStorage.setItem(LS+'-base',J(base))}catch(e){}}
-const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events'],MAP_KEYS=['menu','secMem'];
+const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events','notes'],MAP_KEYS=['menu','secMem','board'];
 const core=x=>{const o={};[...ARR_KEYS,...MAP_KEYS,'sections'].forEach(k=>o[k]=x[k]);return o};
 const dirty=()=>!base||J(core(S))!==J(core(base));
 // Fusión a tres bandas: lo que cambió aquí desde la última sincronización se aplica sobre lo remoto
@@ -493,7 +505,7 @@ async function initCloud(){
     const id=await user.id();
     // Preferencias de esta persona (posición de las pestañas), guardadas en su cuenta para que no se pierdan
     if(id){prefRef=db.collection('data/users/'+id).doc('prefs');
-      try{const ps=await prefRef.get();if(ps.exists){const d=ps.data()||{};if(d.navPos){ui.navPos=d.navPos;ui.navAsked=true}}}catch(e){}}
+      try{const ps=await prefRef.get();if(ps.exists){const d=ps.data()||{};if(d.navPos){ui.navPos=d.navPos;ui.navAsked=true}if(d.me)ui.me=d.me}}catch(e){}}
     prefsReady=true;render();
     docRef=db.doc('hogar/estado');dbRef=db;
     const snap=await docRef.get();
@@ -607,7 +619,7 @@ function vHoy(){
   const C=113.1;
   const stat=(n,l,v)=>`<button class="hstat" data-act="tab" data-v="${v}"><b>${n}</b><small>${l}</small></button>`;
   const msg=!total&&!late.length?'Hoy no tienes tareas: día libre ✨':done===total&&!late.length?'¡Todo hecho por hoy! 🎉':late.length?`Tienes ${late.length} atrasada${late.length>1?'s':''} 👀`:`Te ${total-done===1?'queda':'quedan'} ${total-done} para hoy 💪`;
-  let h=`<div class="hoy-hero">
+  let h=noteBox()+`<div class="hoy-hero">
     <div class="hoy-top"><span class="hoy-greet">${greet} 👋</span>
       <div class="ring-box" aria-label="${done} de ${total} tareas de hoy hechas"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" stroke-dasharray="${(pct*C).toFixed(1)} ${C}"${pct?'':' style="opacity:0"'}/></svg><span class="ring-n">${done}/${total}</span></div></div>
     <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span></div>
@@ -746,6 +758,7 @@ function vRecordar(){
   if(late.length)h+=`<h2>Vencidos</h2>`+ul(late.map(remRow));
   if(next.length)h+=`<h2>Próximos</h2>`+ul(next.map(remRow));
   if(nd.length)h+=`<h2>Para tener en cuenta</h2>`+ul(nd.map(remRow));
+  h+=notesSection();
   if(done.length)h+=`<h2>Hechos</h2>`+ul(done.map(remRow));
   h+=`<p class="hint">Esta lista no envía notificaciones al móvil. Para que te avise, abre un recordatorio y añádelo a Google Calendar.</p>`;
   return h;
@@ -1048,12 +1061,12 @@ function render(){
   const v={hoy:vHoy,tareas:vTareas,compras:vCompras,semana:vSemana,recordar:vRecordar,menu:vMenu,ringo:vRingo}[ui.view]||vHoy;
   const keepFocus=document.activeElement&&document.activeElement.id;
   const keepScroll=$('#app').scrollTop;
-  const keepVals={};['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
+  const keepVals={};['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
   document.body.dataset.view=ui.view;
   $('#app').innerHTML=(syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`;
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});
   $('#app').scrollTop=keepScroll;
-  if(keepFocus&&['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist'].includes(keepFocus)){const el=$('#'+keepFocus);if(el)el.focus()}
+  if(keepFocus&&['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR'].includes(keepFocus)){const el=$('#'+keepFocus);if(el)el.focus()}
   const t=today();
   const badges={tareas:S.tasks.filter(x=>!x.done&&x.date&&x.date<=t).length,recordar:S.reminders.filter(r=>!r.done&&r.date&&r.date<=t).length,ringo:S.pet.filter(x=>{const d=petDue(x);return d&&d<=t}).length};
   const embedded=(()=>{try{return window.self!==window.top}catch(e){return true}})();
@@ -1267,6 +1280,49 @@ function peopleSheet(){
   });
 }
 
+/* ---------- notas rápidas y mensaje desechable ---------- */
+function savePrefs(){if(prefRef)prefRef.set({navPos:ui.navPos||'',me:ui.me||'',at:Date.now()}).catch(()=>{})}
+const meName=()=>{const p=person(ui.me);return p?p.name:''};
+const partner=()=>S.people.find(p=>p.id!==ui.me&&['yo','juanma'].includes(p.id))||S.people.find(p=>p.id!==ui.me);
+function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return'ahora mismo';if(m<60)return'hace '+m+' min';const h=Math.round(m/60);if(h<24)return'hace '+h+' h';return new Date(ts).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}
+function noteBox(){
+  const m=S.board.cur;let card='';
+  if(m&&m.text){
+    const mine=ui.me&&m.from===ui.me,fp=person(m.from),pp=partner();
+    const who=mine?`Tu mensaje para ${esc(pp?pp.name:'tu pareja')}`:`${esc(fp?fp.name:'Mensaje')} te dice`;
+    card=`<div class="msg ${mine?'mine':''}"><div class="msg-h"><span>💌 ${who}</span><small>${ago(m.at)}</small></div><p>${esc(m.text)}</p><button class="msg-x" data-act="delMsg" aria-label="Borrar mensaje">✕</button></div>`;
+  }
+  return`<section class="notebox">${card}<textarea class="field" id="qNote" rows="1" placeholder="Nota rápida o mensaje…" enterkeyhint="done"></textarea>
+    <div class="nb-btns"><button class="btn sec" data-act="saveNote" data-v="qNote">📌 Guardar nota</button><button class="btn" data-act="sendMsg">💌 Enviar mensaje</button></div></section>`;
+}
+function saveNote(id){
+  const el=$('#'+id);const v=el&&el.value.trim();if(!v)return;
+  S.notes.push({id:uid(),text:v,at:Date.now(),by:ui.me||''});el.value='';save();toast('Nota guardada en Recordar → Notas guardadas');
+}
+function sendMsg(){
+  const el=$('#qNote');const v=el&&el.value.trim();if(!v){toast('Escribe el mensaje');return}
+  if(!ui.me){whoAmI(sendMsg);return}
+  S.board.cur={text:v,from:ui.me,at:Date.now()};el.value='';save();
+  const pp=partner();toast('Mensaje enviado'+(pp?' a '+pp.name:'')+'. Se borra cuando te conteste.');
+}
+function whoAmI(then){
+  const ov=sheet('¿Quién eres?',`<p class="hint" style="margin-top:0">Solo se pregunta una vez en este móvil, para firmar tus mensajes.</p>
+    <div class="grid2" style="margin-top:10px">${S.people.filter(p=>['yo','juanma'].includes(p.id)).map(p=>`<button type="button" class="btn sec" data-me="${p.id}">${esc(p.name)}</button>`).join('')}</div>`);
+  ov.addEventListener('click',e=>{const b=e.target.closest('[data-me]');if(!b)return;ui.me=b.dataset.me;savePrefs();ov.remove();then&&then()});
+}
+function notesSection(){
+  const list=S.notes.slice().sort((a,b)=>b.at-a.at);
+  let h=`<h2>📝 Notas guardadas</h2><div class="quick" style="margin:0 0 10px"><input class="field" id="qNoteR" placeholder="Nueva nota" enterkeyhint="done"><button class="btn" data-act="saveNote" data-v="qNoteR">Guardar</button></div>`;
+  if(!list.length)return h+`<div class="empty">Las notas que guardes con 📌 (aquí o arriba en «Hoy») quedan aquí.</div>`;
+  return h+ul(list.map(n=>{const p=person(n.by);return`<li class="row"><div class="row-main" data-act="editNote" data-id="${n.id}"><div class="row-title note-t">${esc(n.text)}</div><div class="row-meta"><span>${ago(n.at)}</span>${p?`<span class="who">${esc(p.name)}</span>`:''}</div></div></li>`}));
+}
+function noteSheet(n){
+  if(!n)return;
+  sheet('Nota',`<label for="f_t">Texto</label><textarea class="field" id="f_t" rows="5">${esc(n.text)}</textarea>`,
+  {onSave:ov=>{const v=val(ov,'f_t');if(!v){toast('La nota está vacía');return false}const x=find(S.notes,n.id);if(x)x.text=v;save();toast('Nota guardada')},
+   onDelete:()=>{S.notes=S.notes.filter(x=>x.id!==n.id);save();toastUndo('Nota eliminada')}});
+}
+
 /* ---------- acciones ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 function quickRemNoDate(){const el=$('#qRemNoDate');const v=el.value.trim();if(!v)return;S.reminders.push({id:uid(),title:v,date:'',time:'',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadido a «Para tener en cuenta»')}
@@ -1329,8 +1385,12 @@ const ACT={
   toTomorrow:d=>{const t=find(S.tasks,d.id);if(!t)return;t.date=addDays(today(),1);save();toastUndo('Pasada a mañana')},
   toToday:d=>{const t=find(S.tasks,d.id);if(!t)return;t.date=today();save();toastUndo('Pasada a hoy')},
   allToToday:()=>{const t0=today();let n=0;S.tasks.forEach(t=>{if(!t.done&&t.date&&t.date<t0){t.date=t0;n++}});if(!n)return;save();toastUndo(n+' tareas pasadas a hoy')},
-  navPos:d=>{ui.navPos=d.v;ui.navAsked=true;if(prefRef)prefRef.set({navPos:d.v,at:Date.now()}).catch(()=>{});render();$('#app').scrollTop=0;toast(d.v==='top'?'Pestañas arriba en este móvil':'Pestañas abajo')},
+  navPos:d=>{ui.navPos=d.v;ui.navAsked=true;savePrefs();render();$('#app').scrollTop=0;toast(d.v==='top'?'Pestañas arriba en este móvil':'Pestañas abajo')},
   backups:()=>backupsSheet(),
+  saveNote:d=>saveNote(d.v),
+  sendMsg:()=>sendMsg(),
+  delMsg:()=>{if(!S.board.cur)return;delete S.board.cur;save();toastUndo('Mensaje borrado')},
+  editNote:d=>noteSheet(find(S.notes,d.id)),
   logout:(d,el)=>{if(el.dataset.ok!=='1'){el.dataset.ok='1';el.textContent='¿Seguro? Se borrarán los datos de este móvil (no los de la casa). Pulsa otra vez';return}window.casaLogout()},
   calMode:d=>{ui.calMode=d.v;render()},
   month:d=>{const v=+d.v;ui.month=v===0?0:(ui.month||0)+v;ui.calDay=null;render()},
@@ -1348,6 +1408,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='qTask')quickTask();
   if(e.target.id==='qNoDate')quickNoDate();
   if(e.target.id==='qRemNoDate')quickRemNoDate();
+  if(e.target.id==='qNoteR')saveNote('qNoteR');
   if(e.target.id==='qItem'||e.target.id==='qQty')quickItem();
 });
 $('#fab').addEventListener('click',()=>{ui.view==='hoy'?addChooser(today()):ui.view==='semana'?eventSheet(null,ui.calDay):ui.view==='recordar'?remSheet(null):ui.view==='ringo'?(ui.ringoTab==='hist'?histSheet(null):petSheet(null)):taskSheet(null)});
