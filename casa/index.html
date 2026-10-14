@@ -1375,7 +1375,14 @@ let lastGreet='';setInterval(()=>{const h=new Date().getHours();const g=h>=6&&h<
 let lastDay=today();setInterval(()=>{if(today()!==lastDay){lastDay=today();autoStaples();render()}},60000);
 </script>
 <script>
-if('serviceWorker' in navigator&&location.protocol!=='file:')window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+// Al abrir la app se busca una versión nueva; si la hay, se recarga sola (salvo con un formulario abierto)
+if('serviceWorker' in navigator&&location.protocol!=='file:'){
+  const had=!!navigator.serviceWorker.controller;let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!reloaded&&!document.querySelector('.overlay')){reloaded=true;location.reload()}});
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
+  }).catch(()=>{}));
+}
 </script>
 </body>
 </html>
