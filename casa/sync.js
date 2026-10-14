@@ -102,7 +102,14 @@
       <input class="field" type="password" name="password" autocomplete="current-password" placeholder="Contraseña" required>
       <div class="err" role="alert">${msg||''}</div>
       <button type="submit" class="btn">Entrar</button>
+      <button type="button" class="link" data-reset style="display:block;margin:14px auto 0">¿Has olvidado la contraseña?</button>
     </form>`);
+    g.querySelector('[data-reset]').onclick=async()=>{
+      const em=g.querySelector('input[type=email]'),err=g.querySelector('.err');
+      if(!em.value.trim()){err.textContent='Escribe primero tu email';em.focus();return}
+      try{await auth.sendPasswordResetEmail(em.value.trim());err.textContent='Te hemos enviado un correo para cambiar la contraseña (mira también en Spam)'}
+      catch(x){err.textContent=x.code==='auth/invalid-email'?'El email no es válido':'No se ha podido enviar el correo ('+(x.code||'sin conexión')+')'}
+    };
     g.querySelector('form').addEventListener('submit',async e=>{
       e.preventDefault();
       const f=e.target,err=g.querySelector('.err');err.textContent='';
