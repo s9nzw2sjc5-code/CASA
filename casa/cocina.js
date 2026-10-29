@@ -43,7 +43,7 @@ function loadMC(){
 // Producto: [id, nombre, envase, precio, tamaño, unidad, precio_ref, unidad_ref, categoría, imagen, aprox]
 const prod=p=>p&&{id:p[0],name:p[1],pack:p[2],price:p[3],size:(p[5]==='ud'?p[4]:p[4]*1000)||(p[5]==='ud'?1:500),d:p[5]==='ud'?'ud':'m',fmt:p[5],ref:p[6],refFmt:p[7],cat:MC.cats[p[8]],img:p[9]};
 const prodSize=p=>p.user&&!p.size?'':p.d==='ud'?(p.size+' ud'):p.size>=1000?(p.size/1000).toLocaleString('es-ES')+(p.fmt==='l'?' L':' kg'):Math.round(p.size)+(p.fmt==='l'?' ml':' g');
-const prodImg=p=>p.img?`https://prod-mercadona.imgix.net/images/${p.img}?fit=crop&h=96&w=96`:'';
+const prodImg=p=>p.img?`https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=96&w=96`:'';
 const prodUrl=id=>'https://tienda.mercadona.es/product/'+id;
 const CK_BADCAT=/Mascotas|Bebé|Cuidado|Maquillaje|Fitoterapia|Limpieza|Pizzas|Aperitivos|Bodega/;
 // Nombres de receta que en Mercadona se llaman de otra forma
@@ -331,7 +331,7 @@ function cartBar(){
 function prodCard(p){
   const ic=cartOf(p.id),u=ic?ic.units||1:0,x=pantryOf(p.id),prev=mcFresh()?MC.byId.get(p.id)[11]:0,fv=isFav(p.id);
   return`<div class="ck-card ${u?'in':''}">${prev?`<span class="ck-offer">Bajada</span>`:''}<button class="ck-fav ${fv?'on':''}" data-act="favToggle" data-id="${p.id}" aria-label="${fv?'Quitar de habituales':'Marcar como habitual'}">${fv?'★':'☆'}</button>
-    <div class="ck-ci">${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=crop&h=240&w=240" alt="" loading="lazy">`:''}</div>
+    <div class="ck-ci">${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}</div>
     <div class="ck-cp">${prev?`<s>${eur(prev)}</s> `:''}<b class="${prev?'red':''}">${eur(p.price)}</b><small>/${p.d==='ud'&&p.size>1?'pack':'ud'}</small></div>
     <div class="ck-cn">${esc(p.name)}</div><small class="ck-cs">${esc(p.pack)} ${prodSize(p)}${p.ref?' · '+eur(p.ref)+'/'+esc(p.refFmt):''}</small>
     ${x?`<small class="ck-home">🏠 En casa: ${x.n>0?fmtAmt(x.n,x.u):'agotado'}</small>`:''}
@@ -419,7 +419,7 @@ function vCkDespensa(){
 function panRow(x){
   const lw=pantryLow(x),full=pantryFull(x),pct=pantryPct(x),p=x.mid&&MC&&MC.byId.get(x.mid),inC=x.mid?cartOf(x.mid):cartItems().find(i=>norm(i.name)===norm(x.name));
   const step=x.u==='ud'?1:full>=2000?50:full>=500?25:5;
-  return`<div class="ck-pan ${lw?'low':''}">${p&&p[9]?`<img src="https://prod-mercadona.imgix.net/images/${p[9]}?fit=crop&h=96&w=96" alt="" loading="lazy">`:'<span class="ck-noimg">🥫</span>'}
+  return`<div class="ck-pan ${lw?'low':''}">${p&&p[9]?`<img src="https://prod-mercadona.imgix.net/images/${p[9]}?fit=contain&h=96&w=96" alt="" loading="eager">`:'<span class="ck-noimg">🥫</span>'}
     <div class="ck-pm"><button class="ck-pt" data-act="ckPan" data-id="${x.id}">${esc(x.name)}</button>
     <input class="ck-range" type="range" min="0" max="${full}" step="${step}" value="${x.n}" data-pid="${x.id}" style="--p:${pct}%" aria-label="Cuánto queda de ${esc(x.name)}">
     <small class="ck-pl" data-pl="${x.id}">${x.n>0?'Queda '+fmtAmt(x.n,x.u)+' · '+pct+' %':'Agotado'}${x.exp?` · ${x.exp<today()?'⚠️ caducado':'cad. '+relDate(x.exp)}`:''}</small></div>
@@ -675,7 +675,7 @@ function productPicker(q,onPick,key){
   const inp=ov.querySelector('#f_q'),box=ov.querySelector('#ckPP');
   const draw=()=>{if(!MC){box.innerHTML='<p class="hint">Cargando precios…</p>';loadMC().then(draw);return}
     const a=searchProducts(inp.value,40);
-    box.innerHTML=a.map(p=>`<button type="button" class="ck-opt ck-prod" data-id="${p.id}">${p.img?`<img src="${prodImg(p)}" alt="" loading="lazy">`:''}<span><b>${esc(p.name)}</b><small>${esc(p.pack)} ${prodSize(p)} · <b>${eur(p.price)}</b> · ${eur(p.ref)}/${esc(p.refFmt)}</small></span></button>`).join('')||'<p class="hint">Sin resultados</p>'};
+    box.innerHTML=a.map(p=>`<button type="button" class="ck-opt ck-prod" data-id="${p.id}">${p.img?`<img src="${prodImg(p)}" alt="" loading="eager">`:''}<span><b>${esc(p.name)}</b><small>${esc(p.pack)} ${prodSize(p)} · <b>${eur(p.price)}</b> · ${eur(p.ref)}/${esc(p.refFmt)}</small></span></button>`).join('')||'<p class="hint">Sin resultados</p>'};
   draw();let t;inp.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(draw,150)});
   box.addEventListener('click',ev=>{const b=ev.target.closest('[data-id]');if(!b)return;const p=prod(MC.byId.get(b.dataset.id));
     if(key&&(S.prices||{})[norm(key)]){S.prices=Object.assign({},S.prices);S.prices[norm(key)]=Object.assign({},S.prices[norm(key)],{use:false})}
@@ -712,7 +712,7 @@ function panSheet(x){
 }
 
 /* ---------- Compras: lista con fotos, cantidades y tachado ---------- */
-const imgUrl=(img,s)=>img?`https://prod-mercadona.imgix.net/images/${img}?fit=crop&h=${s}&w=${s}`:'';
+const imgUrl=(img,s)=>img?`https://prod-mercadona.imgix.net/images/${img}?fit=contain&h=${s}&w=${s}`:'';
 const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(i.mid);return p?p[9]:''};
 const monthKey=d=>(d||today()).slice(0,7);
 const spentIn=m=>(S.buys||[]).filter(b=>monthKey(b.date)===m).reduce((a,b)=>a+(+b.total||0),0);
@@ -735,7 +735,7 @@ function itemRow(i){
   const meta=[!i.mid&&i.qty?esc(i.qty):'',i.mid&&i.qty?esc(i.qty.replace(/^\d+ × /,'')):'',i.store?'🏪 '+esc(i.store):'',i.by&&!/^(Menú|Despensa)$/.test(i.by)?'pidió '+esc(i.by):'',i.done&&i.doneAt?'✓ '+(i.doneBy?esc(i.doneBy)+' ':'')+hhmm(i.doneAt):''].filter(Boolean);
   return`<li class="row ck-it ${i.done?'is-done':''}">
     <button class="check sq ${i.done?'on':''}" data-act="toggleItem" data-id="${i.id}" aria-label="${i.done?'Desmarcar':'Tachar'} ${esc(i.name)}"></button>
-    ${img?`<img class="ck-ith" src="${imgUrl(img,96)}" alt="" loading="lazy">`:`<span class="ck-ith ck-ith0">${i.auto?'🔁':'🛒'}</span>`}
+    ${img?`<img class="ck-ith" src="${imgUrl(img,96)}" alt="" loading="eager">`:`<span class="ck-ith ck-ith0">${i.auto?'🔁':'🛒'}</span>`}
     <div class="row-main" data-act="editItem" data-id="${i.id}"><div class="row-title">${esc(i.name)}${isFav(i.mid||'n:'+i.name)?' <span class="ck-star">★</span>':''}</div>${meta.length?`<div class="row-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>`:''}
       <div class="ck-irow">${i.done?`<span class="ck-u2">${u} ud</span>`:`<button class="ck-st sm" data-act="itemStep" data-id="${i.id}" data-v="-1" aria-label="${u>1?'Uno menos':'Quitar'}">${u>1?'−':'🗑'}</button><b class="ck-u2">${u}</b><button class="ck-st sm plus" data-act="itemStep" data-id="${i.id}" data-v="1" aria-label="Uno más">+</button>`}<span class="ck-ipr">${i.price?'≈ '+eur(i.price):''}</span></div></div></li>`;
 }
@@ -743,7 +743,7 @@ function itemRow(i){
 function habSection(L){
   const fv=(ck().fav||[]),cards=fv.map(k=>{
     const p=!k.startsWith('n:')&&MC&&MC.byId.get(k),name=p?p[1]:k.slice(2),inL=S.items.find(i=>i.listId===L.id&&!i.done&&sameItem(i,{mid:p?k:'',name}));
-    return`<div class="ck-hab ${inL?'in':''}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="lazy">`:'<span class="ck-hab0">⭐</span>'}<b>${esc(name)}</b>${p?`<small>${eur(p[3])}</small>`:''}
+    return`<div class="ck-hab ${inL?'in':''}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}<b>${esc(name)}</b>${p?`<small>${eur(p[3])}</small>`:''}
       ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}">+ Añadir</button>`}</div>`});
   const st=S.staples.filter(s=>s.listId===L.id).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
   if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.</p>`;
@@ -788,7 +788,7 @@ function drawQSug(){
   const el=$('#qItem'),box=$('#qSug');if(!el||!box)return;const q=el.value.trim();
   if(q.length<2||!MC){box.innerHTML='';return}
   const a=searchProducts(q,5);
-  box.innerHTML=a.map(p=>`<button type="button" class="ck-qs" data-act="sugAdd" data-id="${p.id}"><img src="${imgUrl(p.img,72)}" alt="" loading="lazy"><span><b>${esc(p.name)}</b><small>${prodSize(p)} · ${eur(p.price)}</small></span><span class="ck-qs-b">+</span></button>`).join('')+
+  box.innerHTML=a.map(p=>`<button type="button" class="ck-qs" data-act="sugAdd" data-id="${p.id}"><img src="${imgUrl(p.img,72)}" alt="" loading="eager"><span><b>${esc(p.name)}</b><small>${prodSize(p)} · ${eur(p.price)}</small></span><span class="ck-qs-b">+</span></button>`).join('')+
     `<button type="button" class="ck-qs" data-act="quickItem"><span class="ck-ith0">✏️</span><span><b>Añadir «${esc(q)}» tal cual</b></span></button>`;
 }
 

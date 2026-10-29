@@ -1,6 +1,6 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v20';
+const CACHE = 'casa-v21';
 const SHELL = ['./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js', 'cocina.js', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
@@ -16,6 +16,16 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // Las fotos de productos no cambian: reutiliza la copia antes de pedir otra.
+  if(url.hostname === 'prod-mercadona.imgix.net'){
+    e.respondWith(caches.open(CACHE).then(async cache=>{
+      const saved=await cache.match(req);if(saved)return saved;
+      const res=await fetch(req);
+      if(res.ok||res.type==='opaque')await cache.put(req,res.clone());
+      return res;
+    }));
+    return;
+  }
   const cacheable = url.origin === location.origin ||
     url.hostname === 'www.gstatic.com' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (!cacheable) return; // Firestore y la autenticación van siempre por red

@@ -418,7 +418,7 @@ body.nav-top .toast{bottom:90px}
 .ck-card.in{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow)}
 .ck-offer{position:absolute;top:8px;left:8px;z-index:1;background:#E5384B;color:#fff;font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:99px}
 .ck-ci{aspect-ratio:1;border-radius:12px;background:#fff;overflow:hidden;display:grid;place-items:center}
-.ck-ci img{width:100%;height:100%;object-fit:contain}
+.ck-ci img{display:block;width:100%;height:100%;object-fit:contain}
 .ck-cp{margin-top:4px;font-size:1.05rem}
 .ck-cp s{color:var(--muted);font-size:.85rem}
 .ck-cp b.red{color:#E5384B}
@@ -1122,13 +1122,26 @@ const TABS=[
   ['ringo','Ringo','<circle cx="5.5" cy="10.5" r="1.8"/><circle cx="9.3" cy="6" r="1.8"/><circle cx="14.7" cy="6" r="1.8"/><circle cx="18.5" cy="10.5" r="1.8"/><path d="M12 12.5c-3 0-5.8 3.4-5.8 5.8 0 1.6 1.2 2.4 2.8 2.4 1.2 0 2-.6 3-.6s1.8.6 3 .6c1.6 0 2.8-.8 2.8-2.4 0-2.4-2.8-5.8-5.8-5.8z"/>'],
   ['recordar','Recordar','<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>']
 ];
+// Conserva las imágenes ya cargadas cuando cambian cantidades o llega la sincronización.
+function replaceAppContent(html){
+  const app=$('#app'),images=new Map();
+  app.querySelectorAll('img').forEach(img=>{const key=img.getAttribute('src');if(!images.has(key))images.set(key,[]);images.get(key).push(img)});
+  const next=document.createElement('template');next.innerHTML=html;
+  next.content.querySelectorAll('img').forEach(img=>{
+    const previous=images.get(img.getAttribute('src'))?.shift();if(!previous)return;
+    [...previous.attributes].forEach(a=>{if(!img.hasAttribute(a.name))previous.removeAttribute(a.name)});
+    [...img.attributes].forEach(a=>{if(previous.getAttribute(a.name)!==a.value)previous.setAttribute(a.name,a.value)});
+    img.replaceWith(previous);
+  });
+  app.replaceChildren(next.content);
+}
 function render(){
   const v={hoy:vHoy,tareas:vTareas,compras:()=>ui.ckTab&&ui.ckTab!=='lista'?vCocina():vCompras(),semana:vSemana,recordar:vRecordar,ringo:vRingo}[ui.view]||vHoy;
   const keepFocus=document.activeElement&&document.activeElement.id;
   const keepScroll=$('#app').scrollTop;
   const keepVals={};['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR','qRec','qVeto'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
   document.body.dataset.view=ui.view;
-  $('#app').innerHTML=(syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`;
+  replaceAppContent((syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`);
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});
   if(keepVals.qItem)drawQSug();
   $('#app').scrollTop=keepScroll;
