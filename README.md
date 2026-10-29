@@ -52,19 +52,3 @@ Entra con tu email y contraseña la primera vez; después se queda la sesión ab
 2. En la app nueva, ya dentro: **Copias de seguridad** → **Restaurar desde un archivo**.
 
 Tus datos **nunca** se guardan en este repositorio: viven en tu Firebase y en vuestros móviles.
-
-## Importar desde el atajo de iPhone «Recetas IA a Notas»
-
-Casa acepta el texto de una receta en el fragmento `#receta=` de su dirección.
-El atajo sigue usando su acción «Usar ChatGPT»; Casa no llama a otra IA para esta importación.
-
-Sin eliminar las acciones existentes, añade al final del atajo:
-
-1. **Texto**: inserta la variable **Respuesta** de «Usar ChatGPT» completa. En otra línea escribe `Link: ` e inserta la variable **Entrada de atajo** con el enlace original.
-2. **Codificar URL**: codifica ese texto completo como componente de URL.
-3. **Texto**: escribe `https://s9nzw2sjc5-code.github.io/CASA/casa/#receta=` y añade inmediatamente el resultado codificado, sin espacios ni saltos de línea.
-4. **Abrir URLs**: abre el texto anterior.
-
-La respuesta debe incluir un título, un encabezado `Ingredientes` y un encabezado `Pasos`, seguidos de sus listas. Casa abre una revisión; solo **Guardar** añade la receta a la cuenta que tenga la sesión iniciada. Si el texto está incompleto, se muestra el formulario de importación para corregirlo. La nota de Apple sigue guardándose si se conservan sus acciones. Se mantiene el enlace original y se evitan duplicados por ese enlace.
-
-El fragmento no forma parte de la petición HTTP y Casa lo retira de la dirección al procesarlo. El atajo continúa dependiendo del acceso que tenga al contenido de cada publicación; no implica que analice el audio o las imágenes del vídeo.

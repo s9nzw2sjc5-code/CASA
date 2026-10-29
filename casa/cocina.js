@@ -433,7 +433,6 @@ function vCkDespensa(){
   const low=all.filter(pantryLow);
   let h=`<div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="aiPhoto">📸 Foto de la nevera o despensa</button></div>
   <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckTab" data-v="productos">+ Añadir productos</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
-  ${all.some(x=>x.n>0)?`<button class="btn sec ck-aibtn" data-act="aiRecipe">✨ Crear una receta con lo que tengo</button>`:''}
   ${low.length?`<button class="btn sec ck-lowbtn" data-act="ckLowShop">🛒 Pasar a la cesta lo que se acaba (${low.length})</button>`:''}
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','⚠️ Se acaba'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
   <p class="hint">Desliza la barra para decir cuánto queda. Para quitar un artículo, pulsa su papelera.</p>`;
@@ -478,8 +477,7 @@ function vCkRecetas(){
   const cost=r=>{const x=recipeCost(r,c.people);return x?x.per:99};
   const S2={recientes:(x,y)=>(y.added||'').localeCompare(x.added||''),az:(x,y)=>x.name.localeCompare(y.name,'es'),hechas:(x,y)=>(y.made||[]).length-(x.made||[]).length,valoradas:(x,y)=>(y.rating||0)-(x.rating||0)||(y.again?1:0)-(x.again?1:0),baratas:(x,y)=>cost(x)-cost(y),rapidas:(x,y)=>(x.time||999)-(y.time||999)};
   a.sort(S2[so]||S2.recientes);
-  let h=`<button class="btn ck-aibtn" style="margin-top:12px" data-act="aiRecipe">✨ Crear una receta con lo que tengo</button>
-  <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckNewRec">+ Nueva receta</button><button class="btn sec" data-act="ckLinkRec">🔗 Desde enlace</button></div>
+  let h=`<div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckNewRec">+ Nueva receta</button></div>
   <div class="quick"><input class="field" id="qRec" placeholder="Buscar receta o ingrediente" value="${esc(ui.recQ||'')}" autocomplete="off"><select class="field" id="ckSort" style="flex:none;width:auto">${opt([['recientes','Recientes'],['az','A-Z'],['valoradas','Mejor valoradas'],['hechas','Más hechas'],['baratas','Más baratas'],['rapidas','Más rápidas']],so)}</select></div>
   <div class="chips" style="margin-top:10px">${[['todas','Todas'],['fav','❤️ Favoritas'],['again','🔁 Repetiría'],['hechas','✅ Hechas'],['probar','🆕 Por probar'],['casa','🥫 Con lo que tengo'],['instagram','📸 Instagram'],['tiktok','🎵 TikTok'],['web','🌐 Web']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="recF" data-v="${k}">${l}</button>`).join('')}</div>`;
   if(!S.recipes.length)return h+`<div class="empty" style="margin-top:14px">Guarda aquí tus recetas y las que veas en Instagram, TikTok o cualquier web.<br><br><button class="btn sec" data-act="ckSeed">Cargar 24 recetas básicas</button></div>`;
@@ -500,7 +498,7 @@ function vCkAjustes(){
   <h2>Mis electrodomésticos</h2><p class="hint" style="margin-top:-4px">Cada receta te dice cómo adaptarla a lo que tienes.</p><div class="ck-wrap">${[...CK_APPL,...(c.applX||[]).map(x=>[x,x])].map(([k,l])=>`<button class="chip ${c.appl.includes(k)?'on':''}" data-act="ckAppl" data-v="${esc(k)}">${esc(l)}</button>`).join('')}<button class="chip add" data-act="ckApplNew">+ Otro</button></div>
   <h2>Ingredientes vetados</h2><p class="hint" style="margin-top:-4px">Las recetas que los llevan se marcan en rojo.</p><div class="ck-wrap">${c.vetoes.map((v,i)=>`<button class="chip on" data-act="ckVetoDel" data-v="${i}">${esc(v)} ✕</button>`).join('')||'<span class="hint">Ninguno</span>'}</div>
   <div class="quick"><input class="field" id="qVeto" placeholder="Ej.: cilantro, setas, marisco" enterkeyhint="done"><button class="btn" data-act="ckVetoAdd">Vetar</button></div>
-  <h2>Inteligencia artificial</h2><div class="list ck-set"><div class="row"><div class="row-main">${aiKey()?'✅ Activada en este móvil':'Fotos de la nevera y recetas con lo que tienes'}</div><button class="btn sec" data-act="aiKey">${aiKey()?'Cambiar clave':'Activar'}</button></div></div>
+  <h2>Inteligencia artificial</h2><div class="list ck-set"><div class="row"><div class="row-main">${aiKey()?'✅ Activada en este móvil':'Reconocer alimentos en fotos de la nevera'}</div><button class="btn sec" data-act="aiKey">${aiKey()?'Cambiar clave':'Activar'}</button></div></div>
   <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}<br><br>Para afinar una receta, abre un ingrediente y elige el producto exacto que compras: la app lo recordará siempre.</div>
   <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: ese precio se usará en tus recetas.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${/^(Mercadona|Mercadillo)$/.test(x)?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${/^(Mercadona|Mercadillo)$/.test(x)?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
@@ -684,51 +682,6 @@ function parseCaption(txt){
   if(/olla (rapida|express|programable)|presion/.test(all))out.appl.push('olla');
   if(/microondas/.test(all))out.appl.push('micro');
   return out;
-}
-
-function recipeFromHTML(html){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  const text=value=>{const el=doc.createElement('div');el.innerHTML=String(value||'');return el.textContent.trim()};
-  const instructions=v=>Array.isArray(v)?v.map(instructions).filter(Boolean).join('\n'):typeof v==='string'?text(v):v&&typeof v==='object'?instructions(v.itemListElement||v.text||v.name):'';
-  const find=v=>{if(!v||typeof v!=='object')return null;if(Array.isArray(v)){for(const x of v){const r=find(x);if(r)return r}return null}if([].concat(v['@type']||[]).some(t=>/(^|[\/#])Recipe$/.test(t)))return v;return find(v['@graph'])};
-  for(const script of doc.querySelectorAll('script[type="application/ld+json"]')){
-    let r;try{r=find(JSON.parse(script.textContent))}catch(e){continue}if(!r)continue;
-    const ingredients=(Array.isArray(r.recipeIngredient)?r.recipeIngredient:[]).filter(x=>typeof x==='string').map(x=>text(x));
-    const steps=instructions(r.recipeInstructions);if(!ingredients.length||!steps)continue;
-    const duration=String(r.totalTime||r.cookTime||'').match(/^PT(?:(\d+)H)?(?:(\d+)M)?/i);
-    const yieldText=String([].concat(r.recipeYield||'')[0]);
-    return {name:text(r.name),ingredients:ingredients.map(name=>({name,qty:''})),steps,servings:parseInt(yieldText,10)||ck().people,time:duration?(+duration[1]||0)*60+(+duration[2]||0):0};
-  }
-  return null;
-}
-function linkSheet(pre){
-  const ov=sheet('Importar receta',`
-    <label for="f_u">Enlace de la receta</label><input class="field" id="f_u" type="url" inputmode="url" value="${esc(pre&&pre.url||'')}" placeholder="https://…">
-    <p class="hint">Intentaremos leer ingredientes y pasos de la web. Instagram, TikTok y otras páginas pueden impedirlo: en ese caso, pega la descripción de la publicación.</p>
-    <label for="f_cap">Texto de la receta</label><textarea class="field" id="f_cap" rows="5" placeholder="Pega ingredientes y preparación aquí">${esc(pre&&pre.text||'')}</textarea>
-    <p id="linkStatus" class="hint" role="status" aria-live="polite"></p>`,
-  {saveLabel:'Preparar receta',onSave:()=>{run();return false}});
-  let busy=false;
-  async function run(){
-    if(busy)return;
-    const url=val(ov,'f_u'),cap=val(ov,'f_cap'),status=ov.querySelector('#linkStatus'),button=ov.querySelector('[data-s="ok"]');
-    if(url){try{const u=new URL(url);if(!/^https?:$/.test(u.protocol)||u.username||u.password)throw 0}catch(e){status.textContent='Pega un enlace web válido (https://…).';return}}
-    if(!url&&!cap){status.textContent='Pega el enlace o el texto de la receta.';return}
-    const old=url&&S.recipes.find(r=>r.url===url);if(old){ov.remove();recipeView(old);toast('Esta receta ya estaba guardada');return}
-    busy=true;button.disabled=true;status.textContent='Preparando receta…';
-    try{
-      let data;
-      if(cap){const parsed=parseCaption(cap);if(!parsed.ingredients.length||!parsed.steps){status.textContent='Faltan ingredientes o pasos. Pega ambas partes del texto para preparar una receta completa.';return}data={name:parsed.title||pre?.title||'',ingredients:parsed.ingredients,steps:parsed.steps,servings:parsed.servings||ck().people,time:parsed.time,appl:parsed.appl}}
-      else{
-        const response=await fetch(url,{signal:AbortSignal.timeout(12000),credentials:'omit'});if(!response.ok)throw Error('No se ha podido abrir la web.');
-        data=recipeFromHTML(await response.text());if(!data)throw Error('No encontramos una receta completa que podamos importar de esta página.');
-      }
-      if(!ov.isConnected)return;
-      ov.remove();recipeEdit(null,Object.assign(data,{url}));toast('Revisa la receta antes de guardarla');
-    }catch(e){if(ov.isConnected)status.textContent='No hemos podido leer ingredientes y pasos del enlace. Abre la publicación, copia el texto de la receta y pégalo arriba. Aún no se ha guardado nada.'}
-    finally{busy=false;button.disabled=false}
-  }
-  return ov;
 }
 
 function productPicker(q,onPick,key){
@@ -1000,15 +953,15 @@ function buySheet(items,done){
   skip.onclick=()=>{ov.remove();done('')};ov.querySelector('.actions').after(skip);
 }
 
-/* ---------- IA (Claude): fotos de la nevera y recetas con lo que hay ---------- */
+/* ---------- IA (Claude): fotos de la nevera ---------- */
 // La clave se guarda solo en este móvil (no va a la nube ni a las copias de seguridad)
 const AI_MODEL='claude-opus-5-5',AI_LS='casa-ai-key';
 const aiKey=()=>{try{return localStorage.getItem(AI_LS)||''}catch(e){return''}};
 function aiKeySheet(then){
-  sheet('Activar la IA',`<p class="hint" style="margin-top:0">Para reconocer alimentos en fotos y crear recetas, la app usa Claude, la IA de Anthropic. Necesita una clave de API:</p>
+  sheet('Activar la IA',`<p class="hint" style="margin-top:0">Para reconocer alimentos en fotos, la app usa Claude, la IA de Anthropic. Necesita una clave de API:</p>
     <ol class="hint" style="padding-left:18px;line-height:1.5"><li>Entra en <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a> y crea una cuenta.</li><li>Añade saldo (con 5 € hay para cientos de fotos y recetas).</li><li>En «API Keys» crea una clave y pégala aquí.</li></ol>
     <label for="f_k">Clave de API</label><input class="field" id="f_k" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(aiKey())}">
-    <p class="hint">Se guarda solo en este móvil. Cada foto o receta cuesta unos céntimos.</p>`,
+    <p class="hint">Se guarda solo en este móvil. El reconocimiento de fotos consume saldo de la API.</p>`,
   {saveLabel:'Guardar',onSave:ov=>{const k=val(ov,'f_k');if(k&&!/^sk-ant-/.test(k)){toast('La clave empieza por «sk-ant-»');return false}
     try{k?localStorage.setItem(AI_LS,k):localStorage.removeItem(AI_LS)}catch(e){}toast(k?'IA activada en este móvil':'IA desactivada');render();if(k&&then)then()}});
 }
@@ -1071,44 +1024,6 @@ function photoReview(items){
     });
     save();toastUndo(`En casa: ${nu} nuevo${nu===1?'':'s'}, ${up} actualizado${up===1?'':'s'}`);
   }});
-}
-
-async function aiRecipeFlow(pre){
-  if(!aiKey()){aiKeySheet(()=>aiRecipeFlow(pre));return}
-  if(!(S.pantry||[]).some(x=>x.n>0)){toast('Primero apunta lo que tienes en casa (🏠 En casa)');return}
-  const c=ck();
-  const ov=sheet('✨ Receta con lo que tengo',`<label for="f_w">¿Qué te apetece? (opcional)</label><input class="field" id="f_w" value="${esc(pre&&pre.wish||'')}" placeholder="Ej.: cena ligera, algo rápido, con pollo…">
-    <div class="grid2"><div><label for="f_p">Personas</label><input class="field" id="f_p" type="number" min="1" value="${pre&&pre.ppl||c.people}"></div>
-    <div><label for="f_t">Tiempo máximo</label><select class="field" id="f_t">${opt([['','Sin prisa'],['20','20 min'],['30','30 min'],['45','45 min'],['60','1 hora']],pre&&pre.time||'')}</select></div></div>
-    <label class="ing-row" style="display:flex;margin-top:12px;color:var(--ink);font-weight:500;font-size:.95rem"><input type="checkbox" id="f_o" ${pre&&pre.only?'checked':''}><span>Solo con lo que tengo (sin comprar nada)</span></label>`,
-  {saveLabel:'Crear receta',onSave:ov=>{aiRecipe({wish:val(ov,'f_w'),ppl:+val(ov,'f_p')||c.people,time:val(ov,'f_t'),only:ov.querySelector('#f_o').checked})}});
-}
-async function aiRecipe(o,avoid){
-  const c=ck(),t=today();
-  const pan=(S.pantry||[]).filter(x=>x.n>0).map(x=>`- ${x.name}: ${fmtAmt(x.n,x.u)} (${x.loc||'Despensa'})${x.exp?` caduca ${x.exp<=addDays(t,3)?'PRONTO ':''}${x.exp}`:''}`).join('\n');
-  const w=aiWait('Pensando una receta…','La IA está mirando lo que tienes en casa.');
-  let r;
-  try{r=await askClaude([{type:'text',text:
-`Eres cocinero/a de cocina casera española. Propón UNA receta para ${o.ppl} persona${o.ppl>1?'s':''} aprovechando lo que hay en casa, sobre todo lo que caduca pronto.
-Lo que hay en casa:
-${pan}
-${o.wish?'Le apetece: '+o.wish+'\n':''}${o.time?'Tiempo máximo: '+o.time+' minutos.\n':''}${o.only?'Usa SOLO lo que hay en casa (puedes suponer sal, aceite, agua y especias básicas).\n':'Puede faltar como mucho 2 o 3 ingredientes fáciles de comprar en Mercadona.\n'}Electrodomésticos disponibles: ${c.appl.map(applName).join(', ')}.
-${c.vetoes.length?'Nunca uses: '+c.vetoes.join(', ')+'.\n':''}${avoid&&avoid.length?'No repitas estas ideas: '+avoid.join(', ')+'.\n':''}Devuelve solo un JSON con esta forma, sin texto alrededor:
-{"name":"…","servings":${o.ppl},"time":25,"appl":["fuego"],"ingredients":[{"name":"Pechuga de pollo","qty":"400 g","have":true}],"steps":"1. …\\n2. …","tip":"consejo corto"}
-"appl" usa estas claves: ${CK_APPL.map(a=>a[0]).join(', ')}. "have" es true si está en la lista de casa. Cantidades en g, ml, ud o cucharadas.`}])}
-  catch(e){w.remove();toast(e.message||'No se ha podido crear la receta');return}
-  w.remove();
-  if(!r||!r.name||!Array.isArray(r.ingredients)){toast('La IA no ha devuelto una receta');return}
-  const rec={name:String(r.name).slice(0,90),servings:+r.servings||o.ppl,time:+r.time||0,appl:(r.appl||[]).filter(a=>CK_APPL.some(x=>x[0]===a)),
-    ingredients:r.ingredients.filter(g=>g&&g.name).map(g=>({name:String(g.name),qty:String(g.qty||'')})),steps:String(r.steps||''),notes:r.tip?String(r.tip):'',meal:'ambas',tags:'IA'};
-  const ov=sheet('✨ '+rec.name,`<div class="row-meta" style="margin:-8px 0 10px"><span>⏱ ${rec.time||'?'} min</span><span>👥 ${rec.servings} pers.</span><span>🤖 Hecha por IA</span></div>
-    <div class="ck-box">${rec.ingredients.map(g=>{const x=pantryFind(g.name);return`<div class="ck-ing"><span class="ck-dot ${x&&x.n>0?'ok':''}"></span><span><b>${esc(g.name)}</b>${g.qty?' · '+esc(g.qty):''}<br><small>${x&&x.n>0?'En casa: '+fmtAmt(x.n,x.u):'Hay que comprarlo'}</small></span></div>`}).join('')}</div>
-    <h4>Preparación</h4><div class="ck-steps">${esc(rec.steps).replace(/\n/g,'<br>')}</div>${rec.notes?`<div class="ck-tip">💡 ${esc(rec.notes)}</div>`:''}
-    <div class="ck-actions" style="margin-top:14px"><button type="button" class="btn sec" data-k="other">🔄 Otra idea</button><button type="button" class="btn sec" data-k="cart">🛒 Lo que falta</button></div>`,
-  {saveLabel:'Guardar receta',onSave:()=>{if(recipeByName(rec.name)){toast('Ya tienes una receta con ese nombre');return}S.recipes.push(Object.assign({id:uid(),added:today(),made:[],status:'probar'},rec));save();toast('Receta guardada en 📖 Recetas')}});
-  ov.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(!b)return;
-    if(b.dataset.k==='other'){ov.remove();aiRecipe(o,[...(avoid||[]),rec.name])}
-    if(b.dataset.k==='cart'){const n=recipeToCart(Object.assign({id:''},rec),o.ppl);toast(n?n+' producto'+(n>1?'s':'')+' a la cesta':'Tienes todo en casa')}});
 }
 
 /* ---------- tique: foto o PDF → precios, despensa y gasto ---------- */
@@ -1308,7 +1223,6 @@ const CK_ACT={
     save();toast(x.name+' a la cesta')},
   ckSeed:seedRecipes,ckSeedPan:seedPantry,
   ckNewRec:()=>recipeEdit(null),
-  ckLinkRec:()=>linkSheet(),
   ckRec:d=>recipeView(find(S.recipes,d.id)),
   recF:d=>{ui.recF=d.v;render()},
   panF:d=>{ui.panF=d.v;render()},
@@ -1339,7 +1253,6 @@ const CK_ACT={
   clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
     buySheet(dn,(store,fromTicket)=>{const p=fromTicket?0:dn.filter(addToPantry).length;S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
   aiPhoto:()=>{MC?photoFlow():loadMC().then(photoFlow)},
-  aiRecipe:()=>aiRecipeFlow(),
   aiKey:()=>aiKeySheet(),
   ckTicket:()=>ticketFlow(),
   ckStoreNew:()=>{sheet('Otro supermercado',`<input class="field" id="f_t" placeholder="Ej.: Covirán">`,{onSave:ov=>{const v=val(ov,'f_t');if(!v)return false;ckSet('stores',[...new Set([...ck().stores,v])])}})},
@@ -1366,28 +1279,3 @@ document.addEventListener('change',e=>{
   if(e.target.id==='ckSort'){ui.recSort=e.target.value;render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='qVeto')CK_ACT.ckVetoAdd()});
-
-// Recetas compartidas desde Android o desde el atajo de iPhone.
-// El fragmento #receta no se envía al servidor al abrir la página.
-function ckShared(){
-  try{
-    const q=new URLSearchParams(location.search),fragment=new URLSearchParams(location.hash.slice(1));
-    const shortcut=fragment.has('receta');
-    if(!shortcut&&!q.has('url')&&!q.has('text'))return;
-    const raw=shortcut?fragment.get('receta'):q.get('text')||'';
-    const source=raw.match(/^\s*(?:link|enlace|fuente)\s*:\s*(https?:\/\/\S+)\s*$/im);
-    const url=q.get('url')||(source?source[1]:(raw.match(/https?:\/\/\S+/)||[''])[0]);
-    const text=(source?raw.replace(source[0],''):raw.replace(url,'')).trim();
-    const title=q.get('title')||'';
-    history.replaceState(null,'',location.pathname);
-    ui.view='compras';ui.ckTab='recetas';render();
-    const parsed=parseCaption(text);
-    if(shortcut&&parsed.ingredients.length&&parsed.steps){
-      const old=url&&S.recipes.find(r=>r.url===url);
-      if(old){recipeView(old);toast('Esta receta ya estaba guardada');return}
-      recipeEdit(null,{url,name:parsed.title||title,ingredients:parsed.ingredients,steps:parsed.steps,servings:parsed.servings||ck().people,time:parsed.time,appl:parsed.appl});
-      toast('Receta recibida del atajo: revísala antes de guardar');
-    }else linkSheet({url,title,text});
-  }catch(e){toast('No se pudo abrir la receta compartida. Puedes pegar su texto en Importar receta.')}
-}
-window.addEventListener('hashchange',ckShared);
