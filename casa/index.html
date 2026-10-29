@@ -392,6 +392,21 @@ body.nav-top .toast{bottom:90px}
 .ck-ppl{display:flex;align-items:center;gap:4px;font-size:.9rem}
 .sheet h4{margin:16px 0 4px;font-size:1rem}
 .ck-steps{line-height:1.5}
+.ck-buy{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ck-buy:first-child{border-top:0}
+.ck-buy>span{flex:1;min-width:0}
+.ck-buy small{color:var(--muted)}
+.ck-buy input{width:86px;flex:none;text-align:right}
+.ck-spent{display:block;width:100%;text-align:left;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:.88rem}
+.ck-tl{padding:10px 0;border-top:1px solid var(--line)}
+.ck-tl:first-child{border-top:0}
+.sheet label.ck-tl-h{display:flex;gap:8px;align-items:center;margin:0}
+.ck-tl-h input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+.ck-tl-h [data-nm]{flex:1;min-width:0}
+.ck-tl-h [data-pr]{width:84px;flex:none;text-align:right}
+.ck-tl small{display:block;color:var(--muted);margin:4px 0 6px 28px}
+.ck-tl select{margin-left:28px;width:calc(100% - 28px)}
+.ck-pre{white-space:pre-wrap;font-size:.75rem;background:var(--surface);padding:10px;border-radius:12px;max-height:30vh;overflow:auto}
 .ck-tip{background:var(--accent-soft);border-radius:14px;padding:10px 12px;margin-top:8px;font-size:.92rem}
 details summary{cursor:pointer}
 </style>
@@ -466,7 +481,7 @@ function fresh(){return{v:1,updated:0,
   tasks:[],
   lists:[{id:'super',name:'Súper'},{id:'farmacia',name:'Farmacia'},{id:'casa',name:'Para la casa'}],
   sections:['Despensa','Fruta y verdura','Frescos','Congelados','Limpieza','Higiene','Otros'],
-  items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{},pantry:[],cook:{},prodMap:{}}}
+  items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{},pantry:[],cook:{},prodMap:{},prices:{},buys:[]}}
 let S=fresh();
 try{const r=localStorage.getItem(LS);if(r)S=Object.assign(fresh(),JSON.parse(r))}catch(e){}
 let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
@@ -495,7 +510,7 @@ const J=JSON.stringify;
 let canWrite=true,base=null,pushing=false,pushAgain=false;
 try{const bs=localStorage.getItem(LS+'-base');if(bs)base=JSON.parse(bs)}catch(e){}
 function saveBase(){try{localStorage.setItem(LS+'-base',J(base))}catch(e){}}
-const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events','notes','pantry'],MAP_KEYS=['menu','secMem','board','cook','prodMap'];
+const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events','notes','pantry','buys'],MAP_KEYS=['menu','secMem','board','cook','prodMap','prices'];
 const core=x=>{const o={};[...ARR_KEYS,...MAP_KEYS,'sections'].forEach(k=>o[k]=x[k]);return o};
 const dirty=()=>!base||J(core(S))!==J(core(base));
 // Fusión a tres bandas: lo que cambió aquí desde la última sincronización se aplica sobre lo remoto
@@ -636,7 +651,7 @@ function remRow(r,occ){
     <div class="row-meta"><span class="${late&&!preview?'late':''}">${preview?'':(r.date?relDate(r.date):'Sin fecha')}${r.time&&r.date?(preview?'A las ':' a las ')+r.time:''}</span>${r.repeat&&r.repeat!=='none'?`<span>${repLabel(r)}</span>`:''}${r.notes?`<span>${esc(r.notes.slice(0,40))}</span>`:''}</div></div></li>`;
 }
 function itemRow(i){
-  const side=[i.auto?'<span class="tag">Auto</span>':'',i.qty?esc(i.qty):'',i.price?'≈ '+eur(i.price):'',i.by?'pidió '+esc(i.by):''].filter(Boolean).join(' ');
+  const side=[i.auto?'<span class="tag">Auto</span>':'',i.qty?esc(i.qty):'',i.store?esc(i.store):'',i.price?'≈ '+eur(i.price):'',i.by?'pidió '+esc(i.by):''].filter(Boolean).join(' ');
   return`<li class="row ${i.done?'is-done':''}">
     <button class="check sq ${i.done?'on':''}" data-act="toggleItem" data-id="${i.id}" aria-label="Marcar ${esc(i.name)}"></button>
     <div class="row-main" data-act="editItem" data-id="${i.id}"><div class="row-title">${esc(i.name)}</div></div>
@@ -733,7 +748,7 @@ function vCompras(){
   h+=`<div class="head-row"><h2>Productos habituales</h2></div><div class="staples">${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Producto habitual</button></div>`;
   h+=`<div class="quick"><input class="field" id="qItem" placeholder="Añadir producto" enterkeyhint="done" style="flex:2"><input class="field" id="qQty" placeholder="Cant." style="flex:.7"><button class="btn" data-act="quickItem" aria-label="Añadir producto">+</button></div>
      <select class="field" id="qSec" style="margin-top:8px">${S.sections.map(s=>`<option ${s===ui.lastSec?'selected':''}>${esc(s)}</option>`).join('')}</select>`;
-  if(!items.length){h+=`<div class="empty" style="margin-top:16px">Lista vacía. Añade productos arriba.</div>`;return h}
+  if(!items.length){h+=`<div class="empty" style="margin-top:16px">Lista vacía. Añade productos arriba.</div><div style="margin-top:12px;text-align:right"><button class="btn sec" data-act="ckTicket">📷 Subir tique</button></div>`;return h}
   const secs=[...S.sections,...new Set(items.map(i=>i.section).filter(s=>!S.sections.includes(s)))];
   let rows=[];
   secs.forEach(sec=>{
@@ -743,7 +758,7 @@ function vCompras(){
   const dn=items.filter(i=>i.done);
   if(dn.length){rows.push(`<li class="sec-head">En el carro</li>`);rows.push(...dn.map(itemRow))}
   h+=`<div style="margin-top:16px">${ul(rows)}</div>`;
-  if(dn.length)h+=`<div style="margin-top:12px;text-align:right"><button class="btn sec" data-act="clearDone">Quitar comprados (${dn.length})</button></div>`;
+  h+=`<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn sec" data-act="ckTicket">📷 Subir tique</button>${dn.length?`<button class="btn sec" data-act="clearDone">Quitar comprados (${dn.length})</button>`:''}</div>`;
   return h;
 }
 
@@ -1187,11 +1202,13 @@ function itemSheet(i){
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(i.name)}">
     <div class="grid2"><div><label for="f_q">Cantidad</label><input class="field" id="f_q" value="${esc(i.qty)}" placeholder="Ej.: x2, 1 kg"></div>
     <div><label for="f_b">Lo pidió</label><input class="field" id="f_b" value="${esc(i.by)}" placeholder="Nombre"></div></div>
+    <div class="grid2"><div><label for="f_pr">Precio (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${i.price?Math.round(i.price*100)/100:''}"></div>
+    <div><label for="f_st">Supermercado</label><select class="field" id="f_st"><option value="">—</option>${opt(ck().stores.map(x=>[x,x]),i.store||'')}</select></div></div>
     <div class="grid2"><div><label for="f_s">Sección</label><select class="field" id="f_s">${opt(S.sections.map(s=>[s,s]),i.section)}</select></div>
     <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(S.lists.map(l=>[l.id,l.name]),i.listId)}</select></div></div>`,
   {onSave:ov=>{
     const name=val(ov,'f_t');if(!name){toast('Escribe el nombre del producto');return false}
-    const x=find(S.items,i.id);if(x)Object.assign(x,{name,qty:val(ov,'f_q'),by:val(ov,'f_b'),section:val(ov,'f_s'),listId:val(ov,'f_l')});S.secMem[norm(name)]=val(ov,'f_s');save();
+    const x=find(S.items,i.id);if(x)Object.assign(x,{name,qty:val(ov,'f_q'),by:val(ov,'f_b'),section:val(ov,'f_s'),listId:val(ov,'f_l'),price:parseFloat(val(ov,'f_pr'))||0,store:val(ov,'f_st')});S.secMem[norm(name)]=val(ov,'f_s');save();
   },onDelete:()=>{
     if(i.auto){const s=S.staples.find(s=>norm(s.name)===norm(i.name)&&s.listId===i.listId);if(s)s.snooze=today()}
     S.items=S.items.filter(x=>x.id!==i.id);save();toastUndo('Producto eliminado');
@@ -1326,7 +1343,8 @@ const ACT={
     save();
   },
   editItem:d=>itemSheet(find(S.items,d.id)),
-  clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;const p=dn.filter(addToPantry).length;S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo(n+' quitado'+(n>1?'s':'')+(p?' · '+p+' sumado'+(p>1?'s':'')+' a la despensa':''))},
+  clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
+    buySheet(dn,(store,fromTicket)=>{const p=fromTicket?0:dn.filter(addToPantry).length;S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo(n+' quitado'+(n>1?'s':'')+(store?' · compra en '+store+' guardada':'')+(p?' · '+p+' sumado'+(p>1?'s':'')+' a la despensa':''))})},
   pickList:d=>{ui.list=d.v;render()},
   newList:()=>listSheet(null),
   editList:d=>listSheet(find(S.lists,d.id)),

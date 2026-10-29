@@ -2,11 +2,11 @@
 
 La web de Mercadona no deja leer sus precios desde otra página, así que este
 script los descarga (lo ejecuta GitHub Actions cada día) y la app lee el archivo.
-Uso: python3 tools/mercadona.py [almacén, p. ej. vlc1]
+Uso: python3 tools/mercadona.py [almacén; 3968 = Granada]
 """
 import json, sys, time, urllib.request, os
 
-WH = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('MERCADONA_WH', 'vlc1')
+WH = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('MERCADONA_WH', '3968')
 API = 'https://tienda.mercadona.es/api/categories/'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'casa', 'mercadona.json')
 
