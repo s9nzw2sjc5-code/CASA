@@ -686,17 +686,48 @@ function parseCaption(txt){
   return out;
 }
 
+function recipeFromHTML(html){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const text=value=>{const el=doc.createElement('div');el.innerHTML=String(value||'');return el.textContent.trim()};
+  const instructions=v=>Array.isArray(v)?v.map(instructions).filter(Boolean).join('\n'):typeof v==='string'?text(v):v&&typeof v==='object'?instructions(v.itemListElement||v.text||v.name):'';
+  const find=v=>{if(!v||typeof v!=='object')return null;if(Array.isArray(v)){for(const x of v){const r=find(x);if(r)return r}return null}if([].concat(v['@type']||[]).some(t=>/(^|[\/#])Recipe$/.test(t)))return v;return find(v['@graph'])};
+  for(const script of doc.querySelectorAll('script[type="application/ld+json"]')){
+    let r;try{r=find(JSON.parse(script.textContent))}catch(e){continue}if(!r)continue;
+    const ingredients=(Array.isArray(r.recipeIngredient)?r.recipeIngredient:[]).filter(x=>typeof x==='string').map(x=>text(x));
+    const steps=instructions(r.recipeInstructions);if(!ingredients.length||!steps)continue;
+    const duration=String(r.totalTime||r.cookTime||'').match(/^PT(?:(\d+)H)?(?:(\d+)M)?/i);
+    const yieldText=String([].concat(r.recipeYield||'')[0]);
+    return {name:text(r.name),ingredients:ingredients.map(name=>({name,qty:''})),steps,servings:parseInt(yieldText,10)||ck().people,time:duration?(+duration[1]||0)*60+(+duration[2]||0):0};
+  }
+  return null;
+}
 function linkSheet(pre){
-  const ov=sheet('Guardar receta desde enlace',`
-    <label for="f_u">Enlace</label><input class="field" id="f_u" type="url" inputmode="url" value="${esc(pre&&pre.url||'')}" placeholder="https://www.instagram.com/reel/…">
-    <label for="f_cap">Descripción (opcional)</label><textarea class="field" id="f_cap" rows="5" placeholder="En Instagram o TikTok: abre la publicación, mantén pulsado el texto, «Copiar» y pégalo aquí. Así la app saca los ingredientes.">${esc(pre&&pre.text||'')}</textarea>
-    <p class="hint">Consejo: en Android puedes usar «Compartir → Casa» desde Instagram o TikTok si tienes la app instalada en la pantalla de inicio.</p>`,
-  {saveLabel:'Seguir',onSave:ov=>{
-    const url=val(ov,'f_u'),cap=ov.querySelector('#f_cap').value;
-    if(!url&&!cap.trim()){toast('Pega un enlace o la descripción');return false}
-    const old=url&&S.recipes.find(r=>r.url===url);if(old){toast('Ya la tenías guardada');recipeView(old);return}
-    fetchLinkTitle(url).then(t=>recipeEdit(null,{url,name:t||(pre&&pre.title)||'',caption:cap}));
-  }});
+  const ov=sheet('Importar receta',`
+    <label for="f_u">Enlace de la receta</label><input class="field" id="f_u" type="url" inputmode="url" value="${esc(pre&&pre.url||'')}" placeholder="https://…">
+    <p class="hint">Intentaremos leer ingredientes y pasos de la web. Instagram, TikTok y otras páginas pueden impedirlo: en ese caso, pega la descripción de la publicación.</p>
+    <label for="f_cap">Texto de la receta</label><textarea class="field" id="f_cap" rows="5" placeholder="Pega ingredientes y preparación aquí">${esc(pre&&pre.text||'')}</textarea>
+    <p id="linkStatus" class="hint" role="status" aria-live="polite"></p>`,
+  {saveLabel:'Preparar receta',onSave:()=>{run();return false}});
+  let busy=false;
+  async function run(){
+    if(busy)return;
+    const url=val(ov,'f_u'),cap=val(ov,'f_cap'),status=ov.querySelector('#linkStatus'),button=ov.querySelector('[data-s="ok"]');
+    if(url){try{const u=new URL(url);if(!/^https?:$/.test(u.protocol)||u.username||u.password)throw 0}catch(e){status.textContent='Pega un enlace web válido (https://…).';return}}
+    if(!url&&!cap){status.textContent='Pega el enlace o el texto de la receta.';return}
+    const old=url&&S.recipes.find(r=>r.url===url);if(old){ov.remove();recipeView(old);toast('Esta receta ya estaba guardada');return}
+    busy=true;button.disabled=true;status.textContent='Preparando receta…';
+    try{
+      let data;
+      if(cap){const parsed=parseCaption(cap);if(!parsed.ingredients.length||!parsed.steps){status.textContent='Faltan ingredientes o pasos. Pega ambas partes del texto para preparar una receta completa.';return}data={name:parsed.title||pre?.title||'',ingredients:parsed.ingredients,steps:parsed.steps,servings:parsed.servings||ck().people,time:parsed.time,appl:parsed.appl}}
+      else{
+        const response=await fetch(url,{signal:AbortSignal.timeout(12000),credentials:'omit'});if(!response.ok)throw Error('No se ha podido abrir la web.');
+        data=recipeFromHTML(await response.text());if(!data)throw Error('No encontramos una receta completa que podamos importar de esta página.');
+      }
+      if(!ov.isConnected)return;
+      ov.remove();recipeEdit(null,Object.assign(data,{url}));toast('Revisa la receta antes de guardarla');
+    }catch(e){if(ov.isConnected)status.textContent='No hemos podido leer ingredientes y pasos del enlace. Abre la publicación, copia el texto de la receta y pégalo arriba. Aún no se ha guardado nada.'}
+    finally{busy=false;button.disabled=false}
+  }
   return ov;
 }
 
