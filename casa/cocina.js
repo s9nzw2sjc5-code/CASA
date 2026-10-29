@@ -324,8 +324,8 @@ function ckSubTabs(){
   return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${k==='despensa'&&low?` <span class="ck-n">${low}</span>`:''}</button>`).join('')}</div>`;
 }
 function cartBar(){
-  const ci=cartItems(),t=cartTotal(),c=ck(),sp=spentIn(monthKey()),b=+c.budgetM||0;
-  return`<div class="ck-cartbar"><button data-act="ckTab" data-v="lista"><span class="ck-cb-ic">🛒<b>${ci.length}</b></span><span class="ck-cb-t"><small>Cesta (estimación)</small><b>≈ ${eur(t)}</b></span><span class="ck-cb-t"><small>Gastado este mes</small><b class="${b&&sp>b?'over':''}">${eur(sp)}</b></span><span class="ck-cb-go">Lista ›</span></button></div>`;
+  const ci=cartItems(),t=cartTotal();
+  return`<div class="ck-cartbar"><button data-act="ckTab" data-v="lista"><span class="ck-cb-ic">🛒<b>${ci.length}</b></span><span class="ck-cb-t"><small>Cesta (estimación)</small><b>≈ ${eur(t)}</b></span><span class="ck-cb-go">Lista ›</span></button></div>`;
 }
 // Tarjeta de producto, como en la app de Mercadona
 function prodCard(p){
@@ -711,6 +711,42 @@ function panSheet(x){
   });
 }
 
+/* ---------- Ofertas cercanas: guardadas y verificadas por la persona ---------- */
+function lidlLink(raw){
+  try{const u=new URL(raw);return u.protocol==='https:'&&(u.hostname==='lidl.es'||u.hostname==='www.lidl.es')?u.href:''}catch(e){return''}
+}
+function nearOffers(){
+  const c=ck(),cp=c.nearCP||c.cp||'',store=c.nearStore||'',all=c.nearOffers||[],t=today();
+  const names=[...S.items.filter(i=>!i.done).map(i=>i.name),...(c.fav||[]).map(k=>k.startsWith('n:')?k.slice(2):MC&&MC.byId.get(k)?.[1]||'')];
+  const relevant=o=>names.some(n=>norm(n).length>2&&(norm(o.name).includes(norm(n))||norm(n).includes(norm(o.name))));
+  const offers=all.filter(o=>o.cp===cp&&o.store===store).sort((a,b)=>Number(relevant(b))-Number(relevant(a))||a.end.localeCompare(b.end));
+  return `<section class="ck-box" style="margin-top:16px"><h2>📍 Ofertas cerca de casa · Lidl</h2>
+    <p>${cp?`CP ${esc(cp)}${store?' · '+esc(store):''}`:'Elige tu código postal y tienda para organizar las ofertas.'}</p>
+    <div class="ck-actions"><button class="btn sec" data-act="nearSettings">📍 Elegir tienda</button><a class="btn sec" href="https://www.lidl.es/" target="_blank" rel="noopener noreferrer">Ver ofertas oficiales ↗</a><button class="btn" data-act="nearEdit">+ Guardar oferta</button></div>
+    <p class="hint">Ofertas guardadas por vosotros, sin actualización automática. En la web de Lidl selecciona tu tienda y comprueba precio, disponibilidad y condiciones antes de comprar. Las ofertas de otro CP o tienda quedan ocultas.</p>
+    ${offers.length?offers.map(o=>{const active=o.start<=t&&o.end>=t;return `<div class="ck-box"><b>${esc(o.name)}</b>${relevant(o)?' · ⭐ En vuestra lista o habituales':''}<p>${eur(o.price)} · ${esc(o.pack)}${o.unit?' · '+esc(o.unit):''}</p><p class="hint">${esc(o.start)} – ${esc(o.end)} · ${active?'Vigente según las fechas guardadas':o.end<t?'Caducada':'Aún no empieza'}<br>${esc(o.conditions||'Sin condiciones anotadas: comprobar en Lidl')}<br>Guardada/revisada: ${esc(o.checked)}</p><div class="ck-actions"><button class="btn sec" data-act="nearEdit" data-id="${esc(o.id)}">Editar</button><button class="btn" data-act="nearAdd" data-id="${esc(o.id)}" ${active?'':'disabled'}>+ A Compras</button>${o.url?`<a class="link" href="${esc(lidlLink(o.url))}" target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a>`:''}</div></div>`}).join(''):'<p class="hint">No hay ofertas guardadas para esta tienda. Puedes guardar alguna del folleto oficial que os interese.</p>'}</section>`;
+}
+function nearSettings(){
+ const c=ck();sheet('Tu tienda Lidl',`<label for="nearCP">Código postal</label><input class="field" id="nearCP" inputmode="numeric" maxlength="5" value="${esc(c.nearCP||c.cp||'')}"><label for="nearStore">Tienda (dirección o nombre)</label><input class="field" id="nearStore" value="${esc(c.nearStore||'')}"><p class="hint">Esto organiza tus ofertas; no selecciona la tienda en la web de Lidl ni cambia los precios de Mercadona.</p>`,{onSave:ov=>{const cp=val(ov,'nearCP'),store=val(ov,'nearStore');if(!/^(0[1-9]|[1-4]\d|5[0-2])\d{3}$/.test(cp)||!store){toast('Indica un CP español válido y la tienda');return false}S.cook=Object.assign({},S.cook,{nearCP:cp,nearStore:store});save()}});
+}
+function nearEdit(id){
+ const c=ck(),old=(c.nearOffers||[]).find(o=>o.id===id);if(!c.nearStore||!(c.nearCP||c.cp)){nearSettings();return}
+ const o=old||{name:'',price:'',pack:'',unit:'',start:today(),end:today(),conditions:'',url:''};
+ const fields=[['name','Producto','text'],['price','Precio de la oferta (€)','number'],['pack','Tamaño del envase (ej.: 500 g)','text'],['unit','Precio por kg/l/unidad (opcional)','text'],['start','Válida desde','date'],['end','Válida hasta','date'],['conditions','Condiciones (Lidl Plus, activar cupón, varias unidades…)','text'],['url','Enlace oficial de Lidl (opcional)','url']];
+ sheet(old?'Editar oferta Lidl':'Guardar oferta Lidl',`<p class="hint">${esc(c.nearCP||c.cp)} · ${esc(c.nearStore)}. Copia los datos del folleto o de la oferta oficial.</p>`+fields.map(([k,label,type])=>`<label for="near_${k}">${label}</label><input class="field" id="near_${k}" type="${type}" ${type==='number'?'min="0.01" step="0.01"':''} value="${esc(o[k])}">`).join(''),{onSave:ov=>{
+ const n={};fields.forEach(([k])=>n[k]=val(ov,'near_'+k));n.price=Number(n.price);
+ if(!n.name||!n.pack||!Number.isFinite(n.price)||n.price<=0||!n.start||!n.end||n.start>n.end){toast('Revisa producto, envase, precio y fechas');return false}
+ if(n.url&&!lidlLink(n.url)){toast('Usa un enlace HTTPS de www.lidl.es');return false}
+ const entry=Object.assign({},n,{id:old?old.id:uid(),cp:c.nearCP||c.cp,store:c.nearStore,checked:today()});ckSet('nearOffers',[...(ck().nearOffers||[]).filter(x=>x.id!==entry.id),entry]);toast('Oferta guardada');
+ },onDelete:old?()=>{ckSet('nearOffers',(ck().nearOffers||[]).filter(x=>x.id!==old.id));toast('Oferta eliminada')}:null});
+}
+function nearAdd(id){
+ const c=ck(),o=(c.nearOffers||[]).find(x=>x.id===id);if(!o||o.cp!==(c.nearCP||c.cp)||o.store!==c.nearStore||o.start>today()||o.end<today())return;
+ const ex=S.items.find(i=>i.listId===curList().id&&!i.done&&i.store==='Lidl'&&norm(i.name)===norm(o.name));
+ if(ex){toast('Ese producto de Lidl ya está en la lista');return}
+ S.items.push({id:uid(),listId:curList().id,name:o.name,qty:o.pack,units:1,section:'Otros',store:'Lidl',price:o.price,uprice:o.price,done:false,added:Date.now(),notes:[o.conditions,o.url,'Oferta hasta '+o.end].filter(Boolean).join(' · ')});save();toast('Añadido a Compras · Lidl');
+}
+
 /* ---------- Compras: lista con fotos, cantidades y tachado ---------- */
 const imgUrl=(img,s)=>img?`https://prod-mercadona.imgix.net/images/${img}?fit=crop&h=${s}&w=${s}`:'';
 const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(i.mid);return p?p[9]:''};
@@ -754,6 +790,7 @@ function vCompras(){
   const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done);
   let h=`<h1>Compras</h1><p class="sub">${esc(L.name)}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
   h+=moneyCard(pend);
+  h+=nearOffers();
   h+=`<div class="chips" style="margin-top:12px">${S.lists.map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(l.name)}</button>`).join('')}<button class="chip add" data-act="newList">+ Lista</button><button class="chip add" data-act="editList" data-id="${L.id}">Editar lista</button></div>`;
   h+=`<div class="ck-add2"><div class="quick" style="margin-top:12px"><input class="field" id="qItem" placeholder="Añadir producto (busca en Mercadona)" enterkeyhint="done" autocomplete="off" style="flex:2"><input class="field" id="qQty" placeholder="Cant." style="flex:.7"><button class="btn" data-act="quickItem" aria-label="Añadir producto">+</button></div>
     <div id="qSug" class="ck-qsug"></div>
@@ -1164,6 +1201,7 @@ function seedPantry(){
 
 /* ---------- acciones ---------- */
 const CK_ACT={
+  nearSettings, nearEdit:d=>nearEdit(d.id), nearAdd:d=>nearAdd(d.id),
   ckTab:d=>{ui.ckTab=d.v;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},
   prodMore:()=>{ui.prodN=(ui.prodN||40)+40;render()},
