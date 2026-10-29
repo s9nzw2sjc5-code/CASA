@@ -785,6 +785,25 @@ function habSection(L){
   if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.</p>`;
   return`<div class="head-row"><h2>⭐ Habituales</h2><button class="link" data-act="ckTab" data-v="productos">+ Buscar</button></div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Cada X días</button></div>`;
 }
+function shopLaterSection(L){
+  const entries=(S.shopLater||[]).filter(x=>x.listId===L.id);
+  return `<section style="margin-top:18px"><div class="head-row"><h2>📌 Para tener en cuenta</h2><button class="link" data-act="laterEdit">+ Apuntar</button></div><p class="hint">Cosas que quizá queráis comprar más adelante. No cuentan en la cesta ni en los gastos.</p>${entries.length?ul(entries.map(x=>`<li class="row"><button class="row-main" data-act="laterEdit" data-id="${esc(x.id)}" aria-label="Editar ${esc(x.name)}"><span class="row-title">${esc(x.name)}</span>${x.notes?`<span class="row-meta">${esc(x.notes)}</span>`:''}</button><button class="btn sec" data-act="laterMove" data-id="${esc(x.id)}" aria-label="Pasar ${esc(x.name)} a la compra">A la compra</button></li>`)):'<div class="empty">Apunta aquí lo que quieras valorar o comprar en otra ocasión.</div>'}</section>`;
+}
+function laterEdit(id){
+  const entry=(S.shopLater||[]).find(x=>x.id===id),L=curList();
+  sheet(entry?'Editar compra para más adelante':'Para tener en cuenta',`<label for="laterName">Qué quieres comprar</label><input class="field" id="laterName" value="${esc(entry?.name||'')}" placeholder="Ej.: Una sartén"><label for="laterNotes">Notas (opcional)</label><textarea class="field" id="laterNotes" placeholder="Medidas, dónde mirarlo, esperar a una oferta…">${esc(entry?.notes||'')}</textarea>`,{onSave:ov=>{
+    const name=val(ov,'laterName'),notes=val(ov,'laterNotes');if(!name){toast('Escribe qué quieres comprar');return false}
+    if((S.shopLater||[]).some(x=>x.id!==id&&x.listId===L.id&&norm(x.name)===norm(name))){toast('Ya lo tienes apuntado');return false}
+    const item={id:entry?entry.id:uid(),listId:entry?entry.listId:L.id,name,notes};S.shopLater=[...(S.shopLater||[]).filter(x=>x.id!==item.id),item];save();toast('Guardado para más adelante');
+  },onDelete:entry?()=>{S.shopLater=(S.shopLater||[]).filter(x=>x.id!==id);save();toastUndo('Quitado de Para tener en cuenta')}:null});
+}
+function laterMove(id){
+  const x=(S.shopLater||[]).find(x=>x.id===id);if(!x)return;
+  const exists=S.items.some(i=>i.listId===x.listId&&!i.done&&norm(i.name)===norm(x.name));
+  if(!exists)S.items.push({id:uid(),listId:x.listId,name:x.name,notes:x.notes,section:S.secMem[norm(x.name)]||'Otros',qty:'',units:1,done:false,added:Date.now()});
+  S.shopLater=(S.shopLater||[]).filter(i=>i.id!==id);save();toastUndo(exists?'Ya estaba en la compra; quitado de Para tener en cuenta':'Pasado a la compra');
+}
+
 function vCompras(){
   loadMC();
   const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done);
@@ -795,7 +814,7 @@ function vCompras(){
     <div id="qSug" class="ck-qsug"></div>
     <select class="field" id="qSec" style="margin-top:8px">${S.sections.map(s=>`<option ${s===ui.lastSec?'selected':''}>${esc(s)}</option>`).join('')}</select></div>`;
   h+=habSection(L);
-  if(!items.length)return h+`<div class="empty" style="margin-top:16px">Lista vacía. Añade productos arriba, desde ⭐ Habituales o en 🛍️ Productos.</div>${histLink()}`;
+  if(!items.length)return h+`<div class="empty" style="margin-top:16px">Lista vacía. Añade productos arriba, desde ⭐ Habituales o en 🛍️ Productos.</div>${shopLaterSection(L)}${histLink()}`;
   const secs=[...S.sections,...new Set(items.map(i=>i.section).filter(s=>s&&!S.sections.includes(s)))];
   const rows=[];
   secs.forEach(sec=>{const a=pend.filter(i=>(i.section||'Otros')===sec);if(a.length){rows.push(`<li class="sec-head">${esc(sec)} · ${a.length}</li>`);rows.push(...a.map(itemRow))}});
@@ -803,7 +822,7 @@ function vCompras(){
   if(dn.length){rows.push(`<li class="sec-head ck-done-h">✓ En el carro · ${dn.length}</li>`);rows.push(...dn.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0)).map(itemRow))}
   h+=`<div style="margin-top:14px">${ul(rows)}</div>`;
   if(dn.length)h+=`<div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="clearDone">✅ Terminar compra (${dn.length})</button></div><p class="hint">Al terminar, lo tachado sale de la lista y pasa a casa. Puedes apuntar lo que habéis pagado o subir el tique.</p>`;
-  return h+histLink();
+  return h+shopLaterSection(L)+histLink();
 }
 const histLink=()=>(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:12px" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'';
 // Añadir a la lista sin duplicar: si ya está, ofrece sumar una unidad
@@ -1200,6 +1219,7 @@ function seedPantry(){
 
 /* ---------- acciones ---------- */
 const CK_ACT={
+  laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),
   panRemove:d=>confirmRemovePantry(d.id),
   ckTab:d=>{ui.ckTab=d.v;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},

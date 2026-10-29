@@ -586,7 +586,7 @@ function fresh(){return{v:1,updated:0,
   tasks:[],
   lists:[{id:'super',name:'Súper'},{id:'farmacia',name:'Farmacia'},{id:'casa',name:'Para la casa'}],
   sections:['Despensa','Fruta y verdura','Frescos','Congelados','Limpieza','Higiene','Otros'],
-  items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{},pantry:[],cook:{},prodMap:{},prices:{},buys:[]}}
+  shopLater:[],items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{},pantry:[],cook:{},prodMap:{},prices:{},buys:[]}}
 let S=fresh();
 try{const r=localStorage.getItem(LS);if(r)S=Object.assign(fresh(),JSON.parse(r))}catch(e){}
 let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
@@ -615,7 +615,7 @@ const J=JSON.stringify;
 let canWrite=true,base=null,pushing=false,pushAgain=false;
 try{const bs=localStorage.getItem(LS+'-base');if(bs)base=JSON.parse(bs)}catch(e){}
 function saveBase(){try{localStorage.setItem(LS+'-base',J(base))}catch(e){}}
-const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events','notes','pantry','buys'],MAP_KEYS=['menu','secMem','board','cook','prodMap','prices'];
+const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events','notes','pantry','buys','shopLater'],MAP_KEYS=['menu','secMem','board','cook','prodMap','prices'];
 const core=x=>{const o={};[...ARR_KEYS,...MAP_KEYS,'sections'].forEach(k=>o[k]=x[k]);return o};
 const dirty=()=>!base||J(core(S))!==J(core(base));
 // Fusión a tres bandas: lo que cambió aquí desde la última sincronización se aplica sobre lo remoto
