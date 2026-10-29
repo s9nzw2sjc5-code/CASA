@@ -600,15 +600,13 @@ let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
 try{const u=localStorage.getItem(LS+'-ui');if(u)ui=Object.assign(ui,JSON.parse(u))}catch(e){}
 let prefRef=null,prefsReady=false;setTimeout(()=>{if(!prefsReady){prefsReady=true;render()}},3000);
 let docRef=null,dbRef=null,saveTimer=null,syncState='local';
-let lastSaved=null,prevState=null,remoteGen=0;
+let lastSaved=null,prevState=null;
 
 function persistLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toastUndo(msg){
-  const snap=prevState,gen=remoteGen;if(!snap){toast(msg);return}
-  toast(msg,()=>{
-    if(gen!==remoteGen){toast('No se puede deshacer: han llegado cambios de la otra persona. Puedes recuperarlo desde Copias de seguridad.');return}
-    S=Object.assign(fresh(),JSON.parse(JSON.stringify(snap)));save();toast('Deshecho');
-  });
+  // Deshace solo lo que cambió esta acción: lo que haya hecho la otra persona mientras tanto se conserva
+  const before=prevState,after=lastSaved;if(!before||!after){toast(msg);return}
+  toast(msg,()=>{S=merge(clone(after),clone(before),S);save();toast('Deshecho')});
 }
 function save(){
   prevState=lastSaved;try{lastSaved=JSON.parse(JSON.stringify(S))}catch(e){}
@@ -686,7 +684,7 @@ function applyRemote(snap){
   if(base&&(r.rev||0)===(base.rev||0)&&J(core(r))===J(core(base))){if(syncState==='local')syncState='ok';updSync();return}
   if(!canWrite||!dirty())S=r;
   else{S=merge(base,S,r);S.rev=r.rev||0;clearTimeout(saveTimer);saveTimer=setTimeout(pushCloud,300)}
-  base=clone(r);saveBase();persistLocal();remoteGen++;lastSaved=clone(S);
+  base=clone(r);saveBase();persistLocal();lastSaved=clone(S);
   if(canWrite&&migratePeople())save();else render();
   if(syncState!=='ro')syncState='ok';updSync();
 }
