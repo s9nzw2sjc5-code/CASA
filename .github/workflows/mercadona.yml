@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python3 tools/mercadona.py 3968  # almacén de Granada (CP 18001)
+      - run: python3 tools/mercadona.py 2623  # almacén del CP 18210 (Granada)
       - name: Guardar si han cambiado
         run: |
           git config user.name 'github-actions[bot]'

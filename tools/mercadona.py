@@ -2,11 +2,11 @@
 
 La web de Mercadona no deja leer sus precios desde otra página, así que este
 script los descarga (lo ejecuta GitHub Actions cada día) y la app lee el archivo.
-Uso: python3 tools/mercadona.py [almacén; 3968 = Granada]
+Uso: python3 tools/mercadona.py [almacén; 2623 = CP 18210]
 """
 import json, sys, time, urllib.request, os
 
-WH = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('MERCADONA_WH', '3968')
+WH = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('MERCADONA_WH', '2623')
 API = 'https://tienda.mercadona.es/api/categories/'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'casa', 'mercadona.json')
 
@@ -20,6 +20,15 @@ def get(url):
         except Exception:
             time.sleep(2 ** i)
     raise RuntimeError('No se pudo leer ' + url)
+
+
+def prev(pi):
+    # Precio anterior si está rebajado (para tacharlo como en la app de Mercadona)
+    try:
+        prev, now = float(pi.get('previous_unit_price') or 0), float(pi.get('unit_price') or 0)
+    except ValueError:
+        return 0
+    return prev if prev > now else 0
 
 
 def walk(node, top, out):
@@ -37,6 +46,7 @@ def walk(node, top, out):
             pi.get('unit_size') or 0, pi.get('size_format') or '',
             float(pi.get('reference_price') or 0), pi.get('reference_format') or '',
             top, thumb, 1 if pi.get('approx_size') else 0,
+            prev(pi),
         ]
     for c in node.get('categories') or []:
         walk(c, top, out)
@@ -51,7 +61,7 @@ def main():
             walk(get(f"{API}{c['id']}/?lang=es&wh={WH}"), len(tops) - 1, out)
             time.sleep(0.3)
     data = {'wh': WH, 'at': time.strftime('%Y-%m-%d'), 'cats': tops,
-            'cols': ['id', 'nombre', 'envase', 'precio', 'tamano', 'unidad', 'precio_ref', 'unidad_ref', 'cat', 'img', 'aprox'],
+            'cols': ['id', 'nombre', 'envase', 'precio', 'tamano', 'unidad', 'precio_ref', 'unidad_ref', 'cat', 'img', 'aprox', 'antes'],
             'p': sorted(out.values(), key=lambda x: (x[8], x[1]))}
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
