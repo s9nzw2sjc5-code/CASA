@@ -407,7 +407,7 @@ function vCkDespensa(){
   ${all.some(x=>x.n>0)?`<button class="btn sec ck-aibtn" data-act="aiRecipe">✨ Crear una receta con lo que tengo</button>`:''}
   ${low.length?`<button class="btn sec ck-lowbtn" data-act="ckLowShop">🛒 Pasar a la cesta lo que se acaba (${low.length})</button>`:''}
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','⚠️ Se acaba'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
-  <p class="hint">Desliza la barra para decir cuánto queda.</p>`;
+  <p class="hint">Desliza la barra para decir cuánto queda. Para quitar un artículo, pulsa su papelera.</p>`;
   if(!all.length)return h+`<div class="empty" style="margin-top:14px">Aún no hay nada. Haz una <b>📸 foto</b> de la nevera o la despensa, pulsa <b>🏠+</b> en <b>Productos</b> o sube un tique.<br><br><button class="btn sec" data-act="ckSeedPan">Empezar con los básicos</button></div>`;
   if(!a.length)return h+`<div class="empty" style="margin-top:14px">Nada por aquí.</div>`;
   const locs=f==='todo'||f==='low'?CK_LOCS:[f];
@@ -423,7 +423,7 @@ function panRow(x){
     <div class="ck-pm"><button class="ck-pt" data-act="ckPan" data-id="${x.id}">${esc(x.name)}</button>
     <input class="ck-range" type="range" min="0" max="${full}" step="${step}" value="${x.n}" data-pid="${x.id}" style="--p:${pct}%" aria-label="Cuánto queda de ${esc(x.name)}">
     <small class="ck-pl" data-pl="${x.id}">${x.n>0?'Queda '+fmtAmt(x.n,x.u)+' · '+pct+' %':'Agotado'}${x.exp?` · ${x.exp<today()?'⚠️ caducado':'cad. '+relDate(x.exp)}`:''}</small></div>
-    <button class="ck-ib ${inC?'on':''}" data-act="panCart" data-id="${x.id}" aria-label="${inC?'Ya está en la cesta':'Añadir a la cesta'}">${inC?'✓':'🛒'}</button></div>`;
+    <button class="ck-ib ${inC?'on':''}" data-act="panCart" data-id="${x.id}" aria-label="${inC?'Ya está en la cesta':'Añadir a la cesta'}">${inC?'✓':'🛒'}</button><button class="ck-ib" data-act="panRemove" data-id="${x.id}" aria-label="Eliminar ${esc(x.name)} de la despensa" title="Eliminar de la despensa">🗑️</button></div>`;
 }
 
 const CK_SRC={instagram:['📸','Instagram'],tiktok:['🎵','TikTok'],youtube:['▶️','YouTube'],web:['🌐','Web'],propia:['🏠','Propia']};
@@ -682,6 +682,15 @@ function productPicker(q,onPick,key){
     ov.remove();onPick(p)});
 }
 
+function removePantryItem(id){
+  if(!(S.pantry||[]).some(x=>x.id===id))return;
+  S.pantry=S.pantry.filter(x=>x.id!==id);save();toastUndo('Quitado de la despensa');
+}
+function confirmRemovePantry(id){
+  const x=find(S.pantry||[],id);if(!x)return;
+  sheet('Eliminar de la despensa',`<p>¿Quieres quitar <b>${esc(x.name)}</b> de lo que tienes en casa?</p><p class="hint">La lista de la compra y el historial de gastos se conservan.</p>`,{saveLabel:'Eliminar artículo',onSave:()=>removePantryItem(id)});
+}
+
 function panSheet(x){
   const n=!x;x=x||{name:'',n:0,u:'g',min:0,loc:'Despensa',auto:true};
   const ov=sheet(n?'Añadir a la despensa':x.name,`
@@ -702,7 +711,7 @@ function panSheet(x){
     if(n){if(pantryFind(name)&&norm(pantryFind(name).name)===norm(name)){toast('Ya está en la despensa');return false}S.pantry=[...(S.pantry||[]),Object.assign({id:uid()},o)]}
     else Object.assign(find(S.pantry,x.id),o);
     save();
-  },onDelete:n?null:()=>{S.pantry=S.pantry.filter(p=>p.id!==x.id);save();toastUndo('Quitado de la despensa')}});
+  },onDelete:n?null:()=>removePantryItem(x.id)});
   ov.addEventListener('click',ev=>{if(!ev.target.closest('[data-k="mc"]'))return;
     productPicker(val(ov,'f_t'),p=>{ov.dataset.mid=p.id;const t=ov.querySelector('#f_t');if(!t.value)t.value=p.name.replace(/ Hacendado.*$/,'');
       ov.querySelector('#f_mc').textContent=p.name+' · '+prodSize(p)+' · '+eur(p.price);
@@ -1164,6 +1173,7 @@ function seedPantry(){
 
 /* ---------- acciones ---------- */
 const CK_ACT={
+  panRemove:d=>confirmRemovePantry(d.id),
   ckTab:d=>{ui.ckTab=d.v;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},
   prodMore:()=>{ui.prodN=(ui.prodN||40)+40;render()},
