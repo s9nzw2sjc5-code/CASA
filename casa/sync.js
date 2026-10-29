@@ -58,7 +58,13 @@
       const s=await session;
       if(name==='db')return{
         doc:p=>wrapDoc(s.fs.doc(p)),
-        collection:p=>wrapCol(s.fs.collection(p))
+        collection:p=>wrapCol(s.fs.collection(p)),
+        // Leer, fusionar y guardar de una vez: si la otra persona guarda justo a la vez,
+        // Firestore lo repite con sus datos y no se pierde lo de ninguna de las dos
+        transact:(p,fn)=>s.fs.runTransaction(async t=>{
+          const ref=s.fs.doc(p),snap=await t.get(ref),out=fn(snap.exists?snap.data():null);
+          t.set(ref,out);return out;
+        }).catch(e=>{throw mapErr(e)})
       };
       if(name==='user')return{
         id:async()=>s.u.uid,
