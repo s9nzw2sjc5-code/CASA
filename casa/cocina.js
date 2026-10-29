@@ -397,18 +397,12 @@ function productSearchHTML(){
   if(a.length>n)h+=`<button class="btn sec" style="width:100%;margin-top:12px" data-act="prodMore">Ver más (${a.length-n})</button>`;
   return h;
 }
-// Cambiar el código postal: lo hace la descarga diaria (GitHub), no el móvil
-function cpNotice(){
-  const want=ck().cp;if(!MC||!want||want===MC.cp)return'';
-  return`<div class="ck-warn">⚠️ Has puesto el código postal <b>${esc(want)}</b>, pero los precios siguen siendo del <b>${esc(MC.cp)}</b>. Mercadona no deja leer sus precios desde el móvil, así que se descargan cada mañana en GitHub. Para cambiarlo ya:<ol style="margin:8px 0 0;padding-left:18px"><li>Abre <a href="https://github.com/s9nzw2sjc5-code/CASA/actions/workflows/mercadona.yml" target="_blank" rel="noopener">Precios de Mercadona en GitHub</a>.</li><li>Pulsa <b>Run workflow</b>, escribe ${esc(want)} y vuelve a pulsar <b>Run workflow</b>.</li><li>En unos 5 minutos la app tendrá los precios y bajadas de ese código postal (y los mantendrá cada día).</li></ol></div>`;
-}
 // Fecha y vigencia de los precios
 const mcAgeH=()=>MC&&MC.at?(Date.now()-Date.parse(MC.at.length>10?MC.at+'Z':MC.at+'T05:00Z'))/36e5:999;
 const mcFresh=()=>mcAgeH()<36;
 const mcDate=()=>MC&&MC.at?new Date(Date.parse(MC.at.length>10?MC.at+'Z':MC.at+'T05:00Z')).toLocaleDateString('es-ES',{day:'numeric',month:'long'}):'';
 function mcNotice(){
-  if(!MC)return'';const want=ck().cp;
-  if(want&&MC.cp&&want!==MC.cp)return`<div class="ck-warn">⚠️ Los precios son del código postal <b>${esc(MC.cp)}</b>, no del ${esc(want)}. <button class="link" data-act="ckTab" data-v="ajustes">Cómo cambiarlo</button></div>`;
+  if(!MC)return'';
   if(!mcFresh())return`<div class="ck-warn">⚠️ Precios del ${mcDate()}: pueden haber cambiado. Se actualizan solos cada mañana.</div>`;
   return'';
 }
@@ -482,13 +476,13 @@ function vCkAjustes(){
   let h=`<h2>Cocina y presupuesto</h2><div class="list ck-set"><div class="row"><div class="row-main">Personas</div><button class="ck-ib" data-act="ckPeople" data-v="-1">−</button><b class="ck-num">${c.people}</b><button class="ck-ib" data-act="ckPeople" data-v="1">+</button></div>
   <div class="row"><div class="row-main">Presupuesto semanal de compra<br><small class="hint">Opcional. De lunes a domingo.</small></div><input class="field" id="ckBudgetW" type="number" inputmode="decimal" min="0" step="5" value="${budgetW()||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
   <div class="row"><div class="row-main">Presupuesto mensual de compra<br><small class="hint">Opcional. Déjalo vacío para ver solo lo gastado.</small></div><input class="field" id="ckBudgetM" type="number" inputmode="decimal" min="0" step="10" value="${c.budgetM||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
-  <div class="row"><div class="row-main">Código postal (precios de Mercadona)</div><input class="field" id="ckCP" inputmode="numeric" maxlength="5" value="${esc(c.cp||(MC&&MC.cp)||'')}" style="width:96px;text-align:right"></div>
+  <div class="row"><div class="row-main">Código postal de los precios de Mercadona</div><b>${esc((MC&&MC.cp)||'18210')}</b></div>
 </div>
   <h2>Mis electrodomésticos</h2><p class="hint" style="margin-top:-4px">Cada receta te dice cómo adaptarla a lo que tienes.</p><div class="ck-wrap">${[...CK_APPL,...(c.applX||[]).map(x=>[x,x])].map(([k,l])=>`<button class="chip ${c.appl.includes(k)?'on':''}" data-act="ckAppl" data-v="${esc(k)}">${esc(l)}</button>`).join('')}<button class="chip add" data-act="ckApplNew">+ Otro</button></div>
   <h2>Ingredientes vetados</h2><p class="hint" style="margin-top:-4px">Las recetas que los llevan se marcan en rojo.</p><div class="ck-wrap">${c.vetoes.map((v,i)=>`<button class="chip on" data-act="ckVetoDel" data-v="${i}">${esc(v)} ✕</button>`).join('')||'<span class="hint">Ninguno</span>'}</div>
   <div class="quick"><input class="field" id="qVeto" placeholder="Ej.: cilantro, setas, marisco" enterkeyhint="done"><button class="btn" data-act="ckVetoAdd">Vetar</button></div>
   <h2>Inteligencia artificial</h2><div class="list ck-set"><div class="row"><div class="row-main">${aiKey()?'✅ Activada en este móvil':'Fotos de la nevera y recetas con lo que tienes'}</div><button class="btn sec" data-act="aiKey">${aiKey()?'Cambiar clave':'Activar'}</button></div></div>
-  <h2>Precios de Mercadona</h2>${cpNotice()}<div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}<br><br>Para afinar una receta, abre un ingrediente y elige el producto exacto que compras: la app lo recordará siempre.</div>
+  <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}<br><br>Para afinar una receta, abre un ingrediente y elige el producto exacto que compras: la app lo recordará siempre.</div>
   <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: ese precio se usará en tus recetas.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${x==='Mercadona'?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${x==='Mercadona'?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
   ${Object.values(S.prices||{}).filter(e=>e.use!==false).length?`<h2>Precios de otros súper</h2>`+ul(Object.values(S.prices).filter(e=>e.use!==false).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(e=>`<li class="row"><div class="row-main" data-act="ckPrice" data-v="${esc(e.name)}"><div class="row-title">${esc(e.name)}</div><div class="row-meta"><span>🏪 ${esc(e.store)}</span><span>${parse(e.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</span></div></div><span class="row-side">${eur(e.price)}${e.qtxt?' / '+esc(e.qtxt):e.n?' / '+(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):''}</span></li>`)):''}
@@ -1304,7 +1298,6 @@ document.addEventListener('input',e=>{if(e.target.id==='qItem'){clearTimeout(ui.
 document.addEventListener('change',e=>{
   if(e.target.id==='ckBudgetW'){const v=parseFloat(e.target.value);ckSet('budgetW',v>0?Math.round(v*100)/100:0)}
   if(e.target.id==='ckBudgetM'){const v=parseFloat(e.target.value);ckSet('budgetM',v>0?Math.round(v*100)/100:0)}
-  if(e.target.id==='ckCP'){const v=e.target.value.trim();if(v&&!/^\d{5}$/.test(v)){toast('El código postal tiene 5 cifras');return}ckSet('cp',v)}
   if(e.target.classList.contains('ck-range')){const x=find(S.pantry||[],e.target.dataset.pid);if(!x)return;x.full=pantryFull(x);x.n=+e.target.value;x.at=today();save();if(pantryLow(x))toast(x.name+': se está acabando. Pulsa 🛒 para añadirlo a la cesta')}
   if(e.target.id==='ckSort'){ui.recSort=e.target.value;render()}
 });
