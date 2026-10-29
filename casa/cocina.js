@@ -313,15 +313,15 @@ function vCocina(){
   let tab=ui.ckTab||'productos';if(tab==='menu'||tab==='lista')tab='productos';
   const low=(S.pantry||[]).filter(pantryLow).length,ci=cartItems();
   const sub={productos:'Elige qué va a la cesta y qué tienes en casa',recetas:S.recipes.length+' receta'+(S.recipes.length===1?'':'s')+' guardada'+(S.recipes.length===1?'':'s'),despensa:'Lo que tienes en casa y cuánto queda',ajustes:'Presupuesto, supermercados y electrodomésticos'}[tab];
-  let h=`<h1>Compras</h1><p class="sub">${sub}</p>${heroStats([[ci.length,'en la cesta'],[eur0(cartTotal()),'cesta'],[(S.pantry||[]).length,'en casa'],[low,'se acaban']])}`;
+  let h=`<h1>Compras</h1><p class="sub">${sub}</p>${heroStats([[ci.length,'en la cesta'],[eur0(cartTotal()),'cesta'],[(S.pantry||[]).filter(x=>x.n>0).length,'en casa'],[low,'se acaban']])}`;
   h+=ckSubTabs();
   h+=({productos:vCkProductos,recetas:vCkRecetas,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
   return h+cartBar();
 }
 // Pestañas dentro de Compras
 function ckSubTabs(){
-  const tab=ui.ckTab||'lista',low=(S.pantry||[]).filter(pantryLow).length;
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${k==='despensa'&&low?` <span class="ck-n">${low}</span>`:''}</button>`).join('')}</div>`;
+  const tab=ui.ckTab||'lista',inStock=(S.pantry||[]).filter(x=>x.n>0).length;
+  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${k==='despensa'?` <span class="ck-n" aria-label="${inStock} productos con existencias">${inStock}</span>`:''}</button>`).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
