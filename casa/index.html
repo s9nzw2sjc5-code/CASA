@@ -1509,6 +1509,7 @@ $('#fab').addEventListener('click',()=>{ui.view==='hoy'?addChooser(today()):ui.v
 
 /* ---------- arranque ---------- */
 if(ui.view==='pareja')ui.view='hoy';
+if(ui.ckTab==='recetas')ui.ckTab='lista';
 if(ui.view==='menu'){ui.view='compras';if(!ui.ckTab||ui.ckTab==='menu')ui.ckTab='productos'}
 if(S.coupleChecks||S.coupleIdea){stripOld(S);persistLocal()}
 ['coupleWho','coupleEdit','coupleDraft','ideaOff'].forEach(k=>delete ui[k]);

@@ -312,18 +312,18 @@ const pantryPct=x=>Math.round(x.n/pantryFull(x)*100);
 const CK_CATEMO={'Aceite, especias y salsas':'🫒','Agua y refrescos':'🥤','Aperitivos':'🥨','Arroz, legumbres y pasta':'🍝','Azúcar, caramelos y chocolate':'🍫','Bebé':'🍼','Bodega':'🍷','Cacao, café e infusiones':'☕','Carne':'🥩','Cereales y galletas':'🥣','Charcutería y quesos':'🧀','Congelados':'🧊','Conservas, caldos y cremas':'🥫','Cuidado del cabello':'💇','Cuidado facial y corporal':'🧴','Fitoterapia y parafarmacia':'🌿','Fruta y verdura':'🥦','Huevos, leche y mantequilla':'🥚','Limpieza y hogar':'🧽','Maquillaje':'💄','Marisco y pescado':'🐟','Mascotas':'🐾','Panadería y pastelería':'🥖','Pizzas y platos preparados':'🍕','Postres y yogures':'🍮','Zumos':'🧃'};
 function vCocina(){
   loadMC();
-  let tab=ui.ckTab||'productos';if(tab==='menu'||tab==='lista')tab='productos';
+  let tab=ui.ckTab||'productos';if(tab==='menu'||tab==='lista'||tab==='recetas')tab='productos';
   const low=(S.pantry||[]).filter(pantryLow).length,ci=cartItems();
-  const sub={novedades:'Lo nuevo de Mercadona en tu código postal',productos:'Elige qué va a la cesta y qué tienes en casa',recetas:S.recipes.length+' receta'+(S.recipes.length===1?'':'s')+' guardada'+(S.recipes.length===1?'':'s'),despensa:'Lo que tienes en casa y cuánto queda',ajustes:'Presupuesto, supermercados y electrodomésticos'}[tab];
+  const sub={novedades:'Lo nuevo de Mercadona en tu código postal',productos:'Elige qué va a la cesta y qué tienes en casa',despensa:'Lo que tienes en casa y cuánto queda',ajustes:'Presupuesto y supermercados'}[tab];
   let h=`<h1>Compras</h1><p class="sub">${sub}</p>${heroStats([[ci.length,'en la cesta'],[eur0(cartTotal()),'cesta'],[(S.pantry||[]).filter(x=>x.n>0).length,'en casa'],[low,'se acaban']])}`;
   h+=ckSubTabs();
-  h+=({novedades:vCkNovedades,productos:vCkProductos,recetas:vCkRecetas,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
+  h+=({novedades:vCkNovedades,productos:vCkProductos,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
   return h+cartBar();
 }
 // Pestañas dentro de Compras
 function ckSubTabs(){
   const tab=ui.ckTab||'lista';
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
+  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
@@ -490,20 +490,17 @@ function vCkRecetas(){
 
 function vCkAjustes(){
   const c=ck();
-  let h=`<h2>Cocina y presupuesto</h2><div class="list ck-set"><div class="row"><div class="row-main">Personas</div><button class="ck-ib" data-act="ckPeople" data-v="-1">−</button><b class="ck-num">${c.people}</b><button class="ck-ib" data-act="ckPeople" data-v="1">+</button></div>
+  let h=`<h2>Presupuesto de compra</h2><div class="list ck-set">
   <div class="row"><div class="row-main">Presupuesto semanal de compra<br><small class="hint">Opcional. De lunes a domingo.</small></div><input class="field" id="ckBudgetW" type="number" inputmode="decimal" min="0" step="5" value="${budgetW()||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
   <div class="row"><div class="row-main">Presupuesto mensual de compra<br><small class="hint">Opcional. Déjalo vacío para ver solo lo gastado.</small></div><input class="field" id="ckBudgetM" type="number" inputmode="decimal" min="0" step="10" value="${c.budgetM||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
   <div class="row"><div class="row-main">Código postal de los precios de Mercadona</div><b>${esc((MC&&MC.cp)||'18210')}</b></div>
 </div>
-  <h2>Mis electrodomésticos</h2><p class="hint" style="margin-top:-4px">Cada receta te dice cómo adaptarla a lo que tienes.</p><div class="ck-wrap">${[...CK_APPL,...(c.applX||[]).map(x=>[x,x])].map(([k,l])=>`<button class="chip ${c.appl.includes(k)?'on':''}" data-act="ckAppl" data-v="${esc(k)}">${esc(l)}</button>`).join('')}<button class="chip add" data-act="ckApplNew">+ Otro</button></div>
-  <h2>Ingredientes vetados</h2><p class="hint" style="margin-top:-4px">Las recetas que los llevan se marcan en rojo.</p><div class="ck-wrap">${c.vetoes.map((v,i)=>`<button class="chip on" data-act="ckVetoDel" data-v="${i}">${esc(v)} ✕</button>`).join('')||'<span class="hint">Ninguno</span>'}</div>
-  <div class="quick"><input class="field" id="qVeto" placeholder="Ej.: cilantro, setas, marisco" enterkeyhint="done"><button class="btn" data-act="ckVetoAdd">Vetar</button></div>
   <h2>Inteligencia artificial</h2><div class="list ck-set"><div class="row"><div class="row-main">${aiKey()?'✅ Activada en este móvil':'Reconocer alimentos en fotos de la nevera'}</div><button class="btn sec" data-act="aiKey">${aiKey()?'Cambiar clave':'Activar'}</button></div></div>
-  <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}<br><br>Para afinar una receta, abre un ingrediente y elige el producto exacto que compras: la app lo recordará siempre.</div>
-  <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: ese precio se usará en tus recetas.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${/^(Mercadona|Mercadillo)$/.test(x)?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${/^(Mercadona|Mercadillo)$/.test(x)?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
+  <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}</div>
+  <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: se guardará en el historial de compras.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${/^(Mercadona|Mercadillo)$/.test(x)?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${/^(Mercadona|Mercadillo)$/.test(x)?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
   ${Object.values(S.prices||{}).filter(e=>e.use!==false).length?`<h2>Precios de otros súper</h2>`+ul(Object.values(S.prices).filter(e=>e.use!==false).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(e=>`<li class="row"><div class="row-main" data-act="ckPrice" data-v="${esc(e.name)}"><div class="row-title">${esc(e.name)}</div><div class="row-meta"><span>🏪 ${esc(e.store)}</span><span>${parse(e.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</span></div></div><span class="row-side">${eur(e.price)}${e.qtxt?' / '+esc(e.qtxt):e.n?' / '+(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):''}</span></li>`)):''}
-  <h2>Recetario</h2><button class="btn sec" style="width:100%" data-act="ckSeed">Añadir recetas básicas que falten</button>`;
+`;
   return h;
 }
 
@@ -1208,7 +1205,7 @@ function seedPantry(){
 const CK_ACT={
   laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),
   panRemove:d=>confirmRemovePantry(d.id),
-  ckTab:d=>{ui.ckTab=d.v;render();$('#app').scrollTop=0},
+  ckTab:d=>{ui.ckTab=d.v==='recetas'?'lista':d.v;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},
   novCat:d=>{ui.novCat=d.v===''?null:+d.v;render()},
   prodMore:()=>{ui.prodN=(ui.prodN||40)+40;render()},
