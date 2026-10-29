@@ -5,6 +5,10 @@ on:
     branches: [main, claude/deploy-app-outside-claude-ccdb78]
     paths: ['casa/**', 'index.html', '.github/workflows/pages.yml']
   workflow_dispatch:
+  # Los precios que sube «Precios de Mercadona» no lanzan esta publicación por sí solos
+  workflow_run:
+    workflows: ['Precios de Mercadona']
+    types: [completed]
 
 permissions:
   contents: read
@@ -17,6 +21,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
