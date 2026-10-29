@@ -1367,13 +1367,27 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='qVeto')CK_ACT.ckVetoAdd()});
 
-// Recetas compartidas desde otra app (Android: Compartir → Casa)
+// Recetas compartidas desde Android o desde el atajo de iPhone.
+// El fragmento #receta no se envía al servidor al abrir la página.
 function ckShared(){
   try{
-    const q=new URLSearchParams(location.search);if(!q.has('url')&&!q.has('text'))return;
-    const text=q.get('text')||'',url=q.get('url')||(text.match(/https?:\/\/\S+/)||[''])[0],title=q.get('title')||'';
+    const q=new URLSearchParams(location.search),fragment=new URLSearchParams(location.hash.slice(1));
+    const shortcut=fragment.has('receta');
+    if(!shortcut&&!q.has('url')&&!q.has('text'))return;
+    const raw=shortcut?fragment.get('receta'):q.get('text')||'';
+    const source=raw.match(/^\s*(?:link|enlace|fuente)\s*:\s*(https?:\/\/\S+)\s*$/im);
+    const url=q.get('url')||(source?source[1]:(raw.match(/https?:\/\/\S+/)||[''])[0]);
+    const text=(source?raw.replace(source[0],''):raw.replace(url,'')).trim();
+    const title=q.get('title')||'';
     history.replaceState(null,'',location.pathname);
     ui.view='compras';ui.ckTab='recetas';render();
-    linkSheet({url,title,text:text.replace(url,'').trim()});
-  }catch(e){}
+    const parsed=parseCaption(text);
+    if(shortcut&&parsed.ingredients.length&&parsed.steps){
+      const old=url&&S.recipes.find(r=>r.url===url);
+      if(old){recipeView(old);toast('Esta receta ya estaba guardada');return}
+      recipeEdit(null,{url,name:parsed.title||title,ingredients:parsed.ingredients,steps:parsed.steps,servings:parsed.servings||ck().people,time:parsed.time,appl:parsed.appl});
+      toast('Receta recibida del atajo: revísala antes de guardar');
+    }else linkSheet({url,title,text});
+  }catch(e){toast('No se pudo abrir la receta compartida. Puedes pegar su texto en Importar receta.')}
 }
+window.addEventListener('hashchange',ckShared);
