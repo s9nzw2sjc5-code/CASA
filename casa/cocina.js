@@ -12,8 +12,10 @@ const CK_APPL=[['horno','Horno'],['airfryer','Freidora de aire'],['robot','Robot
 // Si no tienes el electrodoméstico de la receta, con cuál se puede hacer igual
 const CK_ALT={horno:['airfryer'],airfryer:['horno'],olla:['fuego','lenta','robot'],robot:['fuego','batidora'],lenta:['olla','fuego'],vapor:['micro','olla','robot','fuego'],plancha:['fuego','airfryer'],micro:['fuego'],batidora:['robot'],fuego:['robot','olla']};
 const CK_LOCS=['Despensa','Nevera','Congelador'];
-const CK_STORES=['Mercadona','Lidl','Carrefour','Dia','Aldi','Mercado / frutería'];
-const ck=()=>Object.assign({people:2,budget:50,vetoes:[],appl:['horno','fuego','micro'],meals:['comida','cena'],rej:{},stores:CK_STORES},S.cook||{});
+const CK_STORES=['Mercadona','Mercadillo','Lidl','Carrefour','Dia','Aldi','Mercado / frutería'];
+const ck=()=>{const c=Object.assign({people:2,budget:50,vetoes:[],appl:['horno','fuego','micro'],meals:['comida','cena'],rej:{},stores:CK_STORES},S.cook||{});
+  // El mercadillo siempre está entre los sitios de compra
+  if(!c.stores.includes('Mercadillo'))c.stores=[c.stores[0],'Mercadillo',...c.stores.slice(1)];return c};
 function ckSet(k,v){S.cook=Object.assign({},S.cook||{});S.cook[k]=v;save()}
 const applName=k=>(CK_APPL.find(a=>a[0]===k)||[k,k])[1];
 const eur=n=>(Math.round(n*100)/100).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
@@ -483,7 +485,7 @@ function vCkAjustes(){
   <div class="quick"><input class="field" id="qVeto" placeholder="Ej.: cilantro, setas, marisco" enterkeyhint="done"><button class="btn" data-act="ckVetoAdd">Vetar</button></div>
   <h2>Inteligencia artificial</h2><div class="list ck-set"><div class="row"><div class="row-main">${aiKey()?'✅ Activada en este móvil':'Fotos de la nevera y recetas con lo que tienes'}</div><button class="btn sec" data-act="aiKey">${aiKey()?'Cambiar clave':'Activar'}</button></div></div>
   <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}<br><br>Para afinar una receta, abre un ingrediente y elige el producto exacto que compras: la app lo recordará siempre.</div>
-  <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: ese precio se usará en tus recetas.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${x==='Mercadona'?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${x==='Mercadona'?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
+  <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: ese precio se usará en tus recetas.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${/^(Mercadona|Mercadillo)$/.test(x)?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${/^(Mercadona|Mercadillo)$/.test(x)?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
   ${Object.values(S.prices||{}).filter(e=>e.use!==false).length?`<h2>Precios de otros súper</h2>`+ul(Object.values(S.prices).filter(e=>e.use!==false).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(e=>`<li class="row"><div class="row-main" data-act="ckPrice" data-v="${esc(e.name)}"><div class="row-title">${esc(e.name)}</div><div class="row-meta"><span>🏪 ${esc(e.store)}</span><span>${parse(e.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</span></div></div><span class="row-side">${eur(e.price)}${e.qtxt?' / '+esc(e.qtxt):e.n?' / '+(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):''}</span></li>`)):''}
   <h2>Recetario</h2><button class="btn sec" style="width:100%" data-act="ckSeed">Añadir recetas básicas que falten</button>`;
@@ -773,7 +775,7 @@ function moneyCard(pend){
     <button class="ck-mc ${st}" data-act="ckBuys"><small>💶 Gastado este mes</small><b>${eur(spent)}</b><span>${b?(spent<=b?'Quedan '+eur(b-spent)+' de '+eur0(b):'Te has pasado '+eur(spent-b)):monthName(m)}</span></button>
     ${b?`<div class="ck-mbar ${st}"><i style="width:${Math.min(100,pct)}%"></i></div>${st==='near'?'<small class="ck-mwarn">⚠️ Os acercáis al presupuesto del mes</small>':st==='over'?'<small class="ck-mwarn">⛔ Presupuesto del mes superado</small>':''}`:''}
     ${weekRow()}
-    <div class="ck-mbtns"><button class="btn sec" data-act="ckSpend">+ Añadir gasto de compra</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
+    <div class="ck-mbtns"><button class="btn sec" data-act="ckMarket">🧺 Mercadillo</button><button class="btn sec" data-act="ckSpend">+ Gasto de compra</button><button class="btn sec" data-act="ckTicket">🧾 Tique</button></div>
   </div>`;
 }
 function itemRow(i){
@@ -858,6 +860,25 @@ function drawQSug(){
 }
 
 /* ---------- gasto: compras registradas, gastos a mano e historial ---------- */
+// Compra en el mercadillo: importe y, si queréis, qué habéis comprado (cuenta en el gasto de la semana y del mes)
+const CK_MARKET=['Tomates','Pimientos','Calabacín','Berenjena','Cebollas','Patatas','Lechuga','Pepino','Zanahorias','Judías verdes','Ajos','Fruta'];
+function marketSheet(){
+  const recent=[...new Set((S.buys||[]).filter(b=>b.store==='Mercadillo').flatMap(b=>buyItems(b).map(x=>x.name)))].filter(x=>!CK_MARKET.includes(x)).slice(0,8);
+  const ov=sheet('🧺 Compra en el mercadillo',`<label for="f_a">Importe total (€)</label><input class="field" id="f_a" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off">
+    <label for="f_d">Fecha</label><input class="field" id="f_d" type="date" value="${today()}" max="${today()}">
+    <label>¿Qué habéis comprado? (opcional)</label><div class="ck-wrap" id="f_v">${[...CK_MARKET,...recent].map(v=>`<button type="button" class="chip" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>
+    <input class="field" id="f_o" style="margin-top:8px" placeholder="Otras cosas, separadas por comas">
+    <label class="ing-row" style="display:flex;margin-top:12px;color:var(--ink);font-weight:500;font-size:.95rem"><input type="checkbox" id="f_h"><span>Apuntarlo también en 🏠 En casa (nevera)</span></label>
+    <p class="hint">Se resta del presupuesto de la semana y del mes. Lo podéis editar o borrar desde el historial.</p>`,
+  {saveLabel:'Guardar compra',onSave:ov=>{
+    const a=parseFloat(String(val(ov,'f_a')).replace(',','.'));if(!(a>0)){toast('Escribe el importe');return false}
+    const names=[...new Set([...[...ov.querySelectorAll('#f_v .chip.on')].map(b=>b.dataset.v),...val(ov,'f_o').split(',').map(x=>x.trim()).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1))])];
+    S.buys=[...(S.buys||[]),{id:uid(),at:Date.now(),manual:true,market:true,date:val(ov,'f_d')||today(),store:'Mercadillo',total:Math.round(a*100)/100,n:names.length,items:names.map(name=>({name,units:1})),note:'',by:meName()}];
+    let h=0;if(ov.querySelector('#f_h').checked)names.forEach(name=>{const x=pantryFind(name);if(x){if(!(x.n>0))x.n=x.u==='ud'?1:500;x.at=today();h++}else{S.pantry=[...(S.pantry||[]),{id:uid(),name,n:1,u:'ud',min:0,loc:'Nevera',mid:'',auto:false,at:today()}];h++}});
+    save();toast('🧺 Mercadillo: '+eur(a)+(h?' · '+h+' en casa':''));
+  }});
+  ov.querySelector('#f_v').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b)b.classList.toggle('on')});
+}
 function spendSheet(b){
   const n=!b,c=ck();b=b||{date:today(),store:ui.store||'Mercadona',total:'',note:''};
   sheet(n?'Añadir gasto de compra':'Editar gasto',`<p class="hint" style="margin-top:0">Para cuando habéis comprado sin apuntar los productos. No cambia la lista ni lo que hay en casa.</p>
@@ -878,7 +899,7 @@ function buysSheet(){
   const all=(S.buys||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||0)-(a.at||0));
   const months=[...new Set(all.map(b=>monthKey(b.date)))];
   const ov=sheet('Historial de compras',`<button type="button" class="btn sec" data-k="add" style="width:100%">+ Añadir gasto de compra</button>
-    ${months.map(m=>{const bs=all.filter(b=>monthKey(b.date)===m);return`<h4>${esc(monthName(m))} · ${eur(spentIn(m))}</h4><div class="ck-box">${bs.map(b=>`<button type="button" class="ck-buy ck-bh" data-b="${b.id}"><span><b>${esc(b.store||'—')}</b> · ${relDate(b.date)}${b.manual?' · <small>a mano</small>':b.ticket?' · <small>🧾 tique</small>':''}<br><small>${b.note?esc(b.note)+' · ':''}${buyItems(b).length?buyItems(b).length+' producto'+(buyItems(b).length>1?'s':''):'sin productos'}</small></span><b>${b.total?eur(b.total):'<small>sin importe</small>'}</b></button>`).join('')}</div>`}).join('')||'<p class="hint">Aún no hay compras registradas.</p>'}`,{});
+    ${months.map(m=>{const bs=all.filter(b=>monthKey(b.date)===m);return`<h4>${esc(monthName(m))} · ${eur(spentIn(m))}</h4><div class="ck-box">${bs.map(b=>`<button type="button" class="ck-buy ck-bh" data-b="${b.id}"><span><b>${b.store==='Mercadillo'?'🧺 ':''}${esc(b.store||'—')}</b> · ${relDate(b.date)}${b.market?'':b.manual?' · <small>a mano</small>':b.ticket?' · <small>🧾 tique</small>':''}<br><small>${b.note?esc(b.note)+' · ':''}${buyItems(b).length?buyItems(b).length+' producto'+(buyItems(b).length>1?'s':''):'sin productos'}</small></span><b>${b.total?eur(b.total):'<small>sin importe</small>'}</b></button>`).join('')}</div>`}).join('')||'<p class="hint">Aún no hay compras registradas.</p>'}`,{});
   ov.addEventListener('click',e=>{if(e.target.closest('[data-k="add"]')){ov.remove();spendSheet();return}
     const b=e.target.closest('[data-b]');if(b){ov.remove();buyDetail(find(S.buys,b.dataset.b))}});
 }
@@ -929,13 +950,6 @@ function buySheet(items,done){
   const skip=document.createElement('button');skip.type='button';
   skip.className='link';skip.textContent='Terminar sin apuntar lo pagado';skip.style.cssText='display:block;margin:14px auto 0';
   skip.onclick=()=>{ov.remove();done('')};ov.querySelector('.actions').after(skip);
-}
-function buysSheet(){
-  const b=(S.buys||[]).slice().reverse(),m=today().slice(0,7);
-  const per={};(S.buys||[]).filter(x=>x.date.startsWith(m)).forEach(x=>{per[x.store]=(per[x.store]||0)+x.total});
-  const ov=sheet('Historial de compras',`${Object.keys(per).length?`<div class="ck-box">${Object.entries(per).map(([k,v])=>`<div class="ck-buy"><span>${esc(k)}</span><b>${eur(v)}</b></div>`).join('')}<div class="ck-buy"><span><b>Este mes</b></span><b>${eur(Object.values(per).reduce((a,v)=>a+v,0))}</b></div></div>`:''}
-    <div class="ck-box">${b.slice(0,40).map(x=>`<div class="ck-buy"><span><b>${esc(x.store)}</b> · ${relDate(x.date)}<br><small>${x.n} producto${x.n>1?'s':''}: ${esc((x.items||[]).slice(0,6).join(', '))}${(x.items||[]).length>6?'…':''}</small></span><b>${x.total?eur(x.total):'—'}</b><button type="button" class="ck-ib" data-del="${x.id}" aria-label="Borrar">✕</button></div>`).join('')||'<p class="hint">Aún no hay compras.</p>'}</div>`,{});
-  ov.addEventListener('click',ev=>{const d=ev.target.closest('[data-del]');if(!d)return;S.buys=S.buys.filter(x=>x.id!==d.dataset.del);save();ov.remove();buysSheet()});
 }
 
 /* ---------- IA (Claude): fotos de la nevera y recetas con lo que hay ---------- */
@@ -1261,6 +1275,7 @@ const CK_ACT={
   ckVetoAdd:()=>{const el=$('#qVeto');const vs=el.value.split(',').map(s=>s.trim()).filter(Boolean);if(!vs.length)return;const c=ck();ckSet('vetoes',[...new Set([...c.vetoes,...vs])]);toast('Vetado: '+vs.join(', '))},
   ckBuys:()=>buysSheet(),
   ckSpend:()=>spendSheet(),
+  ckMarket:()=>marketSheet(),
   toggleItem:d=>{const i=find(S.items,d.id);if(!i)return;
     if(!i.done&&!ui.me){whoAmI(()=>CK_ACT.toggleItem(d));return}
     i.done=!i.done;
@@ -1279,7 +1294,7 @@ const CK_ACT={
   aiKey:()=>aiKeySheet(),
   ckTicket:()=>ticketFlow(),
   ckStoreNew:()=>{sheet('Otro supermercado',`<input class="field" id="f_t" placeholder="Ej.: Covirán">`,{onSave:ov=>{const v=val(ov,'f_t');if(!v)return false;ckSet('stores',[...new Set([...ck().stores,v])])}})},
-  ckStoreDel:d=>{const a=ck().stores.slice();if(a[+d.v]==='Mercadona')return;const x=a.splice(+d.v,1)[0];ckSet('stores',a);toastUndo(x+' quitado')},
+  ckStoreDel:d=>{const a=ck().stores.slice();if(/^(Mercadona|Mercadillo)$/.test(a[+d.v]))return;const x=a.splice(+d.v,1)[0];ckSet('stores',a);toastUndo(x+' quitado')},
   ckPrice:d=>productPicker(d.v,()=>{save()},d.v),
   ckVetoDel:d=>{const v=ck().vetoes.slice();v.splice(+d.v,1);ckSet('vetoes',v)}
 };
