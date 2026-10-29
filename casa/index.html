@@ -1313,8 +1313,7 @@ function itemSheet(i){
   const info=i.done&&i.doneAt?`<p class="hint" style="margin-top:0">✓ Tachado${i.doneBy?' por <b>'+esc(i.doneBy)+'</b>':''} el ${new Date(i.doneAt).toLocaleString('es-ES',{weekday:'long',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>`:'';
   const ov=sheet('Producto de la compra',`${productSheetPhoto(itemImg(i),i.name)}<p class="hint">${esc(i.qty||'')}${i.price?' · ≈ '+eur(i.price):''}</p>${info}
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(i.name)}">
-    <div class="grid2"><div><label for="f_u">Unidades</label><div class="product-units"><button type="button" class="btn sec" data-units="-1" aria-label="Una unidad menos">−</button><input class="field" id="f_u" type="number" min="1" inputmode="numeric" value="${u}"><button type="button" class="btn sec" data-units="1" aria-label="Una unidad más">+</button></div></div>
-    <div><label for="f_q">Cantidad o detalle</label><input class="field" id="f_q" value="${esc(i.mid?'':i.qty||'')}" placeholder="${i.mid?'':'Ej.: 1 kg, maduros'}" ${i.mid?'disabled':''}></div></div>
+    <div><label for="f_u">Unidades</label><div class="product-units"><button type="button" class="btn sec" data-units="-1" aria-label="Una unidad menos">−</button><input class="field" id="f_u" type="number" min="1" inputmode="numeric" value="${u}"><button type="button" class="btn sec" data-units="1" aria-label="Una unidad más">+</button></div></div>
     <label class="toggle-line"><input type="checkbox" id="f_done" ${i.done?'checked':''}> Ya está en el carro</label>
     <button type="button" class="btn sec" data-fav style="width:100%;margin-top:14px">${fv?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual'}</button><details class="product-more"><summary>Más detalles</summary>
     <div class="grid2"><div><label for="f_pr">Precio estimado (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${i.price?Math.round(i.price*100)/100:''}" ${i.mid?'disabled':''}></div>
@@ -1329,7 +1328,7 @@ function itemSheet(i){
     Object.assign(x,{name,by:val(ov,'f_b'),section:val(ov,'f_s'),listId:val(ov,'f_l'),store:val(ov,'f_st')});
     const nu=Math.max(1,parseInt(val(ov,'f_u'),10)||1);
     if(x.mid&&MC&&MC.byId.get(x.mid))setUnits(x,nu);
-    else{const pr=parseFloat(val(ov,'f_pr'))||0;x.qty=val(ov,'f_q');x.uprice=pr/(nu||1);x.price=pr;x.units=nu}
+    else{const pr=parseFloat(val(ov,'f_pr'))||0;x.uprice=pr/(nu||1);x.price=pr;x.units=nu}
     const checked=ov.querySelector('#f_done').checked;if(x.done!==checked){x.done=checked;x.doneAt=checked?Date.now():null;x.doneBy=checked?(S.people.find(p=>p.id===ui.me)?.name||''):''}
     S.secMem[norm(name)]=val(ov,'f_s');save();
   },onDelete:()=>{
