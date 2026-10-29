@@ -409,6 +409,7 @@ body.nav-top .toast{bottom:90px}
 .ck-pre{white-space:pre-wrap;font-size:.75rem;background:var(--surface);padding:10px;border-radius:12px;max-height:30vh;overflow:auto}
 .ck-search{position:relative;margin-top:12px}
 .ck-search input{padding-right:46px;font-size:1rem}
+.ck-search .ck-ib[hidden]{display:none}
 .ck-search .ck-ib{position:absolute;right:4px;top:50%;transform:translateY(-50%)}
 .ck-cats{margin-top:10px}
 .ck-help{margin:8px 0 0}
@@ -1136,6 +1137,8 @@ function replaceAppContent(html){
   app.replaceChildren(next.content);
 }
 function render(){
+  // No interrumpir el teclado con actualizaciones de fondo mientras se busca.
+  if(document.activeElement?.id==='qProd'&&ui.view==='compras'&&ui.ckTab==='productos')return;
   const v={hoy:vHoy,tareas:vTareas,compras:()=>ui.ckTab&&ui.ckTab!=='lista'?vCocina():vCompras(),semana:vSemana,recordar:vRecordar,ringo:vRingo}[ui.view]||vHoy;
   const keepFocus=document.activeElement&&document.activeElement.id;
   const keepScroll=$('#app').scrollTop;

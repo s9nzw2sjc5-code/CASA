@@ -340,10 +340,26 @@ function prodCard(p){
 }
 const CK_HIDECAT=/Mascotas|Maquillaje|Bebé/;
 function vCkProductos(){
+  const html=productSearchHTML(),end=html.indexOf('</div>');
+  return html.includes('id="qProd"')?html.slice(0,end+6)+'<div id="ckProductResults">'+html.slice(end+6)+'</div>':html;
+}
+function updateProductSearch(){
+  const field=$('#qProd'),results=$('#ckProductResults');if(!field||!results)return;
+  const next=document.createElement('template');next.innerHTML=vCkProductos();
+  const content=next.content.querySelector('#ckProductResults');if(!content)return;
+  results.replaceChildren(...content.childNodes);
+  const clear=document.querySelector('[data-act="prodClear"]');if(clear)clear.hidden=!field.value;
+}
+function scheduleProductSearch(e){
+  ui.prodQ=e.target.value;ui.prodN=40;clearTimeout(ui._pt);
+  if(e.isComposing)return;
+  ui._pt=setTimeout(updateProductSearch,300);
+}
+function productSearchHTML(){
   if(!MC)return`<p class="hint" style="margin-top:14px">Cargando productos de Mercadona…</p>`;
   const q=ui.prodQ||'',cat=ui.prodCat||'hab',sub=ui.prodSub;
   let a,title='',h='';
-  h+=`<div class="ck-search"><input class="field" id="qProd" type="search" placeholder="🔍 Buscar en Mercadona (leche, pollo, tomate…)" value="${esc(q)}" autocomplete="off" enterkeyhint="search">${q?`<button class="ck-ib" data-act="prodClear" aria-label="Borrar búsqueda">✕</button>`:''}</div>`;
+  h+=`<div class="ck-search"><input class="field" id="qProd" type="search" placeholder="🔍 Buscar en Mercadona (leche, pollo, tomate…)" value="${esc(q)}" autocomplete="off" enterkeyhint="search"><button class="ck-ib" data-act="prodClear" aria-label="Borrar búsqueda" ${q?'':'hidden'}>✕</button></div>`;
   h+=mcNotice();
   if(q.trim()){
     const sug=suggestTerms(q);
@@ -1188,7 +1204,7 @@ const CK_ACT={
   ckTab:d=>{ui.ckTab=d.v;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},
   prodMore:()=>{ui.prodN=(ui.prodN||40)+40;render()},
-  prodClear:()=>{ui.prodQ='';render()},
+  prodClear:()=>{const f=$('#qProd');ui.prodQ='';ui.prodN=40;clearTimeout(ui._pt);if(f){f.value='';updateProductSearch();f.focus()}else render()},
   prodQ:d=>{ui.prodQ=d.v;ui.prodN=40;render();const f=$('#qProd');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},
   prodSub:d=>{ui.prodSub=d.v===''?null:+d.v;ui.prodN=40;render()},
   favToggle:d=>{const was=isFav(d.id);toggleFav(d.id);toast(was?'Quitado de habituales':'⭐ Añadido a habituales')},
@@ -1241,8 +1257,10 @@ const CK_ACT={
 document.addEventListener('input',e=>{
   if(e.target.id==='qRec'){ui.recQ=e.target.value;clearTimeout(ui._rt);ui._rt=setTimeout(()=>{render();const f=$('#qRec');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},250)}
 });
+document.addEventListener('compositionstart',e=>{if(e.target.id==='qProd')clearTimeout(ui._pt)});
+document.addEventListener('compositionend',e=>{if(e.target.id==='qProd')scheduleProductSearch(e)});
 document.addEventListener('input',e=>{
-  if(e.target.id==='qProd'){ui.prodQ=e.target.value;ui.prodN=40;clearTimeout(ui._pt);ui._pt=setTimeout(()=>{render();const f=$('#qProd');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},300)}
+  if(e.target.id==='qProd')scheduleProductSearch(e);
   if(e.target.classList.contains('ck-range')){const x=find(S.pantry||[],e.target.dataset.pid);if(!x)return;const v=+e.target.value,full=pantryFull(x),pct=Math.round(v/full*100);
     e.target.style.setProperty('--p',pct+'%');const l=document.querySelector(`[data-pl="${x.id}"]`);if(l)l.textContent=v>0?'Queda '+fmtAmt(v,x.u)+' · '+pct+' %':'Agotado'}
 });
