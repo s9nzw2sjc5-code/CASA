@@ -777,6 +777,8 @@ function eventRow(e,occ,label){
     <div class="row-main" data-act="editEvent" data-id="${e.id}"><div class="row-title">${esc(e.title)}</div><div class="row-meta">${meta}</div></div></li>`;
 }
 function remRow(r,occ){
+  if(r.kind==='maintenance')return maintenanceRow(r,occ);
+
   const preview=typeof occ==='string'&&occ!==r.date;
   const late=!r.done&&!!r.date&&(r.date<today()||(r.date===today()&&r.time&&r.time<new Date().toTimeString().slice(0,5)));
   return`<li class="row ${r.done?'is-done':''} ${preview?'ghost':''}">
@@ -866,10 +868,39 @@ function stapleCard(s){
 }
 const isRep=o=>o.repeat&&o.repeat!=='none';
 // imp=true: solo lo puntual (sin repeticiones), para la vista mensual
+/* Mantenimientos: se guardan como recordatorios para compartir calendario y sincronización. */
+function maintenanceRow(r,occ){
+  const historical=!!r.historyDate,preview=occ&&occ!==r.date;
+  return `<li class="row"><span aria-hidden="true">🔧</span><button class="row-main" data-act="editMaintenance" data-id="${r.id}"><span class="row-title">${esc(r.title)}${historical?' · realizado':''}</span><span class="row-meta">${historical?relDate(r.historyDate):r.done?'Completado':(occ||r.date)?'Próximo: '+relDate(occ||r.date):'Sin fecha'}${!historical&&r.last?' · Última vez: '+relDate(r.last):''}</span></button>${!historical&&!preview&&!r.done?`<button class="btn sec" data-act="maintenanceDone" data-id="${r.id}">Hecho</button>`:''}</li>`;
+}
+function maintenanceSection(){
+  const all=S.reminders.filter(r=>r.kind==='maintenance').sort((a,b)=>Number(a.done)-Number(b.done)||(a.date||'').localeCompare(b.date||''));
+  return `<section style="margin-top:20px"><div class="head-row"><h2>🔧 Mantenimiento de casa</h2><button class="link" data-act="newMaintenance">+ Añadir</button></div><p class="hint">Guarda cuándo lo hiciste y cuándo toca de nuevo. Las fechas aparecen en este calendario.</p>${all.length?ul(all.map(r=>maintenanceRow(r))):'<div class="empty">Filtros, cafetera, aire acondicionado… Añade solo lo que necesitéis recordar.</div>'}</section>`;
+}
+function maintenanceSheet(r,date){
+  const n=!r;r=r||{title:'',date:date||today(),last:'',every:3,unit:'m',notes:'',repeat:'custom'};
+  const frequency=r.repeat==='none'?'0':String(r.unit==='m'?r.every||1:3);
+  sheet(n?'Nuevo mantenimiento':'Mantenimiento de casa',`<label for="mtTitle">Qué hay que hacer</label><input class="field" id="mtTitle" value="${esc(r.title)}" placeholder="Ej.: Limpiar el filtro de la campana"><label for="mtDate">Próxima fecha</label><input class="field" id="mtDate" type="date" value="${r.date||today()}"><label for="mtRepeat">Repetir después de hacerlo</label><select class="field" id="mtRepeat">${opt([['0','No repetir'],['1','Cada mes'],['3','Cada 3 meses'],['6','Cada 6 meses'],['12','Cada año']],frequency)}</select><label for="mtLast">Última vez (opcional)</label><input class="field" id="mtLast" type="date" max="${today()}" value="${r.last||''}"><details class="product-more"><summary>Notas e historial</summary><label for="mtNotes">Notas</label><textarea class="field" id="mtNotes" placeholder="Referencia del filtro, producto que usas…">${esc(r.notes||'')}</textarea>${(r.maintenanceLog||[]).length?'<p>Realizado: '+r.maintenanceLog.slice().reverse().map(d=>esc(relDate(d))).join(' · ')+'</p>':'<p class="hint">Al pulsar Hecho se guardará aquí la fecha.</p>'}</details>`,{autoFocus:false,onSave:ov=>{
+    const title=val(ov,'mtTitle'),date=val(ov,'mtDate'),last=val(ov,'mtLast'),every=+val(ov,'mtRepeat');if(!title||!date){toast('Indica el mantenimiento y su próxima fecha');return false}if(last>today()){toast('La última vez no puede ser una fecha futura');return false}
+    const data={kind:'maintenance',title,date,last,repeat:every?'custom':'none',every,unit:'m',time:'',notes:val(ov,'mtNotes'),done:false};
+    if(n)S.reminders.push({id:uid(),maintenanceLog:last?[last]:[],...data});else{const x=find(S.reminders,r.id);if(x){Object.assign(x,data);if(last&&!(x.maintenanceLog||[]).includes(last))x.maintenanceLog=[...(x.maintenanceLog||[]),last].sort()}}
+    save();toast('Mantenimiento guardado en el calendario');
+  },onDelete:n?null:()=>{S.reminders=S.reminders.filter(x=>x.id!==r.id);save();toastUndo('Mantenimiento eliminado')}});
+}
+function maintenanceDone(id){
+  const r=find(S.reminders,id);if(!r)return;
+  sheet('Mantenimiento realizado',`<p>${esc(r.title)}</p><label for="mtDone">¿Qué día lo hiciste?</label><input class="field" id="mtDone" type="date" max="${today()}" value="${today()}">`,{saveLabel:'Guardar fecha',autoFocus:false,onSave:ov=>{
+    const date=val(ov,'mtDone');if(!date||date>today()){toast('Indica una fecha válida, hasta hoy');return false}
+    const x=find(S.reminders,id);if(!x)return;x.maintenanceLog=[...new Set([...(x.maintenanceLog||[]),date])].sort();x.last=x.maintenanceLog.at(-1);
+    if(x.repeat!=='none')x.date=addInterval(x.last,x.every||1,'m');else{x.done=true;x.date=date}
+    save();toastUndo('Fecha guardada'+(!x.done?' · Próxima: '+relDate(x.date):''));
+  }});
+}
+
 function dayData(d,imp){
   return{
     ts:imp?[]:S.tasks.filter(x=>occursOn(x,d)&&forPerson(x)),
-    rs:S.reminders.filter(r=>(r.done?r.date===d:occursOn(r,d))&&!(imp&&isRep(r))),
+    rs:[...S.reminders.filter(r=>(r.done?r.date===d:occursOn(r,d))&&!(imp&&isRep(r)&&r.kind!=='maintenance')&&!(r.kind==='maintenance'&&r.done)),...S.reminders.filter(r=>r.kind==='maintenance'&&(r.maintenanceLog||[]).includes(d)).map(r=>({...r,historyDate:d}))],
     ps:S.pet.filter(x=>petDue(x)===d),
     es:S.events.filter(e=>occursOn(e,d)&&forPerson(e))
   };
@@ -900,7 +931,7 @@ function vMes(){
   if(!ui.calDay||ui.calDay<mStart||ui.calDay>mEnd)ui.calDay=(t>=mStart&&t<=mEnd)?t:mStart;
   const title=first.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
   const mc=(()=>{let e=0,tk=0,pp=0;for(let i=1;i<=days;i++){const o=dayData(ds(new Date(y,m,i)),true);e+=o.es.length;tk+=o.rs.length;pp+=o.ps.length}return[[e,'eventos'],[tk,'avisos'],[pp,'Ringo']]})();
-  let h=`<h1>Calendario</h1><p class="sub">${title.charAt(0).toUpperCase()+title.slice(1)}</p>${heroStats(mc)}`+`
+  let h=`<h1>Calendario</h1><p class="sub">${title.charAt(0).toUpperCase()+title.slice(1)}</p>${heroStats(mc)}<button class="btn sec" data-act="newMaintenance">🔧 Añadir mantenimiento</button>`+`
   <div class="week-nav"><button class="iconbtn" data-act="month" data-v="-1" aria-label="Mes anterior">‹</button><span class="lbl">${title.charAt(0).toUpperCase()+title.slice(1)}</span>${ui.month?`<button class="chip" data-act="month" data-v="0">Hoy</button>`:''}<button class="iconbtn" data-act="month" data-v="1" aria-label="Mes siguiente">›</button></div>
   <div class="mgrid" role="grid">${['L','M','X','J','V','S','D'].map(x=>`<div class="mhead">${x}</div>`).join('')}`;
   const lead=(first.getDay()+6)%7;
@@ -911,10 +942,10 @@ function vMes(){
     const n=o.es.length+o.ts.length+o.rs.length+o.ps.length;
     h+=`<button class="mcell ${d===t?'today':''} ${d===ui.calDay?'sel':''}" data-act="calDay" data-v="${d}" aria-label="${parse(d).toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${n} elemento${n===1?'':'s'}">${dd}<span class="dots">${dots.map(c=>`<i style="background:${c}"></i>`).join('')}</span></button>`;
   }
-  h+=`</div><div class="mlegend"><span><i style="background:var(--c-evento)"></i>Eventos</span><span><i style="background:var(--c-recordar)"></i>Recordatorios</span><span><i style="background:var(--c-ringo)"></i>Ringo</span></div><p class="hint">Se muestran los eventos, los recordatorios con fecha concreta y los cuidados de Ringo. Las tareas están en su pestaña.</p>`;
+  h+=`</div><div class="mlegend"><span><i style="background:var(--c-evento)"></i>Eventos</span><span><i style="background:var(--c-recordar)"></i>Recordatorios</span><span><i style="background:var(--c-ringo)"></i>Ringo</span></div><p class="hint">Se muestran los eventos, los recordatorios con fecha concreta, los mantenimientos de casa y los cuidados de Ringo. Las tareas están en su pestaña.</p>`;
   const sd=parse(ui.calDay),rows=dayRows(ui.calDay,true);
   h+=`<section class="day ${ui.calDay===t?'is-today':''}"><div class="day-h"><b>${sd.toLocaleDateString('es-ES',{weekday:'long'})}</b><span>${sd.getDate()} de ${sd.toLocaleDateString('es-ES',{month:'long'})}</span><button class="link plus" data-act="newEvent" data-date="${ui.calDay}">+ Evento</button></div>${rows.length?ul(rows):`<div class="empty">Libre</div>`}</section>`;
-  return h;
+  return h+maintenanceSection();
 }
 
 function vRecordar(){
@@ -1439,6 +1470,7 @@ function quickRemNoDate(){const el=$('#qRemNoDate');const v=el.value.trim();if(!
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Para tener en cuenta»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  newMaintenance:d=>maintenanceSheet(null,d.date||ui.calDay), editMaintenance:d=>maintenanceSheet(find(S.reminders,d.id)), maintenanceDone:d=>maintenanceDone(d.id),
   tab:d=>{ui.view=d.v;if(d.v==='compras'){autoStaples();autoPantry()}render();$('#app').scrollTop=0},
   quickTask, quickItem, quickNoDate, quickRemNoDate,
   toggleTask:d=>{
@@ -1460,7 +1492,7 @@ const ACT={
       r.date=nd;save();toast('Hecho. Próximo: '+relDate(nd));
     }else{r.done=!r.done;save()}
   },
-  editRem:d=>remSheet(find(S.reminders,d.id)),
+  editRem:d=>{const r=find(S.reminders,d.id);r?.kind==='maintenance'?maintenanceSheet(r):remSheet(r)},
   editItem:d=>itemSheet(find(S.items,d.id)),
   pickList:d=>{ui.list=d.v;render()},
   newList:()=>listSheet(null),
