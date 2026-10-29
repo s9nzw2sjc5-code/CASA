@@ -480,6 +480,7 @@ function vCkRecetas(){
 function vCkAjustes(){
   const c=ck();
   let h=`<h2>Cocina y presupuesto</h2><div class="list ck-set"><div class="row"><div class="row-main">Personas</div><button class="ck-ib" data-act="ckPeople" data-v="-1">−</button><b class="ck-num">${c.people}</b><button class="ck-ib" data-act="ckPeople" data-v="1">+</button></div>
+  <div class="row"><div class="row-main">Presupuesto semanal de compra<br><small class="hint">Opcional. De lunes a domingo.</small></div><input class="field" id="ckBudgetW" type="number" inputmode="decimal" min="0" step="5" value="${budgetW()||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
   <div class="row"><div class="row-main">Presupuesto mensual de compra<br><small class="hint">Opcional. Déjalo vacío para ver solo lo gastado.</small></div><input class="field" id="ckBudgetM" type="number" inputmode="decimal" min="0" step="10" value="${c.budgetM||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
   <div class="row"><div class="row-main">Código postal (precios de Mercadona)</div><input class="field" id="ckCP" inputmode="numeric" maxlength="5" value="${esc(c.cp||(MC&&MC.cp)||'')}" style="width:96px;text-align:right"></div>
 </div>
@@ -763,6 +764,13 @@ const monthName=m=>new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString(
 const hhmm=t=>t?new Date(t).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';
 const sameItem=(i,o)=>o.mid?i.mid===o.mid:!i.mid&&norm(i.name)===norm(o.name);
 // Resumen de dinero: lo que vamos a gastar (estimado) y lo ya gastado este mes (real)
+// Semana de lunes a domingo: lo gastado y el presupuesto semanal (opcional)
+const budgetW=()=>{const c=S.cook||{};return c.budgetW!=null?+c.budgetW||0:c.budget!=null?+c.budget||0:0};
+function spentWeek(){const a=weekStart(0),z=addDays(a,6);return(S.buys||[]).filter(b=>b.date>=a&&b.date<=z).reduce((s,b)=>s+(+b.total||0),0)}
+function weekRow(){
+  const w=spentWeek(),b=budgetW(),pct=b?w/b*100:0,st=!b?'':pct>100?'over':pct>=85?'near':'ok';
+  return`<button class="ck-week ${st}" data-act="ckBuys"><span class="ck-wk-t"><small>📅 Gastado esta semana</small><b>${eur(w)}</b></span><span class="ck-wk-r">${b?(w<=b?'Quedan '+eur(b-w)+'<br>de '+eur0(b):'Te has pasado<br>'+eur(w-b)):'Sin presupuesto<br>semanal'}</span>${b?`<span class="ck-mbar ${st}"><i style="width:${Math.min(100,pct)}%"></i></span>`:''}${st==='near'?'<small class="ck-mwarn">⚠️ Cerca del presupuesto de la semana</small>':st==='over'?'<small class="ck-mwarn">⛔ Presupuesto de la semana superado</small>':''}</button>`;
+}
 function moneyCard(pend){
   const c=ck(),m=monthKey(),spent=spentIn(m),est=pend.reduce((a,i)=>a+(i.price||0),0),noPrice=pend.filter(i=>!i.price).length,b=+c.budgetM||0;
   const pct=b?spent/b*100:0,st=!b?'':pct>100?'over':pct>=85?'near':'ok';
@@ -770,6 +778,7 @@ function moneyCard(pend){
     <div class="ck-mc"><small>🛒 Cesta actual · estimación</small><b>≈ ${eur(est)}</b><span>${pend.length} producto${pend.length===1?'':'s'}${noPrice?` · ${noPrice} sin precio`:''}</span></div>
     <button class="ck-mc ${st}" data-act="ckBuys"><small>💶 Gastado este mes</small><b>${eur(spent)}</b><span>${b?(spent<=b?'Quedan '+eur(b-spent)+' de '+eur0(b):'Te has pasado '+eur(spent-b)):monthName(m)}</span></button>
     ${b?`<div class="ck-mbar ${st}"><i style="width:${Math.min(100,pct)}%"></i></div>${st==='near'?'<small class="ck-mwarn">⚠️ Os acercáis al presupuesto del mes</small>':st==='over'?'<small class="ck-mwarn">⛔ Presupuesto del mes superado</small>':''}`:''}
+    ${weekRow()}
     <div class="ck-mbtns"><button class="btn sec" data-act="ckSpend">+ Añadir gasto de compra</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
   </div>`;
 }
@@ -1293,6 +1302,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('input',e=>{if(e.target.id==='qItem'){clearTimeout(ui._qs);ui._qs=setTimeout(drawQSug,200)}});
 document.addEventListener('change',e=>{
+  if(e.target.id==='ckBudgetW'){const v=parseFloat(e.target.value);ckSet('budgetW',v>0?Math.round(v*100)/100:0)}
   if(e.target.id==='ckBudgetM'){const v=parseFloat(e.target.value);ckSet('budgetM',v>0?Math.round(v*100)/100:0)}
   if(e.target.id==='ckCP'){const v=e.target.value.trim();if(v&&!/^\d{5}$/.test(v)){toast('El código postal tiene 5 cifras');return}ckSet('cp',v)}
   if(e.target.classList.contains('ck-range')){const x=find(S.pantry||[],e.target.dataset.pid);if(!x)return;x.full=pantryFull(x);x.n=+e.target.value;x.at=today();save();if(pantryLow(x))toast(x.name+': se está acabando. Pulsa 🛒 para añadirlo a la cesta')}
