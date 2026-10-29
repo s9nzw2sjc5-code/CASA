@@ -345,6 +345,12 @@ body.nav-top .toast{bottom:90px}
 .navq div{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .navq .btn{flex:1;padding:9px 10px;font-size:.88rem;white-space:normal}
 /* Cocina */
+.product-sheet-photo{display:block;width:88px;height:88px;object-fit:contain;background:#fff;border-radius:12px;margin:0 auto 8px}
+.product-units{display:flex;align-items:center;gap:4px}
+.product-units .field{min-width:0;text-align:center;padding:10px 2px}
+.product-units .btn{padding:10px;min-width:36px}
+.product-more{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.product-more summary{cursor:pointer;font-weight:600;padding:8px 0;min-height:44px}
 .ck-tabs{margin-top:-4px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:8px}
 .ck-tabs .chip{min-width:0;min-height:44px;padding:8px 6px;white-space:normal;font-size:.85rem}
 .ck-n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--danger);color:#fff;font-size:.7rem;font-weight:800;margin-left:2px}
@@ -1162,7 +1168,7 @@ function render(){
 }
 
 /* ---------- hojas (formularios) ---------- */
-function sheet(title,body,{onSave,onDelete,saveLabel='Guardar'}={}){
+function sheet(title,body,{onSave,onDelete,saveLabel='Guardar',autoFocus=true}={}){
   const ov=document.createElement('div');ov.className='overlay';
   ov.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3>${body}
     <div class="actions">${onDelete?'<button class="btn danger" data-s="del">Eliminar</button>':''}<button class="btn sec" data-s="cancel">Cancelar</button>${onSave?`<button class="btn" data-s="ok">${saveLabel}</button>`:''}</div></div>`;
@@ -1179,7 +1185,7 @@ function sheet(title,body,{onSave,onDelete,saveLabel='Guardar'}={}){
   });
   ov.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
   document.body.appendChild(ov);
-  const f=ov.querySelector('input,select,textarea');if(f)f.focus();
+  const f=ov.querySelector('input,select,textarea');if(f&&autoFocus)f.focus();
   return ov;
 }
 const val=(ov,id)=>ov.querySelector('#'+id).value.trim();
@@ -1305,28 +1311,32 @@ function remSheet(r){
 function itemSheet(i){
   const fk=i.mid||'n:'+i.name,fv=isFav(fk),u=i.units||1;
   const info=i.done&&i.doneAt?`<p class="hint" style="margin-top:0">✓ Tachado${i.doneBy?' por <b>'+esc(i.doneBy)+'</b>':''} el ${new Date(i.doneAt).toLocaleString('es-ES',{weekday:'long',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>`:'';
-  const ov=sheet('Editar producto',`${info}
+  const ov=sheet('Producto de la compra',`${productSheetPhoto(itemImg(i),i.name)}<p class="hint">${esc(i.qty||'')}${i.price?' · ≈ '+eur(i.price):''}</p>${info}
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(i.name)}">
-    <div class="grid2"><div><label for="f_u">Unidades</label><input class="field" id="f_u" type="number" min="1" inputmode="numeric" value="${u}"></div>
+    <div class="grid2"><div><label for="f_u">Unidades</label><div class="product-units"><button type="button" class="btn sec" data-units="-1" aria-label="Una unidad menos">−</button><input class="field" id="f_u" type="number" min="1" inputmode="numeric" value="${u}"><button type="button" class="btn sec" data-units="1" aria-label="Una unidad más">+</button></div></div>
     <div><label for="f_q">Cantidad o detalle</label><input class="field" id="f_q" value="${esc(i.mid?'':i.qty||'')}" placeholder="${i.mid?'':'Ej.: 1 kg, maduros'}" ${i.mid?'disabled':''}></div></div>
+    <label class="toggle-line"><input type="checkbox" id="f_done" ${i.done?'checked':''}> Ya está en el carro</label>
+    <button type="button" class="btn sec" data-fav style="width:100%;margin-top:14px">${fv?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual'}</button><details class="product-more"><summary>Más detalles</summary>
     <div class="grid2"><div><label for="f_pr">Precio estimado (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${i.price?Math.round(i.price*100)/100:''}" ${i.mid?'disabled':''}></div>
     <div><label for="f_st">Supermercado</label><select class="field" id="f_st"><option value="">—</option>${opt(ck().stores.map(x=>[x,x]),i.store||'')}</select></div></div>
     <div class="grid2"><div><label for="f_s">Sección</label><select class="field" id="f_s">${opt(S.sections.map(s=>[s,s]),i.section)}</select></div>
     <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(S.lists.map(l=>[l.id,l.name]),i.listId)}</select></div></div>
     <label for="f_b">Lo pidió</label><input class="field" id="f_b" value="${esc(i.by)}" placeholder="Nombre">
-    <button type="button" class="btn sec" data-fav style="width:100%;margin-top:14px">${fv?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual'}</button>`,
-  {onSave:ov=>{
+</details>`,
+  {autoFocus:false,onSave:ov=>{
     const name=val(ov,'f_t');if(!name){toast('Escribe el nombre del producto');return false}
     const x=find(S.items,i.id);if(!x)return;
     Object.assign(x,{name,by:val(ov,'f_b'),section:val(ov,'f_s'),listId:val(ov,'f_l'),store:val(ov,'f_st')});
     const nu=Math.max(1,parseInt(val(ov,'f_u'),10)||1);
     if(x.mid&&MC&&MC.byId.get(x.mid))setUnits(x,nu);
     else{const pr=parseFloat(val(ov,'f_pr'))||0;x.qty=val(ov,'f_q');x.uprice=pr/(nu||1);x.price=pr;x.units=nu}
+    const checked=ov.querySelector('#f_done').checked;if(x.done!==checked){x.done=checked;x.doneAt=checked?Date.now():null;x.doneBy=checked?(S.people.find(p=>p.id===ui.me)?.name||''):''}
     S.secMem[norm(name)]=val(ov,'f_s');save();
   },onDelete:()=>{
     if(i.auto){const s=S.staples.find(s=>norm(s.name)===norm(i.name)&&s.listId===i.listId);if(s)s.snooze=today()}
     S.items=S.items.filter(x=>x.id!==i.id);save();toastUndo('Producto eliminado');
   }});
+  ov.querySelectorAll('[data-units]').forEach(b=>b.addEventListener('click',()=>{const f=ov.querySelector('#f_u');f.value=Math.max(1,(parseInt(f.value,10)||1)+Number(b.dataset.units))}));
   ov.querySelector('[data-fav]').addEventListener('click',e=>{toggleFav(fk);const now=isFav(fk);e.target.textContent=now?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual';toast(now?'⭐ Añadido a habituales':'Quitado de habituales (sigue en la lista)')});
 }
 function stapleSheet(s){

@@ -718,18 +718,25 @@ function confirmRemovePantry(id){
   sheet('Eliminar de la despensa',`<p>¿Quieres quitar <b>${esc(x.name)}</b> de lo que tienes en casa?</p><p class="hint">La lista de la compra y el historial de gastos se conservan.</p>`,{saveLabel:'Eliminar artículo',onSave:()=>removePantryItem(id)});
 }
 
+function productSheetPhoto(path,name){
+  return path?`<img class="product-sheet-photo" src="${imgUrl(path,240)}" alt="${esc(name)}">`:'';
+}
+
 function panSheet(x){
   const n=!x;x=x||{name:'',n:0,u:'g',min:0,loc:'Despensa',auto:true};
-  const ov=sheet(n?'Añadir a la despensa':x.name,`
-    <label for="f_t">Producto</label><div class="quick" style="margin:0"><input class="field" id="f_t" value="${esc(x.name)}" placeholder="Ej.: Arroz" style="flex:1"><button type="button" class="btn sec" data-k="mc">Mercadona</button></div>
-    <p class="hint" id="f_mc">${x.mid&&MC&&MC.byId.get(x.mid)?(p=>esc(p.name)+' · '+prodSize(p)+' · '+eur(p.price))(prod(MC.byId.get(x.mid))):'Elige el producto de Mercadona para saber el precio y el tamaño del envase.'}</p>
+  const photo=pantryPhoto(x);
+  const ov=sheet(n?'Añadir a la despensa':x.name,`${photo?productSheetPhoto(photo.path,photo.label):''}
+    <label for="f_t">Producto</label><div class="quick" style="margin:0"><input class="field" id="f_t" value="${esc(x.name)}" placeholder="Ej.: Arroz" style="flex:1"></div>
     <div class="grid2"><div><label for="f_n">Cuánto queda</label><input class="field" id="f_n" type="number" min="0" step="any" value="${x.u==='ud'?x.n:(x.n>=1000&&x.n%100===0?x.n/1000:x.n)}"></div>
     <div><label for="f_u">Medida</label><select class="field" id="f_u">${opt([['g','g'],['kg','kg'],['ml','ml'],['l','L'],['ud','unidades']],x.u==='ud'?'ud':x.n>=1000&&x.n%100===0?(x.u==='ml'?'l':'kg'):x.u)}</select></div></div>
+    <label for="f_e">Caduca (opcional)</label><input class="field" id="f_e" type="date" value="${esc(x.exp||'')}">
+    <details class="product-more"><summary>Más detalles</summary>
+    <button type="button" class="btn sec" data-k="mc">Elegir producto de Mercadona / cambiar foto</button>
+    <p class="hint" id="f_mc">${x.mid&&MC&&MC.byId.get(x.mid)?(p=>esc(p.name)+' · '+prodSize(p)+' · '+eur(p.price))(prod(MC.byId.get(x.mid))):'Elige el producto de Mercadona para saber el precio y el tamaño del envase.'}</p>
     <div class="grid2"><div><label for="f_mn">Avisar al bajar de</label><input class="field" id="f_mn" type="number" min="0" step="any" value="${x.min?(x.u!=='ud'&&x.n>=1000&&x.n%100===0?x.min/1000:x.min):''}" placeholder="0"></div>
     <div><label for="f_l">Dónde</label><select class="field" id="f_l">${opt(CK_LOCS.map(l=>[l,l]),x.loc||'Despensa')}</select></div></div>
-    <label for="f_e">Caduca (opcional)</label><input class="field" id="f_e" type="date" value="${esc(x.exp||'')}">
-    <label class="ing-row" style="display:flex;margin-top:12px;color:var(--ink);font-weight:500;font-size:.95rem"><input type="checkbox" id="f_a" ${x.auto?'checked':''}><span>Añadir solo a Compras cuando se acabe</span></label>`,
-  {onSave:ov=>{
+    <label class="ing-row" style="display:flex;margin-top:12px;color:var(--ink);font-weight:500;font-size:.95rem"><input type="checkbox" id="f_a" ${x.auto?'checked':''}><span>Añadir solo a Compras cuando se acabe</span></label></details>`,
+  {autoFocus:false,onSave:ov=>{
     let name=val(ov,'f_t');if(!name){toast('Escribe el producto');return false}
     name=name[0].toUpperCase()+name.slice(1);
     let u=val(ov,'f_u'),q=+val(ov,'f_n')||0,mn=+val(ov,'f_mn')||0;
