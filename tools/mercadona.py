@@ -62,6 +62,8 @@ def walk(node, top, sub, out):
             # El mismo producto puede estar en varias secciones (p. ej. pescado y congelados)
             if sub not in out[p['id']][12]:
                 out[p['id']][12].append(sub)
+            if p.get('is_new_arrival'):
+                out[p['id']][13] = 1
             continue
         thumb = (p.get('thumbnail') or '').split('/images/')[-1].split('?')[0]
         out[p['id']] = [
@@ -69,6 +71,7 @@ def walk(node, top, sub, out):
             pi.get('unit_size') or 0, pi.get('size_format') or '',
             float(pi.get('reference_price') or 0), pi.get('reference_format') or '',
             top, thumb, 1 if pi.get('approx_size') else 0, prev(pi), [sub],
+            1 if p.get('is_new_arrival') else 0,  # novedad según Mercadona
         ]
     for c in node.get('categories') or []:
         walk(c, top, sub, out)
@@ -92,7 +95,7 @@ def main():
     if len(out) < 1000:
         raise SystemExit('Muy pocos productos (%d): no se sobrescribe el catálogo' % len(out))
     data = {'cp': cp, 'wh': wh, 'at': time.strftime('%Y-%m-%dT%H:%M', time.gmtime()), 'cats': tops, 'subs': subs,
-            'cols': ['id', 'nombre', 'envase', 'precio', 'tamano', 'unidad', 'precio_ref', 'unidad_ref', 'cat', 'img', 'aprox', 'antes', 'subcats'],
+            'cols': ['id', 'nombre', 'envase', 'precio', 'tamano', 'unidad', 'precio_ref', 'unidad_ref', 'cat', 'img', 'aprox', 'antes', 'subcats', 'nuevo'],
             'p': sorted(out.values(), key=lambda x: (x[8], x[12][0], x[1]))}
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))

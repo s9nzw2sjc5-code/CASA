@@ -314,16 +314,16 @@ function vCocina(){
   loadMC();
   let tab=ui.ckTab||'productos';if(tab==='menu'||tab==='lista')tab='productos';
   const low=(S.pantry||[]).filter(pantryLow).length,ci=cartItems();
-  const sub={productos:'Elige qué va a la cesta y qué tienes en casa',recetas:S.recipes.length+' receta'+(S.recipes.length===1?'':'s')+' guardada'+(S.recipes.length===1?'':'s'),despensa:'Lo que tienes en casa y cuánto queda',ajustes:'Presupuesto, supermercados y electrodomésticos'}[tab];
+  const sub={novedades:'Lo nuevo de Mercadona en tu código postal',productos:'Elige qué va a la cesta y qué tienes en casa',recetas:S.recipes.length+' receta'+(S.recipes.length===1?'':'s')+' guardada'+(S.recipes.length===1?'':'s'),despensa:'Lo que tienes en casa y cuánto queda',ajustes:'Presupuesto, supermercados y electrodomésticos'}[tab];
   let h=`<h1>Compras</h1><p class="sub">${sub}</p>${heroStats([[ci.length,'en la cesta'],[eur0(cartTotal()),'cesta'],[(S.pantry||[]).filter(x=>x.n>0).length,'en casa'],[low,'se acaban']])}`;
   h+=ckSubTabs();
-  h+=({productos:vCkProductos,recetas:vCkRecetas,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
+  h+=({novedades:vCkNovedades,productos:vCkProductos,recetas:vCkRecetas,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
   return h+cartBar();
 }
 // Pestañas dentro de Compras
 function ckSubTabs(){
   const tab=ui.ckTab||'lista';
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
@@ -332,7 +332,7 @@ function cartBar(){
 // Tarjeta de producto, como en la app de Mercadona
 function prodCard(p){
   const ic=cartOf(p.id),u=ic?ic.units||1:0,x=pantryOf(p.id),prev=mcFresh()?MC.byId.get(p.id)[11]:0,fv=isFav(p.id);
-  return`<div class="ck-card ${u?'in':''}">${prev?`<span class="ck-offer">Bajada</span>`:''}<button class="ck-fav ${fv?'on':''}" data-act="favToggle" data-id="${p.id}" aria-label="${fv?'Quitar de habituales':'Marcar como habitual'}">${fv?'★':'☆'}</button>
+  return`<div class="ck-card ${u?'in':''}">${prev?`<span class="ck-offer">Bajada</span>`:isNew(p.id)?`<span class="ck-offer ck-new">Nuevo</span>`:''}<button class="ck-fav ${fv?'on':''}" data-act="favToggle" data-id="${p.id}" aria-label="${fv?'Quitar de habituales':'Marcar como habitual'}">${fv?'★':'☆'}</button>
     <div class="ck-ci">${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}</div>
     <div class="ck-cp">${prev?`<s>${eur(prev)}</s> `:''}<b class="${prev?'red':''}">${eur(p.price)}</b><small>/${p.d==='ud'&&p.size>1?'pack':'ud'}</small></div>
     <div class="ck-cn">${esc(p.name)}</div><small class="ck-cs">${esc(p.pack)} ${prodSize(p)}${p.ref?' · '+eur(p.ref)+'/'+esc(p.refFmt):''}</small>
@@ -341,6 +341,23 @@ function prodCard(p){
       :`<button class="ck-add" data-act="cartStep" data-id="${p.id}" data-v="1">🛒 Cesta</button>`}<button class="ck-home-b" data-act="homeAdd" data-id="${p.id}" aria-label="Lo tengo en casa" title="Lo tengo en casa">🏠+</button></div></div>`;
 }
 const CK_HIDECAT=/Mascotas|Maquillaje|Bebé/;
+// Novedades: lo que Mercadona marca como nuevo en el almacén de nuestro código postal
+const isNew=id=>{const p=MC&&MC.byId.get(id);return!!(p&&p[13])};
+const novIds=()=>MC?MC.p.filter(p=>p[13]).map(p=>p[0]):[];
+// Cuántas novedades no se han visto aún en este móvil
+function novUnseen(){if(!MC)return 0;const seen=new Set(ui.novSeen||[]);return novIds().filter(id=>!seen.has(id)).length}
+function vCkNovedades(){
+  if(!MC)return`<p class="hint" style="margin-top:14px">Cargando productos de Mercadona…</p>`;
+  const ids=novIds(),seen=new Set(ui.novSeen||[]),fresh=ids.filter(id=>!seen.has(id));
+  if(fresh.length)setTimeout(()=>{ui.novSeen=ids;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(e){}},0);
+  let h=mcNotice()+`<p class="hint ck-help">Productos que Mercadona marca como <b>novedad</b> en su tienda online para el CP ${esc(MC.cp||'18210')}, a fecha de ${mcDate()}.${fresh.length&&seen.size?` Hay <b>${fresh.length}</b> nueva${fresh.length>1?'s':''} desde la última vez.`:''}</p>`;
+  if(!ids.length)return h+`<div class="empty" style="margin-top:12px">Ahora mismo Mercadona no marca ninguna novedad.</div>`;
+  const cats=[...new Set(ids.map(id=>MC.byId.get(id)[8]))].sort((a,b)=>a-b),cat=ui.novCat!=null&&cats.includes(ui.novCat)?ui.novCat:null;
+  h+=`<div class="chips ck-subs"><button class="chip ${cat==null?'on':''}" data-act="novCat" data-v="">Todo · ${ids.length}</button>${cats.map(c=>`<button class="chip ${cat===c?'on':''}" data-act="novCat" data-v="${c}">${CK_CATEMO[MC.cats[c]]||''} ${esc(MC.cats[c])}</button>`).join('')}</div>`;
+  const a=ids.filter(id=>cat==null||MC.byId.get(id)[8]===cat).sort((x,y)=>(seen.size&&!seen.has(y))-(seen.size&&!seen.has(x))).map(id=>prod(MC.byId.get(id)));
+  return h+`<div class="ck-grid" style="margin-top:10px">${a.map(prodCard).join('')}</div>`;
+}
+
 function vCkProductos(){
   const html=productSearchHTML(),end=html.indexOf('</div>');
   return html.includes('id="qProd"')?html.slice(0,end+6)+'<div id="ckProductResults">'+html.slice(end+6)+'</div>':html;
@@ -1247,6 +1264,7 @@ const CK_ACT={
   panRemove:d=>confirmRemovePantry(d.id),
   ckTab:d=>{ui.ckTab=d.v;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},
+  novCat:d=>{ui.novCat=d.v===''?null:+d.v;render()},
   prodMore:()=>{ui.prodN=(ui.prodN||40)+40;render()},
   prodClear:()=>{const f=$('#qProd');ui.prodQ='';ui.prodN=40;clearTimeout(ui._pt);if(f){f.value='';updateProductSearch();f.focus()}else render()},
   prodQ:d=>{ui.prodQ=d.v;ui.prodN=40;render();const f=$('#qProd');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},
