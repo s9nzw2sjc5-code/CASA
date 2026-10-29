@@ -320,8 +320,8 @@ function vCocina(){
 }
 // Pestañas dentro de Compras
 function ckSubTabs(){
-  const tab=ui.ckTab||'lista',inStock=(S.pantry||[]).filter(x=>x.n>0).length;
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${k==='despensa'?` <span class="ck-n" aria-label="${inStock} productos con existencias">${inStock}</span>`:''}</button>`).join('')}</div>`;
+  const tab=ui.ckTab||'lista';
+  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['despensa','🏠 En casa'],['recetas','📖 Recetas'],['ajustes','⚙️ Ajustes']].map(([k,l])=>`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}</button>`).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
@@ -416,10 +416,21 @@ function vCkDespensa(){
   });
   return h;
 }
+// Foto orientativa para artículos genéricos; no vincula ni cambia sus datos.
+function pantryPhoto(x){
+  if(!MC)return null;
+  const exact=x.mid&&MC.byId.get(x.mid);if(exact&&exact[9])return{path:exact[9],label:x.name};
+  const mapped=(S.prodMap||{})[norm(x.name)],selected=mapped&&MC.byId.get(mapped);
+  if(selected&&selected[9])return{path:selected[9],label:selected[1]};
+  const query=words(CK_ALIAS[norm(x.name)]||x.name);
+  if(!query.length)return null;
+  const candidate=searchMC(x.name,8).find(p=>p.img&&p.s>0&&allIn(query,words(p.name)));
+  return candidate?{path:candidate.img,label:'Imagen orientativa: '+candidate.name}:null;
+}
 function panRow(x){
-  const lw=pantryLow(x),full=pantryFull(x),pct=pantryPct(x),p=x.mid&&MC&&MC.byId.get(x.mid),inC=x.mid?cartOf(x.mid):cartItems().find(i=>norm(i.name)===norm(x.name));
+  const lw=pantryLow(x),full=pantryFull(x),pct=pantryPct(x),photo=pantryPhoto(x),inC=x.mid?cartOf(x.mid):cartItems().find(i=>norm(i.name)===norm(x.name));
   const step=x.u==='ud'?1:full>=2000?50:full>=500?25:5;
-  return`<div class="ck-pan ${lw?'low':''}">${p&&p[9]?`<img src="https://prod-mercadona.imgix.net/images/${p[9]}?fit=contain&h=96&w=96" alt="" loading="eager">`:'<span class="ck-noimg">🥫</span>'}
+  return`<div class="ck-pan ${lw?'low':''}">${photo?`<img src="${imgUrl(photo.path,192)}" alt="${esc(photo.label)}" title="${esc(photo.label)}" loading="eager">`:'<span class="ck-noimg">🥫</span>'}
     <div class="ck-pm"><button class="ck-pt" data-act="ckPan" data-id="${x.id}">${esc(x.name)}</button>
     <input class="ck-range" type="range" min="0" max="${full}" step="${step}" value="${x.n}" data-pid="${x.id}" style="--p:${pct}%" aria-label="Cuánto queda de ${esc(x.name)}">
     <small class="ck-pl" data-pl="${x.id}">${x.n>0?'Queda '+fmtAmt(x.n,x.u)+' · '+pct+' %':'Agotado'}${x.exp?` · ${x.exp<today()?'⚠️ caducado':'cad. '+relDate(x.exp)}`:''}</small></div>
