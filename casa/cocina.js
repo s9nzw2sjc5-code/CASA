@@ -336,6 +336,7 @@ function prodCard(p){
     <div class="ck-ci">${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}</div>
     <div class="ck-cp">${prev?`<s>${eur(prev)}</s> `:''}<b class="${prev?'red':''}">${eur(p.price)}</b><small>/${p.d==='ud'&&p.size>1?'pack':'ud'}</small></div>
     <div class="ck-cn">${esc(p.name)}</div><small class="ck-cs">${esc(p.pack)} ${prodSize(p)}${p.ref?' · '+eur(p.ref)+'/'+esc(p.refFmt):''}</small>
+    ${fv?`<button class="link" data-act="habitSchedule" data-v="${p.id}">🔁 Cada X días</button>`:''}
     ${x?`<small class="ck-home">🏠 En casa: ${x.n>0?fmtAmt(x.n,x.u):'agotado'}</small>`:''}
     <div class="ck-ca">${u?`<button class="ck-st" data-act="cartStep" data-id="${p.id}" data-v="-1" aria-label="Quitar uno">${u>1?'−':'🗑'}</button><b class="ck-u">${u}</b><button class="ck-st plus" data-act="cartStep" data-id="${p.id}" data-v="1" aria-label="Añadir otro">+</button>`
       :`<button class="ck-add" data-act="cartStep" data-id="${p.id}" data-v="1">🛒 Cesta</button>`}<button class="ck-home-b" data-act="homeAdd" data-id="${p.id}" aria-label="Lo tengo en casa" title="Lo tengo en casa">🏠+</button></div></div>`;
@@ -786,12 +787,20 @@ function itemRow(i){
       <div class="ck-irow">${i.done?`<span class="ck-u2">${u} ud</span>`:`<button class="ck-st sm" data-act="itemStep" data-id="${i.id}" data-v="-1" aria-label="${u>1?'Uno menos':'Quitar'}">${u>1?'−':'🗑'}</button><b class="ck-u2">${u}</b><button class="ck-st sm plus" data-act="itemStep" data-id="${i.id}" data-v="1" aria-label="Uno más">+</button>`}<span class="ck-ipr">${i.price?'≈ '+eur(i.price):''}</span></div></div></li>`;
 }
 // Habituales: los marcados con ☆ (con foto) y los de «cada X días»
+function habitSchedule(key,lid=curList().id,item){
+  const p=MC&&!key.startsWith('n:')&&MC.byId.get(key),name=p?p[1]:item?.name||(key.startsWith('n:')?key.slice(2):'');
+  if(!name){toast('Espera a que cargue el catálogo');return}
+  const mid=p?key:item?.mid||(!key.startsWith('n:')?key:'');
+  const existing=S.staples.find(s=>matchesStaple(s,{listId:lid,name,mid}));
+  const seed=existing||{name,mid,listId:lid,days:7,last:today(),section:item?.section||S.secMem[norm(name)]||'Despensa',auto:true,basePrice:p?p[3]:item?.uprice||item?.price||0,packQty:p?prodSize(prod(p)):item?.qty||''};
+  stapleSheet(seed,!existing);
+}
 function habSection(L){
   const fv=(ck().fav||[]),cards=fv.map(k=>{
     const p=!k.startsWith('n:')&&MC&&MC.byId.get(k),name=p?p[1]:k.slice(2),inL=S.items.find(i=>i.listId===L.id&&!i.done&&sameItem(i,{mid:p?k:'',name}));
-    return`<div class="ck-hab ${inL?'in':''}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}<b>${esc(name)}</b>${p?`<small>${eur(p[3])}</small>`:''}
+    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Ver habitual ${esc(name)}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}</button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:''}<button class="link" data-act="habitSchedule" data-v="${esc(k)}">🔁 ${(()=>{const s=S.staples.find(s=>matchesStaple(s,{listId:L.id,name,mid:p?k:''}));return s?s.auto?'Cada '+s.days+' días':'Reposición desactivada':'Cada X días'})()}</button>
       ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}">+ Añadir</button>`}</div>`});
-  const st=S.staples.filter(s=>s.listId===L.id).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
+  const st=S.staples.filter(s=>s.listId===L.id&&!fv.some(k=>matchesStaple(s,{listId:L.id,mid:k.startsWith('n:')?'':k,name:k.startsWith('n:')?k.slice(2):MC?.byId.get(k)?.[1]||''}))).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
   if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.</p>`;
   return`<div class="head-row"><h2>⭐ Habituales</h2><button class="link" data-act="ckTab" data-v="productos">+ Buscar</button></div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Cada X días</button></div>`;
 }
@@ -1146,6 +1155,7 @@ function ticketReview(t,txt,opts){
       // Precio: el de otros supermercados se usa en las recetas; el de Mercadona queda en el historial
       if(price>0){const key=x?x.name:nm;const per=a.kg?price/a.kg:price/(a.units||1);
         savePrice(key,{store,price:Math.round(per*100)/100,n:a.kg?1000:(mp&&!a.kg?mp.size:(d==='ud'?1:0)),d:a.kg?'m':d,at:date,qtxt:a.kg?'1 kg':mp?prodSize(mp):'1 ud',label:nm});nq++}
+      S.staples.filter(s=>(mp&&s.mid===mp.id)||norm(s.name)===norm(nm)).forEach(s=>{if(!s.last||s.last<date)s.last=date;delete s.snooze});
       if(ov.querySelector('#f_rm').checked){const k1=words(nm),k2=x?words(x.name):[];
         const before=S.items.length;S.items=S.items.filter(i=>{const iw=words(i.name);return!(iw.length&&(allIn(iw,k1)||(k2.length&&allIn(iw,k2))))});rm+=before-S.items.length}
     });
@@ -1203,6 +1213,7 @@ function seedPantry(){
 
 /* ---------- acciones ---------- */
 const CK_ACT={
+  habitSchedule:d=>habitSchedule(d.v),
   laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),
   panRemove:d=>confirmRemovePantry(d.id),
   ckTab:d=>{ui.ckTab=d.v==='recetas'?'lista':d.v;render();$('#app').scrollTop=0},
@@ -1239,7 +1250,7 @@ const CK_ACT={
   toggleItem:d=>{const i=find(S.items,d.id);if(!i)return;
     if(!i.done&&!ui.me){whoAmI(()=>CK_ACT.toggleItem(d));return}
     i.done=!i.done;
-    if(i.done){i.doneBy=meName();i.doneAt=Date.now();const s=S.staples.find(s=>s.listId===i.listId&&norm(s.name)===norm(i.name));if(s){s.last=today();delete s.snooze}}
+    if(i.done){i.doneBy=meName();i.doneAt=Date.now();noteStaplePurchase(i)}
     else{delete i.doneBy;delete i.doneAt}
     save();toastUndo(i.done?'✓ '+i.name+' al carro':i.name+' vuelve a pendientes')},
   itemStep:d=>{const i=find(S.items,d.id);if(!i)return;const u=(i.units||1)+(+d.v);
@@ -1248,7 +1259,7 @@ const CK_ACT={
   habAdd:d=>{const k=d.v,p=!k.startsWith('n:')&&MC&&MC.byId.get(k);if(addToList(p?{mid:k,name:p[1],units:1}:{name:k.slice(2)}))toast('Añadido a la lista')},
   sugAdd:d=>{if(!MC)return;const p=MC.byId.get(d.id);if(!p)return;if(addToList({mid:d.id,name:p[1],units:1})){const el=$('#qItem');if(el){el.value='';drawQSug()}toast(p[1]+' a la lista')}},
   clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
-    buySheet(dn,(store,fromTicket)=>{const p=fromTicket?0:dn.filter(addToPantry).length;S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
+    buySheet(dn,(store,fromTicket)=>{const p=fromTicket?0:dn.filter(addToPantry).length;dn.forEach(i=>noteStaplePurchase(i));S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
   aiPhoto:()=>{MC?photoFlow():loadMC().then(photoFlow)},
   aiKey:()=>aiKeySheet(),
   ckTicket:()=>ticketFlow(),

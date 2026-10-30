@@ -743,13 +743,15 @@ function migratePeople(){
 }
 const curList=()=>S.lists.find(l=>l.id===ui.list)||S.lists[0];
 function stapleLeft(s){return s.days-diff(s.last||today(),today())}
-function stapleInList(s){return S.items.some(i=>!i.done&&i.listId===s.listId&&norm(i.name)===norm(s.name))}
+function matchesStaple(s,i){return s.listId===i.listId&&(i.stapleId===s.id||(s.mid&&i.mid?s.mid===i.mid:norm(s.name)===norm(i.name)))}
+function stapleInList(s){return S.items.some(i=>matchesStaple(s,i))}
+function noteStaplePurchase(i,date=today()){S.staples.filter(s=>matchesStaple(s,i)).forEach(s=>{s.last=date;delete s.snooze})}
 function stapleLow(s){return stapleLeft(s)<=Math.max(2,Math.round(s.days*.25))}
 function autoStaples(){
   let changed=false;
   S.staples.forEach(s=>{
-    if(s.auto&&stapleLeft(s)<=1&&!stapleInList(s)&&s.snooze!==today()){
-      S.items.push({id:uid(),listId:s.listId,name:s.name,section:s.section||'Otros',qty:'',by:'',done:false,auto:true});changed=true;
+    if(s.auto&&stapleLeft(s)<=(s.exactDue?0:1)&&!stapleInList(s)&&s.snooze!==today()){
+      const item={id:uid(),listId:s.listId,name:s.name,section:s.section||'Otros',qty:s.packQty||'',price:s.basePrice||0,uprice:s.basePrice||0,mid:s.mid||'',stapleId:s.id,units:1,by:'',done:false,auto:true};if(item.mid&&MC?.byId.has(item.mid))setUnits(item,1);S.items.push(item);changed=true;
     }
   });
   if(changed)save();
@@ -1352,6 +1354,7 @@ function itemSheet(i){
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(i.name)}">
     <div><label for="f_u">Unidades</label><div class="product-units"><button type="button" class="btn sec" data-units="-1" aria-label="Una unidad menos">−</button><input class="field" id="f_u" type="number" min="1" inputmode="numeric" value="${u}"><button type="button" class="btn sec" data-units="1" aria-label="Una unidad más">+</button></div></div>
     <label class="toggle-line"><input type="checkbox" id="f_done" ${i.done?'checked':''}> Ya está en el carro</label>
+    <button type="button" class="btn sec" data-schedule style="width:100%;margin-top:10px">🔁 Cada X días · reposición automática</button>
     <button type="button" class="btn sec" data-fav style="width:100%;margin-top:14px">${fv?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual'}</button><details class="product-more"><summary>Más detalles</summary>
     <div class="grid2"><div><label for="f_pr">Precio estimado (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${i.price?Math.round(i.price*100)/100:''}" ${i.mid?'disabled':''}></div>
     <div><label for="f_st">Supermercado</label><select class="field" id="f_st"><option value="">—</option>${opt(ck().stores.map(x=>[x,x]),i.store||'')}</select></div></div>
@@ -1366,32 +1369,35 @@ function itemSheet(i){
     const nu=Math.max(1,parseInt(val(ov,'f_u'),10)||1);
     if(x.mid&&MC&&MC.byId.get(x.mid))setUnits(x,nu);
     else{const pr=parseFloat(val(ov,'f_pr'))||0;x.uprice=pr/(nu||1);x.price=pr;x.units=nu}
-    const checked=ov.querySelector('#f_done').checked;if(x.done!==checked){x.done=checked;x.doneAt=checked?Date.now():null;x.doneBy=checked?(S.people.find(p=>p.id===ui.me)?.name||''):''}
+    const wasDone=x.done,checked=ov.querySelector('#f_done').checked;if(x.done!==checked){x.done=checked;x.doneAt=checked?Date.now():null;x.doneBy=checked?(S.people.find(p=>p.id===ui.me)?.name||''):''}
+    if(checked&&!wasDone)noteStaplePurchase(x);
     S.secMem[norm(name)]=val(ov,'f_s');save();
   },onDelete:()=>{
     if(i.auto){const s=S.staples.find(s=>norm(s.name)===norm(i.name)&&s.listId===i.listId);if(s)s.snooze=today()}
     S.items=S.items.filter(x=>x.id!==i.id);save();toastUndo('Producto eliminado');
   }});
+  ov.querySelector('[data-schedule]').addEventListener('click',()=>habitSchedule(fk,i.listId,i));
   ov.querySelectorAll('[data-units]').forEach(b=>b.addEventListener('click',()=>{const f=ov.querySelector('#f_u');f.value=Math.max(1,(parseInt(f.value,10)||1)+Number(b.dataset.units))}));
   ov.querySelector('[data-fav]').addEventListener('click',e=>{toggleFav(fk);const now=isFav(fk);e.target.textContent=now?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual';toast(now?'⭐ Añadido a habituales':'Quitado de habituales (sigue en la lista)')});
 }
-function stapleSheet(s){
-  const n=!s;const L=curList();
+function stapleSheet(s,create=false){
+  const n=!s||create;const L=curList();
   s=s||{name:'',days:7,last:today(),section:'Despensa',listId:L.id,auto:true};
-  sheet(n?'Producto habitual':'Editar producto habitual',`
+  sheet('Reposición del habitual',`${s.mid&&MC?.byId.has(s.mid)?productSheetPhoto(MC.byId.get(s.mid)[9],s.name):''}
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(s.name)}" placeholder="Ej.: Café">
-    <div class="grid2"><div><label for="f_dd">Cuántos días dura</label><input class="field" type="number" min="1" inputmode="numeric" id="f_dd" value="${s.days}"></div>
+    <div class="grid2"><div><label for="f_dd">Volver a comprar cada (días)</label><input class="field" type="number" min="1" inputmode="numeric" id="f_dd" value="${s.days}"></div>
     <div><label for="f_lb">Última compra</label><input class="field" type="date" id="f_lb" value="${s.last}"></div></div>
-    <div class="grid2"><div><label for="f_s">Sección</label><select class="field" id="f_s">${opt(S.sections.map(x=>[x,x]),s.section)}</select></div>
-    <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(S.lists.map(l=>[l.id,l.name]),s.listId)}</select></div></div>
-    <label class="toggle-line"><input type="checkbox" id="f_a" ${s.auto?'checked':''}> Añadirlo a la lista automáticamente cuando quede 1 día</label>`,
-  {onSave:ov=>{
+    <details class="product-more"><summary>Más detalles</summary><div class="grid2"><div><label for="f_s">Sección</label><select class="field" id="f_s">${opt(S.sections.map(x=>[x,x]),s.section)}</select></div>
+    <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(S.lists.map(l=>[l.id,l.name]),s.listId)}</select></div></div></details>
+    <label class="toggle-line"><input type="checkbox" id="f_a" ${s.auto?'checked':''}> Añadir a la compra automáticamente cuando se cumpla el plazo</label>`,
+  {autoFocus:false,onSave:ov=>{
     const name=val(ov,'f_t');const days=parseInt(val(ov,'f_dd'),10);
     if(!name){toast('Escribe el nombre del producto');return false}
     if(!(days>0)){toast('Indica cuántos días dura');return false}
-    const o={name,days,last:val(ov,'f_lb')||today(),section:val(ov,'f_s'),listId:val(ov,'f_l'),auto:ov.querySelector('#f_a').checked};
+    const last=val(ov,'f_lb')||today();if(last>today()){toast('La última compra no puede ser futura');return false}
+    const o={name,days,last,section:val(ov,'f_s'),listId:val(ov,'f_l'),auto:ov.querySelector('#f_a').checked,mid:s.mid||'',exactDue:true,basePrice:s.basePrice||0,packQty:s.packQty||''};
     if(n)S.staples.push({id:uid(),...o});else{const x=find(S.staples,s.id);if(x)Object.assign(x,o)}
-    save();autoStaples();
+    save();autoStaples();toast('Reposición guardada: cada '+days+' días');
   },onDelete:n?null:()=>{S.staples=S.staples.filter(x=>x.id!==s.id);save()}});
 }
 function listSheet(L){
