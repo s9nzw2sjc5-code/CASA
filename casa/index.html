@@ -864,9 +864,9 @@ function vTareas(){
 
 function stapleCard(s){
   const left=stapleLeft(s),inL=stapleInList(s),low=stapleLow(s);
-  return`<button class="staple ${low?'low':''}" data-act="${inL?'editStaple':'stapleAdd'}" data-id="${s.id}">
-    <b>${esc(s.name)}</b><small>Dura ${s.days} días</small><small>${left>0?`Quedan ${left}`:'Agotado'}</small>
-    <span class="st-act">${inL?'En la lista':'+ Añadir'}</span></button>`;
+  return`<button class="staple ${low?'low':''}" data-act="editStaple" data-id="${s.id}">
+    <b>${esc(s.name)}</b>
+    <span class="st-act">${inL?'En la lista':'Ver producto'}</span></button>`;
 }
 const isRep=o=>o.repeat&&o.repeat!=='none';
 // imp=true: solo lo puntual (sin repeticiones), para la vista mensual

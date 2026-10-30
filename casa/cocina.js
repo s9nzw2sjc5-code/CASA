@@ -333,10 +333,9 @@ function cartBar(){
 function prodCard(p){
   const ic=cartOf(p.id),u=ic?ic.units||1:0,x=pantryOf(p.id),prev=mcFresh()?MC.byId.get(p.id)[11]:0,fv=isFav(p.id);
   return`<div class="ck-card ${u?'in':''}">${prev?`<span class="ck-offer">Bajada</span>`:isNew(p.id)?`<span class="ck-offer ck-new">Nuevo</span>`:''}<button class="ck-fav ${fv?'on':''}" data-act="favToggle" data-id="${p.id}" aria-label="${fv?'Quitar de habituales':'Marcar como habitual'}">${fv?'★':'☆'}</button>
-    <div class="ck-ci">${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}</div>
+    <div class="ck-ci">${fv?`<button class="link" style="width:100%;height:100%" data-act="habitSchedule" data-v="${p.id}" aria-label="Ver habitual ${esc(p.name)}">`:''}${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}${fv?'</button>':''}</div>
     <div class="ck-cp">${prev?`<s>${eur(prev)}</s> `:''}<b class="${prev?'red':''}">${eur(p.price)}</b><small>/${p.d==='ud'&&p.size>1?'pack':'ud'}</small></div>
     <div class="ck-cn">${esc(p.name)}</div><small class="ck-cs">${esc(p.pack)} ${prodSize(p)}${p.ref?' · '+eur(p.ref)+'/'+esc(p.refFmt):''}</small>
-    ${fv?`<button class="link" data-act="habitSchedule" data-v="${p.id}">🔁 Cada X días</button>`:''}
     ${x?`<small class="ck-home">🏠 En casa: ${x.n>0?fmtAmt(x.n,x.u):'agotado'}</small>`:''}
     <div class="ck-ca">${u?`<button class="ck-st" data-act="cartStep" data-id="${p.id}" data-v="-1" aria-label="Quitar uno">${u>1?'−':'🗑'}</button><b class="ck-u">${u}</b><button class="ck-st plus" data-act="cartStep" data-id="${p.id}" data-v="1" aria-label="Añadir otro">+</button>`
       :`<button class="ck-add" data-act="cartStep" data-id="${p.id}" data-v="1">🛒 Cesta</button>`}<button class="ck-home-b" data-act="homeAdd" data-id="${p.id}" aria-label="Lo tengo en casa" title="Lo tengo en casa">🏠+</button></div></div>`;
@@ -798,11 +797,11 @@ function habitSchedule(key,lid=curList().id,item){
 function habSection(L){
   const fv=(ck().fav||[]),cards=fv.map(k=>{
     const p=!k.startsWith('n:')&&MC&&MC.byId.get(k),name=p?p[1]:k.slice(2),inL=S.items.find(i=>i.listId===L.id&&!i.done&&sameItem(i,{mid:p?k:'',name}));
-    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Ver habitual ${esc(name)}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}</button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:''}<button class="link" data-act="habitSchedule" data-v="${esc(k)}">🔁 ${(()=>{const s=S.staples.find(s=>matchesStaple(s,{listId:L.id,name,mid:p?k:''}));return s?s.auto?'Cada '+s.days+' días':'Reposición desactivada':'Cada X días'})()}</button>
+    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Ver habitual ${esc(name)}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}</button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:''}
       ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}">+ Añadir</button>`}</div>`});
   const st=S.staples.filter(s=>s.listId===L.id&&!fv.some(k=>matchesStaple(s,{listId:L.id,mid:k.startsWith('n:')?'':k,name:k.startsWith('n:')?k.slice(2):MC?.byId.get(k)?.[1]||''}))).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
   if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.</p>`;
-  return`<div class="head-row"><h2>⭐ Habituales</h2><button class="link" data-act="ckTab" data-v="productos">+ Buscar</button></div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Cada X días</button></div>`;
+  return`<div class="head-row"><h2>⭐ Habituales</h2><button class="link" data-act="ckTab" data-v="productos">+ Buscar</button></div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Habitual</button></div>`;
 }
 function shopLaterSection(L){
   const entries=(S.shopLater||[]).filter(x=>x.listId===L.id);
