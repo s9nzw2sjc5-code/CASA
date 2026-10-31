@@ -394,6 +394,10 @@ body.nav-top .toast{bottom:90px}
 .ck-total{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:12px}
 .ck-total b{font-size:1.3rem}
 .ck-total small{color:var(--muted);width:100%}
+.tk-read-total{display:grid;gap:4px;padding:16px;margin:14px 0;background:var(--accent-soft);border:2px solid var(--accent);border-radius:16px}
+.tk-read-total strong{font-size:2rem;line-height:1.2;color:var(--accent);font-variant-numeric:tabular-nums}
+.tk-read-total small{font-size:.85rem}
+.tk-read-total.needs-review{border-color:var(--danger)}
 .ck-stars{display:flex;gap:4px;margin:10px 0}
 .ck-stars button{font-size:1.6rem;color:var(--line);line-height:1}
 .ck-stars button.on{color:#F5B700}
@@ -540,13 +544,13 @@ details summary{cursor:pointer}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="sync.js?v=48"></script>
-<script src="receipts.js?v=48"></script>
-<script src="receipt-image.js?v=48"></script>
-<script src="receipt-layout.js?v=48"></script>
-<script src="receipt-ocr.js?v=48"></script>
-<script src="cocina.js?v=48"></script>
-<script src="receipt-extras.js?v=48"></script>
+<script src="sync.js?v=49"></script>
+<script src="receipts.js?v=49"></script>
+<script src="receipt-image.js?v=49"></script>
+<script src="receipt-layout.js?v=49"></script>
+<script src="receipt-ocr.js?v=49"></script>
+<script src="cocina.js?v=49"></script>
+<script src="receipt-extras.js?v=49"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -601,7 +605,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=48;
+const APP_VERSION=49;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
