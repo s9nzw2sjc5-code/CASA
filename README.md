@@ -52,3 +52,35 @@ Entra con tu email y contraseña la primera vez; después se queda la sesión ab
 2. En la app nueva, ya dentro: **Copias de seguridad** → **Restaurar desde un archivo**.
 
 Tus datos **nunca** se guardan en este repositorio: viven en tu Firebase y en vuestros móviles.
+
+## Importación de tiques
+
+El lector reutiliza Tesseract en español, cargado desde jsDelivr. También admite
+el PDF del tique o un archivo de texto corregido (`.txt`). La compra se
+valida en céntimos: comercio y fecha son obligatorios y las líneas deben sumar
+exactamente el total. Solo se guarda automáticamente una lectura de alta
+confianza, con productos identificados y sin posibles gastos duplicados. En los
+demás casos se abre una revisión para corregir datos, cantidades y destinos en
+casa, o añadir líneas que el OCR haya omitido.
+
+La importación exige sesión iniciada, conexión y una lectura del servidor.
+`receipts.js` prepara una actualización de los campos de `hogar/estado` usados
+por la app; `transactPatch` de `sync.js` la aplica con `transaction.update`,
+sin reemplazar el documento ni crear colecciones. La compra conserva una huella
+SHA-256 de fecha, total y comercio, otra de sus líneas y el hash del archivo.
+Las comprobaciones se repiten dentro de la transacción para que reintentos o dos
+móviles no dupliquen el gasto ni las existencias. Una relectura del servidor
+verifica el registro antes de anunciar éxito. Completar un gasto previo conserva
+su ID y no vuelve a incrementar el inventario. Las semanas van de lunes a domingo
+según la fecha de compra, no la fecha de subida.
+
+Pruebas sin credenciales ni datos personales:
+
+```sh
+node --test tests/receipts.test.cjs
+node tests/receipt-flow.cjs
+```
+
+La segunda usa Playwright y Chromium (`/usr/bin/chromium`, configurable mediante
+`CHROMIUM_PATH`). Ejecuta la app y su adaptador real de Firebase con un transporte
+simulado; no demuestra acceso o escritura en el Firestore de producción.

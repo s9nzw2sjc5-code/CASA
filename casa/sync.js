@@ -59,6 +59,14 @@
       if(name==='db')return{
         doc:p=>wrapDoc(s.fs.doc(p)),
         collection:p=>wrapCol(s.fs.collection(p)),
+        // Solo actualiza campos explícitos de un documento existente. No reemplaza el hogar.
+        transactPatch:(p,fn)=>s.fs.runTransaction(async t=>{
+          const ref=s.fs.doc(p),snap=await t.get(ref);
+          if(!snap.exists)throw new Error('No existe el documento de la casa. No se ha creado ni sobrescrito nada.');
+          const data=snap.data(),operation=fn(data),patch=operation.patch||{};
+          if(Object.keys(patch).length)t.update(ref,patch);
+          return {data:{...data,...patch},result:operation.result};
+        }).catch(e=>{throw mapErr(e)}),
         // Leer, fusionar y guardar de una vez: si la otra persona guarda justo a la vez,
         // Firestore lo repite con sus datos y no se pierde lo de ninguna de las dos
         transact:(p,fn)=>s.fs.runTransaction(async t=>{
@@ -89,6 +97,7 @@
   };
   const wrapDoc=ref=>({
     id:ref.id,
+    getServer:()=>ref.get({source:'server'}).catch(e=>{throw mapErr(e)}),
     get:()=>ref.get().catch(e=>{throw mapErr(e)}),
     set:d=>ref.set(d).catch(e=>{throw mapErr(e)}),
     delete:()=>ref.delete().catch(e=>{throw mapErr(e)}),
