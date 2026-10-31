@@ -1084,32 +1084,10 @@ async function cropTicketImage(file){
   });
 }
 
-async function ocrText(file,prog){
-  await loadJS('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
-  const w=await Tesseract.createWorker('spa',1,{langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/spa@1.0.0/4.0.0',logger:m=>{if(m.status==='recognizing text')prog(Math.round(m.progress*100))}});
-  try{
-    await w.setParameters({tessedit_pageseg_mode:Tesseract.PSM.SINGLE_BLOCK,preserve_interword_spaces:'1'});
-    const score=data=>{const t=parseTicket(data.text),v=CasaReceipts.validate(t);return (v.ok?10000:0)+(t.totalObserved?500:0)+t.lines.length*20+data.confidence};
-    let prepared;try{prepared=await CasaReceiptImage.prepare(file)}catch(e){/* El original sigue disponible si no se puede preparar. */}
-    let data=(await w.recognize(prepared?prepared.cropped:file)).data;
-    const attempts=[{mode:prepared?'papel':'original',confidence:data.confidence,lines:parseTicket(data.text).lines.length}];
-    if(prepared&&(!CasaReceipts.validate(parseTicket(data.text)).ok||data.confidence<85)){
-      const enhanced=(await w.recognize(prepared.normalized)).data;attempts.push({mode:'iluminación compensada',confidence:enhanced.confidence,lines:parseTicket(enhanced.text).lines.length});
-      if(score(enhanced)>score(data))data=enhanced;
-      await w.setParameters({tessedit_pageseg_mode:Tesseract.PSM.SINGLE_COLUMN});
-      const column=(await w.recognize(prepared.normalized)).data;attempts.push({mode:'columna',confidence:column.confidence,lines:parseTicket(column.text).lines.length});
-      if(score(column)>score(data))data=column;
-      // El recorte automático puede equivocarse con fondos o papeles distintos.
-      // Conservamos también una lectura completa antes de elegir el texto.
-      if(prepared.bounds.left>0||prepared.bounds.right<1){
-        await w.setParameters({tessedit_pageseg_mode:Tesseract.PSM.SINGLE_BLOCK});
-        const original=(await w.recognize(file)).data;attempts.push({mode:'original completo',confidence:original.confidence,lines:parseTicket(original.text).lines.length});
-        if(score(original)>score(data))data=original;
-      }
-    }
-    return{text:data.text,confidence:data.confidence,attempts};
-  }finally{await w.terminate()}
+async function ocrText(file,prog,options={}){
+  return CasaReceiptOCR.read(file,prog,options);
 }
+
 const tNum=s=>parseFloat(String(s).replace(/\s/g,'').replace(',','.'));
 const T_SKIP=/^(total|subtotal|iva|base|cuota|tarjeta|entrega|efectivo|cambio|importe|descuento|ahorro|cupon|nif|cif|factura|fecha|hora|op[:.]|tienda|telefono|tel[.:]|c\/|avda|calle|mercadona|lidl|carrefour|aldi|dia\b|gracias|devolucion|n[ºo°]|caja|cajer|ticket|tique|art[ií]culos|descripci|p\.? ?unit|aut|visa|mastercard|contactless|forma de pago|venta|copia|www|http|s\.a\.|s\.l\.|%)/;
 // Saca de un tique: supermercado, fecha, total y cada línea (nombre, unidades, precio unidad, importe, kilos)
@@ -1126,19 +1104,19 @@ function parseTicket(txt){
     const n=norm(l);
     // Línea de peso: «0,856 kg 2,30 €/kg 1,97»
     const w=n.match(/(\d+[.,]\d{1,3})\s*kg\s*[x×]?\s*(\d+[.,]\d{2})\s*(?:\/\s*kg|eur\/kg|e\/kg)?\s+(\d+[.,]\d{2})(?:\s+[a-e])?$/);
-    if(w&&pend){lines.push({name:pend,units:1,kg:tNum(w[1]),unit:tNum(w[2]),price:tNum(w[3])});pend=null;return}
+    if(w&&pend){lines.push({name:pend,units:1,kg:tNum(w[1]),unit:tNum(w[2]),price:tNum(w[3]),quantityObserved:true,sourceText:l});pend=null;return}
     // «2 x 0,89» debajo del nombre (Lidl, Carrefour…)
     const x=n.match(/^(\d+)\s*[x×*]\s*(\d+[.,]\d{2})(?:\s+(\d+[.,]\d{2}))?/);
-    if(x&&lines.length&&!pend){const a=lines[lines.length-1];a.units=+x[1];a.unit=tNum(x[2]);if(x[3])a.price=tNum(x[3]);return}
+    if(x&&lines.length&&!pend){const a=lines[lines.length-1];a.units=+x[1];a.unit=tNum(x[2]);a.quantityObserved=true;if(x[3])a.price=tNum(x[3]);return}
     const discount=l.match(/^((?:DESCUENTO|CUPON|DTO)[^\d]*?)\s+(-\d+[.,]\d{2})$/i);
-    if(discount){lines.push({name:discount[1].trim(),units:1,unit:tNum(discount[2]),price:tNum(discount[2])});pend=null;return}
+    if(discount){lines.push({name:discount[1].trim(),units:1,unit:tNum(discount[2]),price:tNum(discount[2]),quantityObserved:true,sourceText:l});pend=null;return}
     if(T_SKIP.test(n)||/^\d+[.,]\d+\s*kg\b/.test(n)){pend=null;return}
     // «3 HUEVOS GRANDES L 3,05 9,15» o «1 LECHE ENTERA 0,89»
     let m=l.match(/^(\d{1,2})\s+(.*?[A-Za-zÁÉÍÓÚÑáéíóúñ].*?)\s+(-?\d+[.,]\d{2})(?:\s+(-?\d+[.,]\d{2}))?(?:\s+[A-E])?$/);
-    if(m){const u=+m[1],a=tNum(m[3]),b=m[4]?tNum(m[4]):null;lines.push({name:m[2],units:u,unit:b!=null?a:a/u,price:b!=null?b:a});pend=null;return}
+    if(m){const u=+m[1],a=tNum(m[3]),b=m[4]?tNum(m[4]):null;lines.push({name:m[2],units:u,unit:b!=null?a:a/u,price:b!=null?b:a,quantityObserved:true,sourceText:l});pend=null;return}
     // «LECHE ENTERA 0,89 A» (sin unidades delante)
     m=l.match(/^(.*?[A-Za-zÁÉÍÓÚÑáéíóúñ]{2}.*?)\s+(-?\d+[.,]\d{2})(?:\s+[A-E])?$/);
-    if(m){const pr=tNum(m[2]);lines.push({name:m[1],units:1,unit:pr,price:pr});pend=null;return}
+    if(m){const pr=tNum(m[2]);lines.push({name:m[1],units:1,unit:pr,price:pr,quantityObserved:false,sourceText:l});pend=null;return}
     // Nombre solo (lo de peso viene en la línea siguiente)
     m=l.match(/^(?:\d{1,2}\s+)?([A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ0-9 .,%/'-]{2,})$/);
     pend=m?m[1]:null;
@@ -1191,7 +1169,7 @@ async function receiptRemoteState(){
   return state;
 }
 async function commitTicket(t,options={}){
-  if(CasaReceipts.version!==46)throw new Error('Casa tiene una versión antigua abierta. Cierra esta revisión y pulsa Actualizar Casa.');
+  if(CasaReceipts.version!==47)throw new Error('Casa tiene una versión antigua abierta. Cierra esta revisión y pulsa Actualizar Casa.');
   const check=CasaReceipts.validate(t);if(!check.ok)throw new Error(check.reasons.join('. '));
   if(t.date>today())throw new Error('La fecha del tique no puede ser futura.');
   await receiptRemoteState(); // Una lectura de servidor es obligatoria; no se acepta la caché.
@@ -1211,45 +1189,56 @@ async function commitTicket(t,options={}){
   return {...saved.result,weekly:spentWeek()};
 }
 function receiptMessage(result){return result.duplicate?'Este tique ya estaba guardado. No se han duplicado el gasto ni los productos.':`Tique guardado y verificado${result.enriched?' · completa el gasto anterior':''} · ${result.added||0} productos actualizados en casa · ${result.removed||0} quitados de Compras. Gastado esta semana: ${eur(result.weekly)}`}
+function receiptFromText(text,meta={}){
+  const t=parseTicket(text),clean=s=>String(s).replace(/[€|]/g,' ').replace(/\s+/g,' ').trim();
+  for(const line of t.lines){const source=(meta.lines||[]).find(row=>clean(row.text)===line.sourceText);if(source)line.readConfidence=source.confidence}
+  return prepareTicket({...t,imageHash:meta.imageHash||'',ocrConfidence:meta.confidence||0,ocrEngine:meta.engine||'',ocrLines:meta.lines||[]});
+}
+function receiptReadOptions(ov){
+  const controller=new AbortController(),observer=new MutationObserver(()=>{if(!ov.isConnected){controller.abort();observer.disconnect()}});
+  observer.observe(document.body,{childList:true,subtree:true});return {signal:controller.signal,dispose:()=>observer.disconnect()};
+}
 function ticketTranscription(text,meta={}){
   const ov=sheet('Transcripción del tique',`<p class="hint">Revisa el texto que hemos leído. Todavía no se ha guardado ninguna compra.</p>${meta.file&&(/image/.test(meta.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(meta.file.name||''))?'<details><summary>Ver foto original</summary><img id="tkOriginalImage" style="display:block;width:100%;height:auto" alt="Foto original del ticket para comprobar la transcripción"></details>':''}<label for="tkTranscript">Texto del ticket</label><textarea class="field" id="tkTranscript" rows="14" spellcheck="false">${esc(text)}</textarea><p id="tkTranscriptStatus" class="hint" role="status"></p>${meta.file&&(/image/.test(meta.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(meta.file.name||''))?'<button type="button" class="btn sec" id="tkTranscriptCrop">✂️ Recortar y volver a leer</button>':''}`,{autoFocus:false,saveLabel:'Preparar compra',onSave:()=>{
     const edited=ov.querySelector('#tkTranscript').value.trim();if(!edited){ov.querySelector('#tkTranscriptStatus').textContent='No se ha leído texto. Prueba a recortar el papel o vuelve a hacer la foto.';return false}
-    const t=prepareTicket({...parseTicket(edited),imageHash:meta.imageHash||'',ocrConfidence:meta.confidence||0});
+    const t=receiptFromText(edited,meta);
     ov.remove();ticketReview(t,edited,{file:meta.file,reasons:['Confirma las cantidades, el destino en casa y los productos que se quitarán de Compras.']});return false;
   }});
   const original=ov.querySelector('#tkOriginalImage');
   if(original){const url=URL.createObjectURL(meta.file);original.src=url;const observer=new MutationObserver(()=>{if(!ov.isConnected){URL.revokeObjectURL(url);observer.disconnect()}});observer.observe(document.body,{childList:true,subtree:true})}
   let busy=false;
   const status=ov.querySelector('#tkTranscriptStatus'),field=ov.querySelector('#tkTranscript');
-  const summary=()=>{const t=parseTicket(field.value),check=CasaReceipts.validate(t);status.textContent=t.lines.length+' líneas interpretadas · suma '+eur(check.sumCents/100)+(t.total?' · total leído '+eur(t.total):' · total no identificado')+(meta.confidence<85?' · Lectura dudosa: comprueba el texto con el ticket.':'')+(check.ok?'':' · '+check.reasons.join('. '))};
+  const summary=()=>{const t=parseTicket(field.value),check=CasaReceipts.validate(t),unknown=meta.engine?t.lines.filter(l=>!l.quantityObserved).length:0,doubtful=(meta.lines||[]).filter(l=>l.confidence<.9).length;status.textContent=t.lines.length+' líneas interpretadas · suma '+eur(check.sumCents/100)+(t.total?' · total leído '+eur(t.total):' · total no identificado')+(unknown?' · '+unknown+' cantidades sin leer: tendrás que confirmarlas.':'')+(doubtful||meta.confidence<85?' · Hay texto dudoso: comprueba los nombres con la foto.':'')+(check.ok?'':' · '+check.reasons.join('. '))};
   field.addEventListener('input',summary);summary();
   ov.querySelector('#tkTranscriptCrop')?.addEventListener('click',async()=>{
     if(busy)return;busy=true;
-    try{const crop=await cropTicketImage(meta.file);if(!crop||!ov.isConnected)return;ov.querySelector('[data-s="ok"]').disabled=true;status.textContent='Volviendo a leer el papel…';const result=await ocrText(crop,n=>{if(ov.isConnected)status.textContent='Volviendo a leer… '+n+' %'});if(!ov.isConnected)return;field.value=result.text;meta.confidence=result.confidence;summary()}
+    const readOptions=receiptReadOptions(ov);
+    try{const crop=await cropTicketImage(meta.file);if(!crop||!ov.isConnected)return;ov.querySelector('[data-s="ok"]').disabled=true;status.textContent='Volviendo a leer el papel…';const result=await ocrText(crop,(n,stage)=>{if(ov.isConnected)status.textContent=(stage||'Volviendo a leer')+'… '+n+' %'},readOptions);if(!ov.isConnected)return;field.value=result.text;meta.confidence=result.confidence;meta.lines=result.lines;meta.engine=result.engine;summary()}
     catch(e){if(ov.isConnected)status.textContent=e.message||'No se pudo volver a leer la foto.'}
-    finally{busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
+    finally{readOptions.dispose();busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
   });
   return ov;
 }
 async function ticketFlow(){
   const file=await pickFile('image/*,application/pdf,text/plain,.txt');if(!file)return;
-  const ov=sheet('Leyendo el tique…',`<p class="hint" id="tkP">Preparando…</p><p class="hint">Primero verás una transcripción editable. Nada se guarda hasta que confirmes la compra.</p>`,{}),progress=ov.querySelector('#tkP');
-  let text='',confidence=0,imageHash='';
+  const ov=sheet('Leyendo el tique…',`<p class="hint" id="tkP">Preparando…</p><p class="hint">Primero verás una transcripción editable. Nada se guarda hasta que confirmes la compra. La primera lectura puede tardar mientras se descarga el lector; la foto se procesa en este dispositivo.</p>`,{}),progress=ov.querySelector('#tkP');
+  let text='',confidence=0,imageHash='',reading={};const readOptions=receiptReadOptions(ov);
   try{
     const raw=await file.arrayBuffer();imageHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',raw))).map(b=>b.toString(16).padStart(2,'0')).join('');
     if(file.type==='text/plain'||/\.txt$/i.test(file.name)){progress.textContent='Leyendo el texto del tique…';text=await file.text();confidence=100}
     else if(/pdf/i.test(file.type)||/\.pdf$/i.test(file.name)){progress.textContent='Leyendo el PDF…';text=await pdfText(file);confidence=100}
-    else{progress.textContent='Leyendo la foto…';const ocr=await ocrText(file,n=>{progress.textContent='Leyendo la foto… '+n+' %'});text=ocr.text;confidence=ocr.confidence}
+    else{progress.textContent='Leyendo la foto…';reading=await ocrText(file,(n,stage)=>{if(ov.isConnected)progress.textContent=(stage||'Leyendo la foto')+'… '+n+' %'},readOptions);text=reading.text;confidence=reading.confidence}
     if(!ov.isConnected)return;
     if(!MC)await loadMC();
     if(!ov.isConnected)return;
-    ov.remove();ticketTranscription(text,{file,imageHash,confidence});
-  }catch(e){ov.remove();sheet('No se ha podido completar el tique',`<p>${esc(e.message||'Revisa la conexión o prueba con una foto más nítida.')}</p><p class="hint">No se creará un gasto distinto al reintentar el mismo archivo.</p>`,{})}
+    readOptions.dispose();ov.remove();ticketTranscription(text,{file,imageHash,confidence,engine:reading.engine,lines:reading.lines});
+  }catch(e){if(!ov.isConnected||e.name==='AbortError')return;ov.remove();sheet('No se ha podido completar el tique',`<p>${esc(e.message||'Revisa la conexión o prueba con una foto más nítida.')}</p><p class="hint">No se creará un gasto distinto al reintentar el mismo archivo.</p>`,{})}
+  finally{readOptions.dispose()}
 }
 function ticketReview(t,text,opts={}){
   const stores=[...new Set([...ck().stores,...(t.store?[t.store]:[])])],pans=S.pantry||[];
   const candidates=(opts.candidates||S.buys||[]).filter(b=>b.date===t.date&&CasaReceipts.cents(b.total)===CasaReceipts.cents(t.total)&&(!t.store||!b.store||norm(b.store)===norm(t.store)));
-  const rows=t.lines.map((a,i)=>{const plan=a.plan||ticketLinePlan(a,t.store),matches=ticketShoppingMatches(a,plan),selected=matches.length===1?matches[0].id:'';return `<div class="ck-tl"><label class="ck-tl-h"><input type="checkbox" data-on="${i}" checked><input class="field" data-nm="${i}" value="${esc(a.nice||a.name)}"><input class="field" data-pr="${i}" type="number" inputmode="decimal" step="0.01" value="${a.price}"></label><div class="grid2"><div><label>Cantidad</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" value="${a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p><label>Destino en casa</label><select class="field" data-pn="${i}">${opt([['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.inventory)}</select><details><summary>Cuánto añadir a casa</summary><input class="field" data-stockqty="${i}" data-per-unit="${plan.amount/(a.kg||a.units||1)}" type="number" min="0.001" step="any" value="${plan.amount}"><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></details><label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],selected)}</select>${matches.length>1?'<p class="hint">Hay varias coincidencias: elige cuál has comprado.</p>':''}</div>`});
+  const rows=t.lines.map((a,i)=>{const plan=a.plan||ticketLinePlan(a,t.store),matches=ticketShoppingMatches(a,plan),selected=matches.length===1?matches[0].id:'',unknown=!!t.ocrEngine&&a.quantityObserved===false;return `<div class="ck-tl"><label class="ck-tl-h"><input type="checkbox" data-on="${i}" checked><input class="field" data-nm="${i}" value="${esc(a.nice||a.name)}"><input class="field" data-pr="${i}" type="number" inputmode="decimal" step="0.01" value="${a.price}"></label>${a.readConfidence<.9?'<p class="hint">Texto dudoso: comprueba este producto con la foto.</p>':''}<div class="grid2"><div><label>${unknown?'Cantidad sin leer: confirmar':'Cantidad'}</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" placeholder="Confirmar" value="${unknown?'':a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p><label>Destino en casa</label><select class="field" data-pn="${i}">${opt([['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.inventory)}</select><details><summary>Cuánto añadir a casa</summary><input class="field" data-stockqty="${i}" data-per-unit="${plan.amount/(a.kg||a.units||1)}" type="number" min="0.001" step="any" value="${plan.amount}"><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></details><label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],selected)}</select>${matches.length>1?'<p class="hint">Hay varias coincidencias: elige cuál has comprado.</p>':''}</div>`});
   const ov=sheet('Revisar tique',`<p class="hint">${esc((opts.reasons||[]).join('. '))}</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><button type="button" class="link" id="tkBackToText">Corregir transcripción</button><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Si ya está guardado, no se repiten gasto ni existencias. Al completar un gasto previo tampoco se vuelven a sumar sus productos.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});
   let busy=false;
   function collect(){
@@ -1261,18 +1250,18 @@ function ticketReview(t,text,opts={}){
   }
   function sum(){const check=CasaReceipts.validate(collect());ov.querySelector('#f_sum').textContent='Suma de artículos: '+eur(check.sumCents/100)+(check.ok?' · ✓ Cuadra':' · '+check.reasons.join('. '))}
   ov.querySelector('#tkCrop')?.addEventListener('click',async()=>{
-    if(busy)return;busy=true;
+    if(busy)return;busy=true;const readOptions=receiptReadOptions(ov);
     try{
       const current=collect(),cropped=await cropTicketImage(opts.file);if(!cropped||!ov.isConnected)return;
       const status=ov.querySelector('#tkStatus');status.textContent='Leyendo la zona recortada…';ov.querySelector('[data-s="ok"]').disabled=true;
-      const result=await ocrText(cropped,n=>{if(ov.isConnected)status.textContent='Leyendo la zona recortada… '+n+' %'});
+      const result=await ocrText(cropped,n=>{if(ov.isConnected)status.textContent='Leyendo la zona recortada… '+n+' %'},readOptions);
       if(!ov.isConnected)return;
-      const parsed=parseTicket(result.text),updated=prepareTicket({...parsed,store:parsed.store||current.store,date:parsed.date||current.date,total:parsed.total||current.total,imageHash:t.imageHash,ocrConfidence:result.confidence});
+      const parsed=receiptFromText(result.text,{...result,imageHash:t.imageHash}),updated={...parsed,store:parsed.store||current.store,date:parsed.date||current.date,total:parsed.total||current.total};
       ov.remove();ticketReview(updated,result.text,{...opts,reasons:['Revisa la nueva lectura del recorte antes de guardar.']});
     }catch(e){if(ov.isConnected)ov.querySelector('#tkStatus').textContent=e.message||'No se ha podido volver a leer la foto.'}
-    finally{busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
+    finally{readOptions.dispose();busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
   });
-  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence})});
+  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines})});
   ov.querySelector('#tkAddLine').addEventListener('click',()=>{
     const current=collect();current.lines.push({name:'',nice:'',units:1,unit:0,price:0});
     ov.remove();ticketReview(current,text,opts);

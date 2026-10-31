@@ -18,7 +18,7 @@ if([photo,reference,report].some(insideRepo))throw Error('Guarda fotos, referenc
  const server=http.createServer((req,res)=>{
   const pathname=decodeURIComponent(new URL(req.url,'http://test').pathname),file=path.resolve(root,'.'+(pathname.endsWith('/')?pathname+'index.html':pathname));
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
-  fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return}res.setHeader('Content-Type',({'.html':'text/html','.js':'application/javascript','.json':'application/json'})[path.extname(file)]||'application/octet-stream');res.end(data)});
+  fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return}res.setHeader('Content-Type',({'.html':'text/html','.js':'application/javascript','.mjs':'application/javascript','.wasm':'application/wasm','.json':'application/json'})[path.extname(file)]||'application/octet-stream');res.end(data)});
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  let browser,api;
@@ -48,7 +48,7 @@ if([photo,reference,report].some(insideRepo))throw Error('Guarda fotos, referenc
      }else{ctx.filter=`brightness(${condition==='mas-luz'?1.2:.55})`;ctx.drawImage(image,0,0)}
      image.close();photo=await new Promise(r=>canvas.toBlob(r,'image/png'));
     }
-    const start=performance.now(),ocr=await ocrText(photo,()=>{}),parsed=parseTicket(ocr.text);
+    const start=performance.now(),ocr=await ocrText(photo,()=>{}),parsed=receiptFromText(ocr.text,ocr);
     return {condition,elapsedMs:Math.round(performance.now()-start),ocr,parsed,validation:CasaReceipts.validate(parsed)};
    },condition);
    const actual=result.parsed;

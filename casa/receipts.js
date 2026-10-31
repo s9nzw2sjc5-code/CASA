@@ -13,6 +13,7 @@
     if(!(cents(t.total)>0))reasons.push('Falta el total pagado');
     if(!Array.isArray(t.lines)||!t.lines.length)reasons.push('No se han leído artículos');
     for(const l of t.lines||[]){
+      if(t.ocrEngine&&l.quantityObserved===false)reasons.push('Confirma las cantidades que no se han podido leer');
       if(!norm(l.name)||!Number.isFinite(cents(l.price))||!Number.isFinite(Number(l.units))||l.units<=0)reasons.push('Hay una línea incompleta');
       else sum+=cents(l.price);
       if(Number.isFinite(l.unit)&&Math.abs(cents(l.unit*(l.kg||l.units))-cents(l.price))>1)reasons.push('Hay una cantidad o precio unitario que no cuadra');
@@ -105,6 +106,6 @@
     if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype){for(const [key,item] of Object.entries(value))assertData(item,path+'.'+key);return}
     throw new Error('Dato no válido en '+path+'. No se ha enviado el tique.');
   }
-  const api={version:46,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch};
+  const api={version:47,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch};
   root.CasaReceipts=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

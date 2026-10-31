@@ -103,3 +103,7 @@ test('a similar photo can be linked to an existing ticket instead of importing t
  const t=receipt(),s=state();s.buys=[{id:'existing-receipt',ticket:true,date:t.date,store:t.store,total:t.total,items:[{name:'Different OCR wording',units:1,price:5}]}];
  const op=R.patch(s,t,await R.identify(t),{matchId:'existing-receipt'});assert(op.result.duplicate);assert.deepEqual(op.patch,{});
 });
+test('unread image quantities require confirmation even when the total matches',()=>{
+ const t=receipt();t.ocrEngine='rapidocr-ppocrv4-web';t.lines[0].quantityObserved=false;
+ const check=R.validate(t);assert(!check.ok);assert(check.reasons.some(r=>r.includes('cantidades')));
+});

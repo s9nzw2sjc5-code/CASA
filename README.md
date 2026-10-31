@@ -55,12 +55,20 @@ Tus datos **nunca** se guardan en este repositorio: viven en tu Firebase y en vu
 
 ## Importación de tiques
 
-El lector reutiliza Tesseract en español, cargado desde jsDelivr. También admite
-el PDF del tique o un archivo de texto corregido (`.txt`). Las fotos se preparan
-localmente: se intenta aislar el papel y compensar la iluminación desigual.
-Se comparan la lectura del papel, el contraste compensado y la segmentación por
-columna cuando la primera no es fiable. Se vuelve a comprobar el original si se
-ha recortado automáticamente. Esto no garantiza reconocer todos los importes.
+El lector de fotos ejecuta los modelos de RapidOCR/PP-OCRv4 en el navegador con
+ONNX Runtime Web y OpenCV, dentro de un worker que se libera al terminar o cancelar.
+No necesita una clave de ChatGPT ni un servidor de OCR. Los modelos se descargan
+solo en la primera lectura y se conservan en una caché independiente. Las fotos
+no se envían a un servicio externo de reconocimiento.
+
+Se conservan las coordenadas y la confianza del texto para reconstruir filas y
+separar cantidades pegadas al nombre cuando existe evidencia de la columna.
+Las cantidades que no se leen deben confirmarse en la revisión. Los importes no
+se completan con el residuo de la suma. Sigue admitiendo PDF y texto corregido.
+Una suma correcta no garantiza que todos los nombres y cantidades sean correctos.
+El modelo probado es el distribuido con RapidOCR 1.4.4; no se promete precisión
+universal ni se ha certificado su rendimiento en un iPhone real. Licencias,
+versiones y hashes: `casa/ocr/THIRD_PARTY.md` y `casa/ocr/assets.sha256`.
 
 Todos los tiques muestran primero una **transcripción editable**. «Preparar
 compra» interpreta ese texto y abre una revisión; no se escribe nada hasta pulsar
@@ -85,7 +93,7 @@ según la fecha de compra, no la fecha de subida.
 Pruebas sin credenciales ni datos personales:
 
 ```sh
-node --test tests/receipts.test.cjs
+node --test tests/receipts.test.cjs tests/receipt-layout.test.cjs
 node tests/receipt-flow.cjs
 ```
 
