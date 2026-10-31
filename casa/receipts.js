@@ -39,7 +39,7 @@
     const match=duplicates(state,t,id);
     if(match.exact)return {patch:{},result:{id:match.exact.id,duplicate:true}};
     if(match.candidates.length&&!options.matchId&&!options.confirmNew){const e=new Error('Hay una compra del mismo día e importe. Revisa si es el mismo gasto.');e.code='receipt_review';throw e}
-    const old=options.matchId&&(state.buys||[]).find(b=>b.id===options.matchId);
+    const old=options.matchId?(state.buys||[]).find(b=>b.id===options.matchId):null;
     if(options.matchId&&!old)throw new Error('La compra seleccionada ya no existe. Vuelve a revisar el tique.');
     if(old&&(old.date!==t.date||cents(old.total)!==cents(t.total)||(old.store&&norm(old.store)!==norm(t.store))))throw new Error('El gasto seleccionado no coincide en fecha, comercio e importe.');
     if(old?.ticket)return {patch:{},result:{id:old.id,duplicate:true}};

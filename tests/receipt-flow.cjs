@@ -47,6 +47,9 @@ const root=path.resolve(__dirname,'..');
   await p.evaluate(()=>{testFile=new File([testText],'receipt.txt',{type:'text/plain'});ocrText=async()=>{throw Error('Text import must not invoke OCR')}});await p.evaluate(()=>ticketFlow());assert.equal(await p.evaluate(()=>testWrites),1);
   // Cancel while OCR is running must not save afterwards.
   await p.evaluate(()=>{testFile=new File(['cancel image'],'receipt.jpg',{type:'image/jpeg'});ocrText=()=>new Promise(r=>window.finishOCR=r);window.flowPromise=ticketFlow()});await p.waitForFunction(()=>!!window.finishOCR);await p.locator('[data-s=cancel]').click();await p.evaluate(()=>finishOCR({text:testText,confidence:99}));await p.evaluate(()=>flowPromise);assert.equal(await p.evaluate(()=>testWrites),1);
+  // Regression: a genuinely new reviewed purchase previously sent a function as `at`.
+  await p.evaluate(()=>{const t=parseTicket(testText);t.total*=2;t.lines[0].units*=2;t.lines[0].price*=2;ticketReview(prepareTicket(t),testText,{reasons:['Test review']})});
+  await p.locator('#f_as').selectOption('__new');await p.getByRole('button',{name:'Guardar y verificar',exact:true}).click();await p.locator('.overlay').waitFor({state:'detached'});assert.equal(await p.evaluate(()=>testWrites),2);assert.equal(await p.evaluate(()=>typeof testState.buys.at(-1).at),'number');
   assert.deepEqual(errors,[]);console.log('PASS browser: real sync adapter uses update, not set; high-confidence auto-save; server reread; duplicate retry; review of incomplete data; add missing lines; cancel prevents saving. Firebase transport simulated.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r))}
 })().catch(e=>{console.error(e);process.exit(1)});

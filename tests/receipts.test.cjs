@@ -64,3 +64,12 @@ test('an unexpected remote schema is rejected without creating fields',async()=>
  const remote={unrelated:'keep'},before=structuredClone(remote),t=receipt();
  assert.throws(()=>R.patch(remote,t,{}));assert.deepEqual(remote,before);
 });
+test('a new purchase from review has a numeric timestamp, not String.prototype.at',async()=>{
+ const t=receipt(),id=await R.identify(t);
+ for(const confirmNew of [false,true]){
+  const op=R.patch(state(),t,id,{matchId:'',confirmNew,at:123456});
+  assert.equal(op.patch.buys[0].at,123456);
+  assert.equal(typeof op.patch.buys[0].at,'number');
+  assert.doesNotThrow(()=>structuredClone(op.patch));
+ }
+});

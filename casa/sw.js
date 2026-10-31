@@ -1,6 +1,6 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v42';
+const CACHE = 'casa-v43';
 const SHELL = ['./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js', 'cocina.js', 'receipts.js', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
