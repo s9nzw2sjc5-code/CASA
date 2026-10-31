@@ -79,6 +79,28 @@ cantidad que añadir a casa y el producto concreto que quitar de Compras. Las
 coincidencias ambiguas no se quitan sin selección. Se puede volver a la
 transcripción o recortar y releer la foto manteniendo la huella original.
 
+La revisión despliega los productos dudosos y permite abrir los demás. Cuando hay
+coordenadas del OCR muestra un recorte de la foto junto al producto. Las
+correcciones de nombre confirmadas se recuerdan por comercio en
+`cook.receiptAliases`; nunca cambian automáticamente un importe.
+
+Las compras parciales restan unidades de la lista y conservan el resto. Para
+productos por peso se confirma cuántas unidades de la lista se han comprado.
+El historial permite deshacer importaciones nuevas mediante un registro de los
+campos afectados: gasto, existencias, lista, precios y habituales. La transacción
+se detiene si esos datos cambiaron después. Los tickets anteriores a esta versión
+no tienen un registro para deshacer con seguridad. Una compra anulada conserva
+su historial con gasto cero; volver a importarla no crea dos registros con el
+mismo identificador.
+
+Las fotos/PDF originales se conservan en IndexedDB **solo en el dispositivo de
+subida**, antes de confirmar el guardado, y se consultan desde el historial. No
+se insertan imágenes en `hogar/estado`, no se publican en GitHub y no se ha
+configurado Firebase Storage. Borrar los datos del navegador elimina esas copias;
+otro móvil muestra que no dispone de la foto. Los artículos y gastos siguen
+sincronizándose por Firestore. Si falla el archivo local, se informa antes de
+intentar guardar el gasto.
+
 La importación exige sesión iniciada, conexión y una lectura del servidor.
 `receipts.js` prepara una actualización de los campos de `hogar/estado` usados
 por la app; `transactPatch` de `sync.js` la aplica con `transaction.update`,

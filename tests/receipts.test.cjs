@@ -107,3 +107,24 @@ test('unread image quantities require confirmation even when the total matches',
  const t=receipt();t.ocrEngine='rapidocr-ppocrv4-web';t.lines[0].quantityObserved=false;
  const check=R.validate(t);assert(!check.ok);assert(check.reasons.some(r=>r.includes('cantidades')));
 });
+test('partial purchase retains the remaining units and recalculates estimated price',async()=>{
+ const s=state(),t=receipt();s.items[0].units=3;s.items[0].price=6;s.items[0].qty='3 paquetes';t.lines[0].plan.shoppingIds=['shopping'];t.lines[0].plan.shoppingAmount=1;
+ const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.items[0].units,2);assert.equal(op.patch.items[0].price,4);assert(op.patch.items.some(x=>x.id==='other'));
+});
+test('repeated lines for the same shopping item are counted together',async()=>{
+ const s=state(),t=receipt();s.items[0].units=5;t.lines[0].units=1;t.lines[0].unit=4;t.lines[0].plan.shoppingIds=['shopping'];const second=structuredClone(t.lines[0]);t.lines.push(second);t.total=9;
+ const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.items[0].units,3);
+});
+test('undo restores touched state, removes spend, preserves unrelated changes and is idempotent',async()=>{
+ const s=state(),t=receipt();t.lines[0].originalName='ARROZ ABREV';const op=R.patch(s,t,await R.identify(t)),current={...s,...op.patch};current.tasks.push({id:'new',title:'Keep too'});
+ const undone=R.undo(current,op.result.id),after={...current,...undone.patch};assert(after.buys[0].voided);assert.equal(after.buys[0].total,0);assert.deepEqual(after.pantry,s.pantry);assert.deepEqual(after.items,s.items);assert.deepEqual(after.prices,s.prices);assert.equal(after.tasks.length,2);assert.deepEqual(R.undo(after,op.result.id).patch,{});
+ const reimport=R.patch(after,t,await R.identify(t));assert.equal(reimport.patch.buys.length,1);assert(!reimport.result.duplicate);
+});
+test('undo refuses subsequent edits atomically and refuses legacy tickets without a journal',async()=>{
+ const s=state(),t=receipt(),op=R.patch(s,t,await R.identify(t)),current={...s,...op.patch};current.pantry[0].n--;const before=structuredClone(current);assert.throws(()=>R.undo(current,op.result.id),/cambiado/);assert.deepEqual(current,before);
+ s.buys=[{id:'old',ticket:true}];assert.throws(()=>R.undo(s,'old'),/antiguo/);
+});
+test('confirmed corrections are learned by store and undo restores the previous aliases',async()=>{
+ const s=state(),t=receipt();t.lines[0].originalName='ABREV';const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.cook.receiptAliases['tienda de prueba|abrev'].name,'Arroz');
+ const undone=R.undo({...s,...op.patch},op.result.id);assert.deepEqual(undone.patch.cook,s.cook);
+});

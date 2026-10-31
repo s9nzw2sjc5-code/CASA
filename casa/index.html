@@ -540,12 +540,13 @@ details summary{cursor:pointer}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="sync.js?v=47"></script>
-<script src="receipts.js?v=47"></script>
-<script src="receipt-image.js?v=47"></script>
-<script src="receipt-layout.js?v=47"></script>
-<script src="receipt-ocr.js?v=47"></script>
-<script src="cocina.js?v=47"></script>
+<script src="sync.js?v=48"></script>
+<script src="receipts.js?v=48"></script>
+<script src="receipt-image.js?v=48"></script>
+<script src="receipt-layout.js?v=48"></script>
+<script src="receipt-ocr.js?v=48"></script>
+<script src="cocina.js?v=48"></script>
+<script src="receipt-extras.js?v=48"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -600,7 +601,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=47;
+const APP_VERSION=48;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
