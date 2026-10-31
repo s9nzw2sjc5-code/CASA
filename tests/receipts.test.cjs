@@ -73,3 +73,19 @@ test('a new purchase from review has a numeric timestamp, not String.prototype.a
   assert.doesNotThrow(()=>structuredClone(op.patch));
  }
 });
+test('price history is stored as maps rather than Firestore-incompatible nested arrays',async()=>{
+ const s=state(),t=receipt();s.prices.arroz={hist:[['2026-10-01','Old store',1,1000,'m']],custom:'keep'};
+ const op=R.patch(s,t,await R.identify(t));
+ assert.deepEqual(op.patch.prices.arroz.hist[0],{date:'2026-10-01',store:'Old store',price:1,n:1000,d:'m'});
+ assert.equal(op.patch.prices.arroz.hist[1].price,2);
+ assert.equal(op.patch.prices.arroz.custom,'keep');assert.doesNotThrow(()=>R.assertData(op.patch));
+});
+test('write boundary rejects functions and nested arrays with a field path',()=>{
+ assert.throws(()=>R.assertData({buys:[{at:()=>0}]}),/buys\[0\]\.at/);
+ assert.throws(()=>R.assertData({prices:{item:{hist:[['date',2]]}}}),/prices\.item\.hist/);
+ assert.doesNotThrow(()=>R.assertData({prices:{item:{hist:[{date:'2026-01-01',price:2}]}}}));
+});
+test('legacy local price history is normalized without losing previous entries',()=>{
+ const s=state();s.prices.arroz={hist:[['2026-10-01','Store',2,1000,'m'],{date:'2026-10-02',price:3}],n:1000};
+ R.normalizeHistory(s);assert.equal(s.prices.arroz.hist.length,2);assert.equal(s.prices.arroz.hist[0].store,'Store');assert.equal(s.prices.arroz.hist[1].price,3);assert.equal(s.prices.arroz.n,1000);
+});

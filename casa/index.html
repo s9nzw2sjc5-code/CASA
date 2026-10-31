@@ -540,9 +540,9 @@ details summary{cursor:pointer}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="sync.js"></script>
-<script src="receipts.js"></script>
-<script src="cocina.js"></script>
+<script src="sync.js?v=45"></script>
+<script src="receipts.js?v=45"></script>
+<script src="cocina.js?v=45"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -597,6 +597,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
+const APP_VERSION=45;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -606,6 +607,7 @@ function fresh(){return{v:1,updated:0,
   shopLater:[],items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{},pantry:[],cook:{},prodMap:{},prices:{},buys:[]}}
 let S=fresh();
 try{const r=localStorage.getItem(LS);if(r)S=Object.assign(fresh(),JSON.parse(r))}catch(e){}
+CasaReceipts.normalizeHistory(S);
 let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
 try{const u=localStorage.getItem(LS+'-ui');if(u)ui=Object.assign(ui,JSON.parse(u))}catch(e){}
 let prefRef=null,prefsReady=false;setTimeout(()=>{if(!prefsReady){prefsReady=true;render()}},3000);
@@ -625,10 +627,11 @@ function save(){
   render();
 }
 const clone=o=>JSON.parse(JSON.stringify(o));
-const stripOld=o=>{if(o){delete o.coupleChecks;delete o.coupleIdea}return o};
+const stripOld=o=>{CasaReceipts.normalizeHistory(o);if(o){delete o.coupleChecks;delete o.coupleIdea}return o};
 const J=JSON.stringify;
 let canWrite=true,base=null,pushing=false,pushAgain=false;
 try{const bs=localStorage.getItem(LS+'-base');if(bs)base=JSON.parse(bs)}catch(e){}
+CasaReceipts.normalizeHistory(base);
 function saveBase(){try{localStorage.setItem(LS+'-base',J(base))}catch(e){}}
 const ARR_KEYS=['people','tasks','lists','items','staples','reminders','recipes','pet','petLog','events','notes','pantry','buys','shopLater'],MAP_KEYS=['menu','secMem','board','cook','prodMap','prices'];
 const core=x=>{const o={};[...ARR_KEYS,...MAP_KEYS,'sections'].forEach(k=>o[k]=x[k]);return o};
@@ -1192,7 +1195,7 @@ function render(){
   const keepScroll=$('#app').scrollTop;
   const keepVals={};['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR','qRec','qVeto'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
   document.body.dataset.view=ui.view;
-  replaceAppContent((syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`);
+  replaceAppContent((syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button><br><span>Versión ${APP_VERSION}</span> · <button class="link" data-act="refreshApp">Actualizar Casa</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`);
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});
   if(keepVals.qItem)drawQSug();
   $('#app').scrollTop=keepScroll;
@@ -1478,6 +1481,7 @@ function quickRemNoDate(){const el=$('#qRemNoDate');const v=el.value.trim();if(!
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Para tener en cuenta»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  refreshApp:()=>{location.reload()},
   newMaintenance:d=>maintenanceSheet(null,d.date||ui.calDay), editMaintenance:d=>maintenanceSheet(find(S.reminders,d.id)), maintenanceDone:d=>maintenanceDone(d.id),
   tab:d=>{ui.view=d.v;if(d.v==='compras'){autoStaples();autoPantry()}render();$('#app').scrollTop=0},
   quickTask, quickItem, quickNoDate, quickRemNoDate,
@@ -1582,7 +1586,11 @@ let lastDay=today();setInterval(()=>{if(today()!==lastDay){lastDay=today();autoS
 // Al abrir la app se busca una versión nueva; si la hay, se recarga sola (salvo con un formulario abierto)
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
   const had=!!navigator.serviceWorker.controller;let reloaded=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!reloaded&&!document.querySelector('.overlay')){reloaded=true;location.reload()}});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!had||reloaded)return;
+    if(!document.querySelector('.overlay')){reloaded=true;location.reload();return}
+    const banner=document.createElement('p');banner.className='ck-warn';banner.setAttribute('role','status');banner.textContent='Hay una actualización de Casa. Al terminar o cancelar esta revisión, pulsa Actualizar Casa en el pie de la app.';document.body.appendChild(banner);
+  });
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
   }).catch(()=>{}));

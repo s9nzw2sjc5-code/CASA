@@ -83,7 +83,7 @@ function userPrice(name){
 }
 function savePrice(name,o){
   const k=norm(name),old=(S.prices||{})[k]||{};
-  const hist=[...(old.hist||[]),[o.at||today(),o.store,o.price,o.n||0,o.d||'m']].slice(-12);
+  const hist=[...(old.hist||[]).map(CasaReceipts.historyEntry),{date:o.at||today(),store:o.store,price:o.price,n:o.n||0,d:o.d||'m'}].slice(-12);
   S.prices=Object.assign({},S.prices||{});
   S.prices[k]=Object.assign({},old,{name,store:o.store,price:o.price,n:o.n||0,d:o.d||'m',label:o.label||old.label||'',qtxt:o.qtxt||'',at:o.at||today(),use:o.store!=='Mercadona',hist});
 }
@@ -688,7 +688,7 @@ function productPicker(q,onPick,key){
     <div><label for="f_pr">Precio (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${e&&e.price||''}"></div></div>
     <label for="f_en">Envase (opcional)</label><input class="field" id="f_en" value="${e?esc(e.qtxt||(e.n?(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):'')):''}" placeholder="Ej.: 1 kg, 500 g, 6 ud">
     <button type="button" class="btn" data-k="own" style="width:100%;margin-top:10px">Usar este precio</button>
-    ${e&&e.hist&&e.hist.length?`<p class="hint">Has pagado: ${e.hist.slice(-4).reverse().map(h=>esc(h[1])+' '+eur(h[2])+' ('+parse(h[0]).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+')').join(' · ')}</p>`:''}</details>
+    ${e&&e.hist&&e.hist.length?`<p class="hint">Has pagado: ${e.hist.slice(-4).reverse().map(CasaReceipts.historyEntry).map(h=>esc(h.store)+' '+eur(h.price)+' ('+parse(h.date).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+')').join(' · ')}</p>`:''}</details>
     <h4>O elige el de Mercadona</h4>`:''}<input class="field" id="f_q" value="${esc(q)}" placeholder="Buscar producto" autocomplete="off"><div id="ckPP" class="ck-pick" style="max-height:52vh"></div><p class="hint">Precios de la tienda online de Mercadona (CP 18210)${MC?' del '+parse(MC.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):''}.</p>`,{});
   ov.addEventListener('click',ev=>{if(!ev.target.closest('[data-k="own"]'))return;
     const pr=parseFloat(String(val(ov,'f_pr')).replace(',','.'));if(!(pr>0)){toast('Escribe el precio');return}
@@ -1165,6 +1165,7 @@ async function receiptRemoteState(){
   return state;
 }
 async function commitTicket(t,options={}){
+  if(CasaReceipts.version!==45)throw new Error('Casa tiene una versión antigua abierta. Cierra esta revisión y pulsa Actualizar Casa.');
   const check=CasaReceipts.validate(t);if(!check.ok)throw new Error(check.reasons.join('. '));
   if(t.date>today())throw new Error('La fecha del tique no puede ser futura.');
   await receiptRemoteState(); // Una lectura de servidor es obligatoria; no se acepta la caché.

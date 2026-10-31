@@ -64,7 +64,7 @@
           const ref=s.fs.doc(p),snap=await t.get(ref);
           if(!snap.exists)throw new Error('No existe el documento de la casa. No se ha creado ni sobrescrito nada.');
           const data=snap.data(),operation=fn(data),patch=operation.patch||{};
-          if(Object.keys(patch).length)t.update(ref,patch);
+          if(Object.keys(patch).length){CasaReceipts.assertData(patch);t.update(ref,patch);}
           return {data:{...data,...patch},result:operation.result};
         }).catch(e=>{throw mapErr(e)}),
         // Leer, fusionar y guardar de una vez: si la otra persona guarda justo a la vez,

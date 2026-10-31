@@ -86,3 +86,10 @@ node tests/receipt-flow.cjs
 La segunda usa Playwright y Chromium (`/usr/bin/chromium`, configurable mediante
 `CHROMIUM_PATH`). Ejecuta la app y su adaptador real de Firebase con un transporte
 simulado; no demuestra acceso o escritura en el Firestore de producción.
+
+Para comprobar también los valores con el SDK oficial de Firebase 10.14.1,
+instálalo en una carpeta temporal y ejecuta `tests/receipt-sdk.cjs` con
+`CASA_FIREBASE_TEST_SDK` apuntando al directorio del paquete `firebase`.
+Esta prueba valida los datos con `WriteBatch.update` sin llamar a `commit`.
+Los historiales de precios se guardan como listas de objetos, no listas anidadas,
+y se conserva la lectura de historiales antiguos del almacenamiento local.

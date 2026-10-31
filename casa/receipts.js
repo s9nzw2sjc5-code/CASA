@@ -69,16 +69,32 @@
       // Misma estructura de precios que usa la app; conserva el resto de campos.
       const priceKey=String(l.name).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
       const previous=next.prices[priceKey]||{},per=price/(l.kg||l.units),perPrice=Math.round(per*100)/100;
-      next.prices[priceKey]={...previous,name:l.name,store:t.store,price:perPrice,n:l.kg?1000:plan.packSize||1,d:l.kg?'m':plan.unit==='ud'?'ud':'m',label:l.name,qtxt:l.kg?'1 kg':plan.packLabel||'1 ud',at:t.date,use:t.store!=='Mercadona',hist:[...(previous.hist||[]),[t.date,t.store,perPrice,l.kg?1000:plan.packSize||1,l.kg?'m':plan.unit==='ud'?'ud':'m']].slice(-12)};changes.add('prices');
+      next.prices[priceKey]={...previous,name:l.name,store:t.store,price:perPrice,n:l.kg?1000:plan.packSize||1,d:l.kg?'m':plan.unit==='ud'?'ud':'m',label:l.name,qtxt:l.kg?'1 kg':plan.packLabel||'1 ud',at:t.date,use:t.store!=='Mercadona',hist:[...(previous.hist||[]).map(historyEntry),{date:t.date,store:t.store,price:perPrice,n:l.kg?1000:plan.packSize||1,d:l.kg?'m':plan.unit==='ud'?'ud':'m'}].slice(-12)};changes.add('prices');
       for(const s of next.staples||[]){if((plan.mid&&s.mid===plan.mid)||norm(s.name)===norm(l.name)){if(!s.last||s.last<t.date)s.last=t.date;delete s.snooze;changes.add('staples')}}
       if(options.removePurchased!==false){const before=(next.items||[]).length;next.items=(next.items||[]).filter(i=>!((plan.mid&&i.mid===plan.mid)||norm(i.name)===norm(l.name)));removed+=before-next.items.length;if(before!==next.items.length)changes.add('items')}
     }
-    const record={...(old||{}),id:old?old.id:id.id,date:t.date,store:t.store,total:cents(t.total)/100,n:items.length,items,ticket:true,manual:false,at:old?.at||options.at||Date.now(),by:old?.by||options.by||'',receiptVersion:1,receiptKey:id.key,lineFingerprint:id.lines,imageHash:id.imageHash,inventoryApplied:inventory,inventoryEffects:effects};
+    const savedAt=old&&typeof old.at==='number'&&Number.isFinite(old.at)?old.at:typeof options.at==='number'&&Number.isFinite(options.at)?options.at:Date.now();
+    const record={...(old||{}),id:old?old.id:id.id,date:t.date,store:t.store,total:cents(t.total)/100,n:items.length,items,ticket:true,manual:false,at:savedAt,by:old?.by||options.by||'',receiptVersion:1,receiptKey:id.key,lineFingerprint:id.lines,imageHash:id.imageHash,inventoryApplied:inventory,inventoryEffects:effects};
     next.buys=old?next.buys.map(b=>b.id===old.id?record:b):[...(next.buys||[]),record];
     const stores=next.cook?.stores||options.defaultStores||[];if(!stores.includes(t.store)){next.cook={...(next.cook||{}),stores:[...new Set([...stores,t.store])]};changes.add('cook')}
-    const out={};for(const k of changes)out[k]=next[k];out.rev=(state.rev||0)+1;out.updated=options.at||Date.now();
+    const out={};for(const k of changes)out[k]=next[k];out.rev=(state.rev||0)+1;out.updated=typeof options.at==='number'&&Number.isFinite(options.at)?options.at:Date.now();
+    assertData(out);
     return {patch:out,result:{id:record.id,duplicate:false,enriched:!!old,added,removed}};
   }
-  const api={norm,cents,validDate,signature,validate,hash,identify,duplicates,patch};
+  function historyEntry(value){
+    if(!Array.isArray(value))return value;
+    return {date:value[0],store:value[1],price:value[2],n:value[3]||0,d:value[4]||'m'};
+  }
+  function normalizeHistory(state){
+    for(const price of Object.values(state?.prices||{}))if(Array.isArray(price.hist))price.hist=price.hist.map(historyEntry);
+    return state;
+  }
+  function assertData(value,path='tique',insideArray=false){
+    if(value===null||typeof value==='string'||typeof value==='boolean'||(typeof value==='number'&&Number.isFinite(value)))return;
+    if(Array.isArray(value)){if(insideArray)throw new Error('Lista anidada no válida en '+path+'. No se ha enviado el tique.');value.forEach((item,i)=>assertData(item,path+'['+i+']',true));return}
+    if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype){for(const [key,item] of Object.entries(value))assertData(item,path+'.'+key);return}
+    throw new Error('Dato no válido en '+path+'. No se ha enviado el tique.');
+  }
+  const api={version:45,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch};
   root.CasaReceipts=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);
