@@ -71,7 +71,17 @@
       const previous=next.prices[priceKey]||{},per=price/(l.kg||l.units),perPrice=Math.round(per*100)/100;
       next.prices[priceKey]={...previous,name:l.name,store:t.store,price:perPrice,n:l.kg?1000:plan.packSize||1,d:l.kg?'m':plan.unit==='ud'?'ud':'m',label:l.name,qtxt:l.kg?'1 kg':plan.packLabel||'1 ud',at:t.date,use:t.store!=='Mercadona',hist:[...(previous.hist||[]).map(historyEntry),{date:t.date,store:t.store,price:perPrice,n:l.kg?1000:plan.packSize||1,d:l.kg?'m':plan.unit==='ud'?'ud':'m'}].slice(-12)};changes.add('prices');
       for(const s of next.staples||[]){if((plan.mid&&s.mid===plan.mid)||norm(s.name)===norm(l.name)){if(!s.last||s.last<t.date)s.last=t.date;delete s.snooze;changes.add('staples')}}
-      if(options.removePurchased!==false){const before=(next.items||[]).length;next.items=(next.items||[]).filter(i=>!((plan.mid&&i.mid===plan.mid)||norm(i.name)===norm(l.name)));removed+=before-next.items.length;if(before!==next.items.length)changes.add('items')}
+      if(options.removePurchased!==false){
+        const before=(next.items||[]).length;
+        next.items=(next.items||[]).filter(i=>{
+          if(Array.isArray(plan.shoppingIds)){
+            if(!plan.shoppingIds.includes(i.id))return true;
+            if(plan.shoppingNames?.[i.id]&&norm(plan.shoppingNames[i.id])!==norm(i.name))throw new Error('Un producto de Compras cambió. Revisa cuál has comprado antes de quitarlo.');
+            return false;
+          }
+          return !((plan.mid&&i.mid===plan.mid)||norm(i.name)===norm(l.name));
+        });removed+=before-next.items.length;if(before!==next.items.length)changes.add('items');
+      }
     }
     const savedAt=old&&typeof old.at==='number'&&Number.isFinite(old.at)?old.at:typeof options.at==='number'&&Number.isFinite(options.at)?options.at:Date.now();
     const record={...(old||{}),id:old?old.id:id.id,date:t.date,store:t.store,total:cents(t.total)/100,n:items.length,items,ticket:true,manual:false,at:savedAt,by:old?.by||options.by||'',receiptVersion:1,receiptKey:id.key,lineFingerprint:id.lines,imageHash:id.imageHash,inventoryApplied:inventory,inventoryEffects:effects};
@@ -95,6 +105,6 @@
     if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype){for(const [key,item] of Object.entries(value))assertData(item,path+'.'+key);return}
     throw new Error('Dato no válido en '+path+'. No se ha enviado el tique.');
   }
-  const api={version:45,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch};
+  const api={version:46,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch};
   root.CasaReceipts=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

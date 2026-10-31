@@ -56,14 +56,20 @@ Tus datos **nunca** se guardan en este repositorio: viven en tu Firebase y en vu
 ## Importación de tiques
 
 El lector reutiliza Tesseract en español, cargado desde jsDelivr. También admite
-el PDF del tique o un archivo de texto corregido (`.txt`). La compra se
-valida en céntimos: comercio y fecha son obligatorios y las líneas deben sumar
-exactamente el total. Solo se guarda automáticamente una lectura de alta
-confianza, con productos identificados y sin posibles gastos duplicados. En los
-demás casos se abre una revisión para corregir datos, cantidades y destinos en
-casa, o añadir líneas que el OCR haya omitido. En fotos, la revisión ofrece
-«Recortar foto y volver a leer» para aislar el papel sin salir de Casa; mantiene
-la huella del archivo original para no duplicar una compra al releerla.
+el PDF del tique o un archivo de texto corregido (`.txt`). Las fotos se preparan
+localmente: se intenta aislar el papel y compensar la iluminación desigual.
+Se comparan la lectura del papel, el contraste compensado y la segmentación por
+columna cuando la primera no es fiable. Se vuelve a comprobar el original si se
+ha recortado automáticamente. Esto no garantiza reconocer todos los importes.
+
+Todos los tiques muestran primero una **transcripción editable**. «Preparar
+compra» interpreta ese texto y abre una revisión; no se escribe nada hasta pulsar
+«Guardar y verificar». La compra se valida en céntimos: comercio y fecha son
+obligatorios y las líneas deben sumar exactamente el total. En la revisión se
+pueden corregir cantidades, añadir líneas omitidas, elegir el destino y la
+cantidad que añadir a casa y el producto concreto que quitar de Compras. Las
+coincidencias ambiguas no se quitan sin selección. Se puede volver a la
+transcripción o recortar y releer la foto manteniendo la huella original.
 
 La importación exige sesión iniciada, conexión y una lectura del servidor.
 `receipts.js` prepara una actualización de los campos de `hogar/estado` usados
@@ -93,3 +99,17 @@ instálalo en una carpeta temporal y ejecuta `tests/receipt-sdk.cjs` con
 Esta prueba valida los datos con `WriteBatch.update` sin llamar a `commit`.
 Los historiales de precios se guardan como listas de objetos, no listas anidadas,
 y se conserva la lectura de historiales antiguos del almacenamiento local.
+
+Para medir el OCR real con una foto y una transcripción revisada, guardadas fuera
+de este repositorio público:
+
+```sh
+node tests/receipt-ocr-quality.cjs /tmp/ticket.jpg /tmp/referencia.json /tmp/informe.json
+```
+
+La referencia contiene `store`, `date`, `total` y `lines` con `name`, `units`,
+`price` y, si procede, `kg`. La prueba ejecuta el lector de la app en la foto y
+tres variaciones simuladas de brillo y arrugas; bloquea Firebase. Compara también
+nombres y cantidades, no solo el número de líneas o la suma. El código de salida
+2 significa que alguna condición no logró coincidencia exacta. Estas simulaciones
+no sustituyen una muestra de capturas reales ni garantizan calidad universal.

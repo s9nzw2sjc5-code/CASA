@@ -89,3 +89,17 @@ test('legacy local price history is normalized without losing previous entries',
  const s=state();s.prices.arroz={hist:[['2026-10-01','Store',2,1000,'m'],{date:'2026-10-02',price:3}],n:1000};
  R.normalizeHistory(s);assert.equal(s.prices.arroz.hist.length,2);assert.equal(s.prices.arroz.hist[0].store,'Store');assert.equal(s.prices.arroz.hist[1].price,3);assert.equal(s.prices.arroz.n,1000);
 });
+test('confirmed shopping match removes the chosen item and preserves unrelated products',async()=>{
+ const s=state(),t=receipt();s.items=[{id:'generic',name:'Arroz'},{id:'keep',name:'Arroz integral'}];
+ t.lines[0].plan.shoppingIds=['generic'];t.lines[0].plan.shoppingNames={generic:'Arroz'};
+ const op=R.patch(s,t,await R.identify(t));assert.equal(op.result.removed,1);assert.equal(op.patch.items[0].id,'keep');assert.equal(op.patch.pantry[0].n,2500);
+ s.items[0].name='Otro producto';assert.throws(()=>R.patch(s,t,{},{}),/cambió/);
+});
+test('choosing no shopping match leaves the shopping list untouched',async()=>{
+ const s=state(),t=receipt();t.lines[0].plan.shoppingIds=[];t.lines[1].plan.shoppingIds=[];
+ const op=R.patch(s,t,await R.identify(t));assert.equal(op.result.removed,0);assert(!('items' in op.patch));
+});
+test('a similar photo can be linked to an existing ticket instead of importing twice',async()=>{
+ const t=receipt(),s=state();s.buys=[{id:'existing-receipt',ticket:true,date:t.date,store:t.store,total:t.total,items:[{name:'Different OCR wording',units:1,price:5}]}];
+ const op=R.patch(s,t,await R.identify(t),{matchId:'existing-receipt'});assert(op.result.duplicate);assert.deepEqual(op.patch,{});
+});
