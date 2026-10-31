@@ -61,7 +61,9 @@ valida en céntimos: comercio y fecha son obligatorios y las líneas deben sumar
 exactamente el total. Solo se guarda automáticamente una lectura de alta
 confianza, con productos identificados y sin posibles gastos duplicados. En los
 demás casos se abre una revisión para corregir datos, cantidades y destinos en
-casa, o añadir líneas que el OCR haya omitido.
+casa, o añadir líneas que el OCR haya omitido. En fotos, la revisión ofrece
+«Recortar foto y volver a leer» para aislar el papel sin salir de Casa; mantiene
+la huella del archivo original para no duplicar una compra al releerla.
 
 La importación exige sesión iniciada, conexión y una lectura del servidor.
 `receipts.js` prepara una actualización de los campos de `hogar/estado` usados

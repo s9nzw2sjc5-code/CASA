@@ -1046,6 +1046,44 @@ async function pdfText(file){
   }
   return out.join('\n');
 }
+// Recorte local: la foto no se envía a un servicio externo.
+async function cropTicketImage(file){
+  const image=new Image(),url=URL.createObjectURL(file);
+  try{await new Promise((ok,fail)=>{image.onload=ok;image.onerror=()=>fail(new Error('No se puede abrir esta imagen. Prueba una foto en JPEG o PNG.'));image.src=url})}finally{URL.revokeObjectURL(url)}
+  return new Promise(resolve=>{
+    const ov=sheet('Encuadra solo el papel',`<p class="hint">Arrastra las esquinas para quitar el fondo. Incluye la cabecera, la fecha y el total si aparecen en la foto.</p><canvas class="ticket-crop" aria-label="Vista previa del recorte del tique"></canvas><details><summary>Ajustar con controles</summary>${[['left','Izquierda',0],['top','Arriba',0],['right','Derecha',100],['bottom','Abajo',100]].map(([k,label,n])=>`<label for="crop-${k}">${label}</label><input id="crop-${k}" data-crop="${k}" type="range" min="0" max="100" value="${n}" aria-label="Borde ${label.toLowerCase()}">`).join('')}</details>`,{autoFocus:false,saveLabel:'Volver a leer',onSave:()=>{finish();return false}});
+    let done=false,drag=null,rect={left:0,top:0,right:1,bottom:1};
+    const canvas=ov.querySelector('canvas'),scale=Math.min(1,480/image.naturalWidth);canvas.width=Math.round(image.naturalWidth*scale);canvas.height=Math.round(image.naturalHeight*scale);
+    const ctx=canvas.getContext('2d');
+    function draw(){
+      const x=rect.left*canvas.width,y=rect.top*canvas.height,w=(rect.right-rect.left)*canvas.width,h=(rect.bottom-rect.top)*canvas.height;
+      ctx.drawImage(image,0,0,canvas.width,canvas.height);ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(image,0,0,canvas.width,canvas.height);ctx.restore();ctx.strokeStyle='#00a86b';ctx.lineWidth=3;ctx.strokeRect(x,y,w,h);
+      for(const [cx,cy] of [[x,y],[x+w,y],[x,y+h],[x+w,y+h]]){ctx.beginPath();ctx.arc(cx,cy,9,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.stroke()}
+      ov.querySelectorAll('[data-crop]').forEach(el=>el.value=String(Math.round(rect[el.dataset.crop]*100)));
+    }
+    const clamp=n=>Math.max(0,Math.min(1,n));
+    function point(e){const box=canvas.getBoundingClientRect();return{x:clamp((e.clientX-box.left)/box.width),y:clamp((e.clientY-box.top)/box.height)}}
+    canvas.style.touchAction='none';
+    canvas.addEventListener('pointerdown',e=>{
+      const p=point(e),corners=[['left','top'],['right','top'],['left','bottom'],['right','bottom']],box=canvas.getBoundingClientRect();
+      const nearest=corners.map(([x,y])=>({x,y,d:Math.hypot((p.x-rect[x])*box.width,(p.y-rect[y])*box.height)})).sort((a,b)=>a.d-b.d)[0];
+      drag=nearest.d<38?nearest:{start:p};canvas.setPointerCapture(e.pointerId);e.preventDefault();
+    });
+    canvas.addEventListener('pointermove',e=>{if(!drag)return;const p=point(e);if(drag.start){rect={left:Math.min(drag.start.x,p.x),top:Math.min(drag.start.y,p.y),right:Math.max(drag.start.x,p.x),bottom:Math.max(drag.start.y,p.y)}}else{rect[drag.x]=drag.x==='left'?Math.min(p.x,rect.right-.02):Math.max(p.x,rect.left+.02);rect[drag.y]=drag.y==='top'?Math.min(p.y,rect.bottom-.02):Math.max(p.y,rect.top+.02)}draw()});
+    for(const name of ['pointerup','pointercancel'])canvas.addEventListener(name,()=>{drag=null});
+    ov.addEventListener('input',e=>{const k=e.target.dataset.crop;if(!k)return;const value=+e.target.value/100;if(k==='left')rect.left=Math.min(value,rect.right-.01);if(k==='right')rect.right=Math.max(value,rect.left+.01);if(k==='top')rect.top=Math.min(value,rect.bottom-.01);if(k==='bottom')rect.bottom=Math.max(value,rect.top+.01);draw()});
+    const observer=new MutationObserver(()=>{if(!ov.isConnected&&!done){done=true;observer.disconnect();resolve(null)}});observer.observe(document.body,{childList:true,subtree:true});
+    function finish(){
+      if(done)return;
+      const width=Math.round((rect.right-rect.left)*image.naturalWidth),height=Math.round((rect.bottom-rect.top)*image.naturalHeight);if(width<40||height<40){toast('Selecciona una zona más grande del tique');return}
+      const output=document.createElement('canvas');output.width=width;output.height=height;output.getContext('2d').drawImage(image,rect.left*image.naturalWidth,rect.top*image.naturalHeight,width,height,0,0,width,height);
+      ov.querySelector('[data-s="ok"]').disabled=true;
+      output.toBlob(blob=>{if(!blob){ov.querySelector('[data-s="ok"]').disabled=false;toast('No se ha podido recortar la imagen');return}if(!ov.isConnected)return;done=true;observer.disconnect();ov.remove();resolve(blob)},'image/png');
+    }
+    draw();
+  });
+}
+
 async function ocrText(file,prog){
   await loadJS('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
   const w=await Tesseract.createWorker('spa',1,{langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/spa@1.0.0/4.0.0',logger:m=>{if(m.status==='recognizing text')prog(Math.round(m.progress*100))}});
@@ -1171,14 +1209,14 @@ async function ticketFlow(){
     if(!ov.isConnected)return;
     if(!reasons.length){try{progress.textContent='Guardando y verificando en la casa…';ov.querySelector('[data-s="cancel"]').disabled=true;const result=await commitTicket(t);ov.remove();toast(receiptMessage(result));return}catch(e){if(e.code!=='receipt_review')throw e;reasons.push(e.message)}}
     ov.remove();
-    ticketReview(t,text,{reasons:[...new Set(reasons)],candidates:duplicates.candidates});
+    ticketReview(t,text,{reasons:[...new Set(reasons)],candidates:duplicates.candidates,file});
   }catch(e){ov.remove();sheet('No se ha podido completar el tique',`<p>${esc(e.message||'Revisa la conexión o prueba con una foto más nítida.')}</p><p class="hint">No se creará un gasto distinto al reintentar el mismo archivo.</p>`,{})}
 }
 function ticketReview(t,text,opts={}){
   const stores=[...new Set([...ck().stores,...(t.store?[t.store]:[])])],pans=S.pantry||[];
   const candidates=(opts.candidates||S.buys||[]).filter(b=>b.date===t.date&&CasaReceipts.cents(b.total)===CasaReceipts.cents(t.total)&&(!t.store||!b.store||norm(b.store)===norm(t.store)));
   const rows=t.lines.map((a,i)=>{const plan=a.plan||ticketLinePlan(a,t.store);return `<div class="ck-tl"><label class="ck-tl-h"><input type="checkbox" data-on="${i}" checked><input class="field" data-nm="${i}" value="${esc(a.nice||a.name)}"><input class="field" data-pr="${i}" type="number" inputmode="decimal" step="0.01" value="${a.price}"></label><div class="grid2"><div><label>Cantidad</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" value="${a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p><label>Destino en casa</label><select class="field" data-pn="${i}">${opt([['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.inventory)}</select></div>`});
-  const ov=sheet('Revisar tique',`<p class="hint">${esc((opts.reasons||[]).join('. '))}</p><div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.filter(b=>!b.ticket).map(b=>`<option value="${esc(b.id)}">Completar ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Al completar un gasto previo no se vuelven a sumar sus productos a la despensa.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});
+  const ov=sheet('Revisar tique',`<p class="hint">${esc((opts.reasons||[]).join('. '))}</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.filter(b=>!b.ticket).map(b=>`<option value="${esc(b.id)}">Completar ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Al completar un gasto previo no se vuelven a sumar sus productos a la despensa.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});
   let busy=false;
   function collect(){
     const lines=[];
@@ -1187,6 +1225,18 @@ function ticketReview(t,text,opts={}){
     return {...t,date:val(ov,'f_dt'),store:val(ov,'f_sto'),total:Number(val(ov,'f_tot')),lines};
   }
   function sum(){const check=CasaReceipts.validate(collect());ov.querySelector('#f_sum').textContent='Suma de artículos: '+eur(check.sumCents/100)+(check.ok?' · ✓ Cuadra':' · '+check.reasons.join('. '))}
+  ov.querySelector('#tkCrop')?.addEventListener('click',async()=>{
+    if(busy)return;busy=true;
+    try{
+      const current=collect(),cropped=await cropTicketImage(opts.file);if(!cropped||!ov.isConnected)return;
+      const status=ov.querySelector('#tkStatus');status.textContent='Leyendo la zona recortada…';ov.querySelector('[data-s="ok"]').disabled=true;
+      const result=await ocrText(cropped,n=>{if(ov.isConnected)status.textContent='Leyendo la zona recortada… '+n+' %'});
+      if(!ov.isConnected)return;
+      const parsed=parseTicket(result.text),updated=prepareTicket({...parsed,store:parsed.store||current.store,date:parsed.date||current.date,total:parsed.total||current.total,imageHash:t.imageHash,ocrConfidence:result.confidence});
+      ov.remove();ticketReview(updated,result.text,{...opts,reasons:['Revisa la nueva lectura del recorte antes de guardar.']});
+    }catch(e){if(ov.isConnected)ov.querySelector('#tkStatus').textContent=e.message||'No se ha podido volver a leer la foto.'}
+    finally{busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
+  });
   ov.querySelector('#tkAddLine').addEventListener('click',()=>{
     const current=collect();current.lines.push({name:'',nice:'',units:1,unit:0,price:0});
     ov.remove();ticketReview(current,text,opts);

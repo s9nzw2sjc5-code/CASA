@@ -50,6 +50,11 @@ const root=path.resolve(__dirname,'..');
   // Regression: a genuinely new reviewed purchase previously sent a function as `at`.
   await p.evaluate(()=>{const t=parseTicket(testText);t.total*=2;t.lines[0].units*=2;t.lines[0].price*=2;ticketReview(prepareTicket(t),testText,{reasons:['Test review']})});
   await p.locator('#f_as').selectOption('__new');await p.getByRole('button',{name:'Guardar y verificar',exact:true}).click();await p.locator('.overlay').waitFor({state:'detached'});assert.equal(await p.evaluate(()=>testWrites),2);assert.equal(await p.evaluate(()=>typeof testState.buys.at(-1).at),'number');
+  // Crop UI works locally and cancellation leaves the receipt unchanged.
+  await p.evaluate(async()=>{const c=document.createElement('canvas');c.width=800;c.height=1000;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,800,1000);ctx.fillStyle='#000';ctx.font='28px sans-serif';ctx.fillText('1 ARROZ 2,00',100,100);window.testImage=await new Promise(r=>c.toBlob(r));window.cropPromise=cropTicketImage(testImage)});
+  await p.locator('.ticket-crop').waitFor();await p.getByText('Ajustar con controles',{exact:true}).click();await p.locator('#crop-left').fill('20');await p.locator('#crop-right').fill('80');await p.locator('#crop-top').fill('10');await p.locator('#crop-bottom').fill('90');await p.getByRole('button',{name:'Volver a leer',exact:true}).click();
+  const dimensions=await p.evaluate(async()=>{const blob=await cropPromise,image=await createImageBitmap(blob);return [image.width,image.height]});assert.deepEqual(dimensions,[480,800]);
+  await p.evaluate(()=>{window.cropPromise=cropTicketImage(testImage)});await p.locator('.ticket-crop').waitFor();await p.locator('[data-s=cancel]').click();assert.equal(await p.evaluate(()=>cropPromise),null);assert.equal(await p.evaluate(()=>testWrites),2);
   assert.deepEqual(errors,[]);console.log('PASS browser: real sync adapter uses update, not set; high-confidence auto-save; server reread; duplicate retry; review of incomplete data; add missing lines; cancel prevents saving. Firebase transport simulated.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r))}
 })().catch(e=>{console.error(e);process.exit(1)});
