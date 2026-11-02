@@ -822,11 +822,41 @@ function laterMove(id){
   S.shopLater=(S.shopLater||[]).filter(i=>i.id!==id);save();toastUndo(exists?'Ya estaba en la compra; quitado de Para tener en cuenta':'Pasado a la compra');
 }
 
+// Recordatorios calculados a partir de compras reales, sin alterar gastos ni existencias.
+function shoppingSuggestions(){
+  const groups=new Map(),now=today();
+  for(const b of S.buys||[]){
+    if(b.voided||!b.date||b.date>now)continue;
+    for(const i of buyItems(b)){
+      const key=norm(i.name);if(!key)continue;
+      if(!groups.has(key))groups.set(key,{name:i.name,dates:new Set()});
+      groups.get(key).dates.add(b.date);
+    }
+  }
+  const feedback=ck().shoppingFeedback||{};
+  return [...groups.entries()].flatMap(([key,g])=>{
+    const dates=[...g.dates].sort();if(dates.length<3)return [];
+    const gaps=dates.slice(1).map((d,i)=>diff(dates[i],d)).filter(d=>d>0).sort((a,b)=>a-b);
+    if(!gaps.length)return [];
+    const interval=gaps[Math.floor(gaps.length/2)],last=dates[dates.length-1],elapsed=diff(last,now),f=feedback[key];
+    if(elapsed<Math.max(1,interval-2)||(f&&f.until>=now))return [];
+    if(S.items.some(i=>norm(i.name)===key))return [];
+    if((S.pantry||[]).some(i=>norm(i.name)===key&&!pantryLow(i)))return [];
+    return [{key,name:g.name,interval,elapsed,score:elapsed/interval}];
+  }).sort((a,b)=>b.score-a.score).slice(0,4);
+}
+function shoppingReminderCard(){
+  const suggestions=shoppingSuggestions();
+  if(!suggestions.length)return '';
+  return `<section class="card" style="margin-top:12px"><h2>¿Seguro que no se te olvida…?</h2><p class="hint">Según tus compras anteriores. La duración es una estimación.</p>${suggestions.map((x,i)=>`<div style="margin-top:12px"><strong>${esc(x.name)}</strong><p>Sueles comprarlo cada ${x.interval} días; hace ${x.elapsed} días de la última compra.</p><div class="ck-actions"><button class="btn" data-act="ckSuggest" data-v="add" data-id="${i}">Añadir</button><button class="btn sec" data-act="ckSuggest" data-v="have" data-id="${i}">Todavía tengo</button><button class="btn sec" data-act="ckSuggest" data-v="skip" data-id="${i}">Hoy no</button></div></div>`).join('')}</section>`;
+}
+
 function vCompras(){
   loadMC();
   const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done);
   let h=`<h1>Compras</h1><p class="sub">${esc(L.name)}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
   h+=moneyCard(pend);
+  h+=shoppingReminderCard();
   h+=`<div class="chips" style="margin-top:12px">${S.lists.map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(l.name)}</button>`).join('')}<button class="chip add" data-act="newList">+ Lista</button><button class="chip add" data-act="editList" data-id="${L.id}">Editar lista</button></div>`;
   h+=`<div class="ck-add2"><div class="quick" style="margin-top:12px"><input class="field" id="qItem" placeholder="Añadir producto (busca en Mercadona)" enterkeyhint="done" autocomplete="off" style="flex:2"><input class="field" id="qQty" placeholder="Cant." style="flex:.7"><button class="btn" data-act="quickItem" aria-label="Añadir producto">+</button></div>
     <div id="qSug" class="ck-qsug"></div>
@@ -1367,6 +1397,13 @@ const CK_ACT={
   ckAppl:d=>{const a=ck().appl;ckSet('appl',a.includes(d.v)?a.filter(x=>x!==d.v):[...a,d.v])},
   ckApplNew:()=>{sheet('Otro electrodoméstico',`<input class="field" id="f_t" placeholder="Ej.: Panificadora">`,{onSave:ov=>{const v=val(ov,'f_t');if(!v)return false;const c=ck();S.cook=Object.assign({},S.cook,{applX:[...new Set([...(c.applX||[]),v])],appl:[...new Set([...c.appl,v])]});save()}})},
   ckVetoAdd:()=>{const el=$('#qVeto');const vs=el.value.split(',').map(s=>s.trim()).filter(Boolean);if(!vs.length)return;const c=ck();ckSet('vetoes',[...new Set([...c.vetoes,...vs])]);toast('Vetado: '+vs.join(', '))},
+  ckSuggest:d=>{
+    const x=shoppingSuggestions()[Number(d.id)];if(!x)return;
+    if(d.v==='add'){addToList({name:x.name});return}
+    const days=d.v==='have'?Math.max(2,Math.round(x.interval/2)):0;
+    ckSet('shoppingFeedback',{...(ck().shoppingFeedback||{}),[x.key]:{until:addDays(today(),days),answer:d.v}});
+    toast(d.v==='have'?'Lo recordaré más adelante':'No volveré a sugerirlo hoy');
+  },
   ckBuys:()=>buysSheet(),
   ckSpend:()=>spendSheet(),
   ckMarket:()=>marketSheet(),
