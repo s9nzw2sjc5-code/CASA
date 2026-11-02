@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v51';
+const CACHE = 'casa-v52';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=51', 'cocina.js?v=51', 'receipts.js?v=51', 'receipt-image.js?v=51', 'receipt-layout.js?v=51', 'receipt-ocr.js?v=51', 'receipt-extras.js?v=51', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['push.js?v=52','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=52', 'cocina.js?v=52', 'receipts.js?v=52', 'receipt-image.js?v=52', 'receipt-layout.js?v=52', 'receipt-ocr.js?v=52', 'receipt-extras.js?v=52', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -45,4 +45,18 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('index.html')))
   );
+});
+
+// El servidor envía solo una referencia; las respuestas se confirman dentro de CASA.
+self.addEventListener('push',event=>{
+  let payload={};try{payload=event.data?event.data.json():{}}catch(e){}
+  const url=new URL('./',self.location.href);
+  if(['task','reminder'].includes(payload.kind)&&typeof payload.id==='string'&&payload.id.length<200){url.searchParams.set('noticeKind',payload.kind);url.searchParams.set('noticeId',payload.id)}
+  event.waitUntil(self.registration.showNotification('CASA',{body:'Tienes un aviso pendiente. Toca para verlo y responder.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:typeof payload.tag==='string'?payload.tag.slice(0,120):'casa-notice',data:{url:url.href}}));
+});
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  const target=new URL(event.notification.data?.url||'./',self.location.href),scope=new URL('./',self.location.href);
+  if(target.origin!==scope.origin||!target.pathname.startsWith(scope.pathname))return;
+  event.waitUntil(clients.openWindow(target.href));
 });

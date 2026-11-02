@@ -544,13 +544,14 @@ details summary{cursor:pointer}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="sync.js?v=51"></script>
-<script src="receipts.js?v=51"></script>
-<script src="receipt-image.js?v=51"></script>
-<script src="receipt-layout.js?v=51"></script>
-<script src="receipt-ocr.js?v=51"></script>
-<script src="cocina.js?v=51"></script>
-<script src="receipt-extras.js?v=51"></script>
+<script src="push.js?v=52"></script>
+<script src="sync.js?v=52"></script>
+<script src="receipts.js?v=52"></script>
+<script src="receipt-image.js?v=52"></script>
+<script src="receipt-layout.js?v=52"></script>
+<script src="receipt-ocr.js?v=52"></script>
+<script src="cocina.js?v=52"></script>
+<script src="receipt-extras.js?v=52"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -1199,6 +1200,8 @@ function replaceAppContent(html){
 function render(){
   // No interrumpir el teclado con actualizaciones de fondo mientras se busca.
   if(document.activeElement?.id==='qProd'&&ui.view==='compras'&&ui.ckTab==='productos')return;
+  const notice=new URLSearchParams(location.search),noticeId=notice.get('noticeId'),noticeKind=notice.get('noticeKind');
+  if(noticeId&&['task','reminder'].includes(noticeKind)&&find(noticeKind==='task'?S.tasks:S.reminders,noticeId)){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>answerNotice({kind:noticeKind,id:noticeId}),0)}
   const v={hoy:vHoy,tareas:vTareas,compras:()=>ui.ckTab&&ui.ckTab!=='lista'?vCocina():vCompras(),semana:vSemana,recordar:vRecordar,ringo:vRingo}[ui.view]||vHoy;
   const keepFocus=document.activeElement&&document.activeElement.id;
   const keepScroll=$('#app').scrollTop;
