@@ -544,13 +544,13 @@ details summary{cursor:pointer}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="sync.js?v=50"></script>
-<script src="receipts.js?v=50"></script>
-<script src="receipt-image.js?v=50"></script>
-<script src="receipt-layout.js?v=50"></script>
-<script src="receipt-ocr.js?v=50"></script>
-<script src="cocina.js?v=50"></script>
-<script src="receipt-extras.js?v=50"></script>
+<script src="sync.js?v=51"></script>
+<script src="receipts.js?v=51"></script>
+<script src="receipt-image.js?v=51"></script>
+<script src="receipt-layout.js?v=51"></script>
+<script src="receipt-ocr.js?v=51"></script>
+<script src="cocina.js?v=51"></script>
+<script src="receipt-extras.js?v=51"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -783,7 +783,7 @@ function taskRow(t,occ){
   ].join('');
   return`<li class="row ${t.done?'is-done':''} ${preview?'ghost':''}">
     <button class="check round ${t.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleTask" data-id="${t.id}" aria-label="Completar ${esc(t.title)}"`}></button>
-    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
+    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${responseButton('task',t,preview)}${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
 }
 function eventRow(e,occ,label){
   const p=person(e.who);
@@ -800,7 +800,7 @@ function remRow(r,occ){
   return`<li class="row ${r.done?'is-done':''} ${preview?'ghost':''}">
     <button class="check round ${r.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleRem" data-id="${r.id}" aria-label="Marcar ${esc(r.title)}"`}></button>
     <div class="row-main" data-act="editRem" data-id="${r.id}"><div class="row-title">${esc(r.title)}</div>
-    <div class="row-meta"><span class="${late&&!preview?'late':''}">${preview?'':(r.date?relDate(r.date):'Sin fecha')}${r.time&&r.date?(preview?'A las ':' a las ')+r.time:''}</span>${r.repeat&&r.repeat!=='none'?`<span>${repLabel(r)}</span>`:''}${r.notes?`<span>${esc(r.notes.slice(0,40))}</span>`:''}</div></div></li>`;
+    <div class="row-meta"><span class="${late&&!preview?'late':''}">${preview?'':(r.date?relDate(r.date):'Sin fecha')}${r.time&&r.date?(preview?'A las ':' a las ')+r.time:''}</span>${r.repeat&&r.repeat!=='none'?`<span>${repLabel(r)}</span>`:''}${r.notes?`<span>${esc(r.notes.slice(0,40))}</span>`:''}</div></div>${responseButton('reminder',r,preview)}</li>`;
 }
 const ul=rows=>`<ul class="list">${rows.join('')}</ul>`;
 
@@ -1484,12 +1484,39 @@ function noteSheet(n){
    onDelete:()=>{S.notes=S.notes.filter(x=>x.id!==n.id);save();toastUndo('Nota eliminada')}});
 }
 
+function responseButton(kind,x,preview){
+  return !x.done&&!preview?`<button class="btn sec" style="padding:7px;font-size:.8rem;flex:none" data-act="answerNotice" data-kind="${kind}" data-id="${esc(x.id)}">Responder</button>`:'';
+}
+function answerNotice(d){
+  const collection=d.kind==='task'?S.tasks:S.reminders,x=find(collection,d.id);if(!x||x.done)return;
+  const expected=x.date||'';
+  const ov=sheet('Responder al aviso',`<p>${esc(x.title)}</p><div class="ck-actions"><button class="btn" data-response="done">Hecho</button><button class="btn sec" data-response="tomorrow">Mañana</button><button class="btn sec" data-response="dismiss">Ya no hace falta</button></div><p class="hint">Mañana cambia la fecha de este pendiente. «Ya no hace falta» cierra el aviso y detiene sus repeticiones.</p>`,{});
+  ov.addEventListener('click',e=>{
+    const action=e.target.closest('[data-response]')?.dataset.response;if(!action)return;
+    const current=find(d.kind==='task'?S.tasks:S.reminders,d.id);
+    if(!current||current.done||(current.date||'')!==expected){ov.remove();toast('Este aviso ha cambiado. Revisa su estado actual.');return}
+    if(action==='dismiss'){
+      sheet('¿Cerrar este aviso?',`<p>Se cerrará «${esc(current.title)}» y no volverá a repetirse. Puedes recuperarlo editándolo.</p>`,{saveLabel:'Cerrar aviso',onSave:()=>{const r=find(d.kind==='task'?S.tasks:S.reminders,d.id);if(!r||r.done||(r.date||'')!==expected)return; r.noticePreviousRepeat=r.repeat||'none';r.repeat='none';r.done=true;r.noticeResolution='dismissed';r.doneAt=today();save();ov.remove();toastUndo('Aviso cerrado')}});return;
+    }
+    ov.remove();
+    if(action==='done'){
+      if(d.kind!=='task'&&current.kind==='maintenance'){maintenanceDone(current.id);return}
+      ACT[d.kind==='task'?'toggleTask':'toggleRem']({id:current.id});return;
+    }
+    const next=addDays(today(),1);
+    if(current.date===next){toast('Ya está previsto para mañana');return}
+    current.noticePostponements=[...(current.noticePostponements||[]),{from:current.date||'',to:next,at:Date.now()}];
+    current.date=next;save();toastUndo('Pospuesto hasta mañana');
+  });
+}
+
 /* ---------- acciones ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 function quickRemNoDate(){const el=$('#qRemNoDate');const v=el.value.trim();if(!v)return;S.reminders.push({id:uid(),title:v,date:'',time:'',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadido a «Para tener en cuenta»')}
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Para tener en cuenta»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  answerNotice,
   refreshApp:()=>{location.reload()},
   newMaintenance:d=>maintenanceSheet(null,d.date||ui.calDay), editMaintenance:d=>maintenanceSheet(find(S.reminders,d.id)), maintenanceDone:d=>maintenanceDone(d.id),
   tab:d=>{ui.view=d.v;if(d.v==='compras'){autoStaples();autoPantry()}render();$('#app').scrollTop=0},
