@@ -534,6 +534,10 @@ body.nav-top .toast{bottom:90px}
 .ck-cartbar .ck-cb-t{flex:1}
 .ck-tip{background:var(--accent-soft);border-radius:14px;padding:10px 12px;margin-top:8px;font-size:.92rem}
 details summary{cursor:pointer}
+
+body[data-view="compras"] #app{overflow-anchor:none}
+body[data-view="compras"] .ck-add2{position:sticky;top:0;z-index:8;background:var(--bg);padding:4px 0 10px}
+body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -544,14 +548,14 @@ details summary{cursor:pointer}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=52"></script>
-<script src="sync.js?v=52"></script>
-<script src="receipts.js?v=52"></script>
-<script src="receipt-image.js?v=52"></script>
-<script src="receipt-layout.js?v=52"></script>
-<script src="receipt-ocr.js?v=52"></script>
-<script src="cocina.js?v=52"></script>
-<script src="receipt-extras.js?v=52"></script>
+<script src="push.js?v=53"></script>
+<script src="sync.js?v=53"></script>
+<script src="receipts.js?v=53"></script>
+<script src="receipt-image.js?v=53"></script>
+<script src="receipt-layout.js?v=53"></script>
+<script src="receipt-ocr.js?v=53"></script>
+<script src="cocina.js?v=53"></script>
+<script src="receipt-extras.js?v=53"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -606,7 +610,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=49;
+const APP_VERSION=53;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1211,7 +1215,7 @@ function render(){
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});
   if(keepVals.qItem)drawQSug();
   $('#app').scrollTop=keepScroll;
-  if(keepFocus&&['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR','qRec','qVeto','qProd'].includes(keepFocus)){const el=$('#'+keepFocus);if(el)el.focus()}
+  if(keepFocus&&['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR','qRec','qVeto','qProd'].includes(keepFocus)){const el=$('#'+keepFocus);if(el)el.focus({preventScroll:true})}
   const t=today();
   const badges={tareas:S.tasks.filter(x=>!x.done&&x.date&&x.date<=t).length,recordar:S.reminders.filter(r=>!r.done&&r.date&&r.date<=t).length,ringo:S.pet.filter(x=>{const d=petDue(x);return d&&d<=t}).length,compras:(S.pantry||[]).filter(pantryLow).length};
   const embedded=(()=>{try{return window.self!==window.top}catch(e){return true}})();

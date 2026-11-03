@@ -865,9 +865,9 @@ function vCompras(){
   if(!items.length)return h+`<div class="empty" style="margin-top:16px">Lista vacía. Añade productos arriba, desde ⭐ Habituales o en 🛍️ Productos.</div>${shopLaterSection(L)}${histLink()}`;
   const secs=[...S.sections,...new Set(items.map(i=>i.section).filter(s=>s&&!S.sections.includes(s)))];
   const rows=[];
-  secs.forEach(sec=>{const a=pend.filter(i=>(i.section||'Otros')===sec);if(a.length){rows.push(`<li class="sec-head">${esc(sec)} · ${a.length}</li>`);rows.push(...a.map(itemRow))}});
-  const lost=pend.filter(i=>!secs.includes(i.section||'Otros'));if(lost.length){rows.push(`<li class="sec-head">Otros</li>`);rows.push(...lost.map(itemRow))}
-  if(dn.length){rows.push(`<li class="sec-head ck-done-h">✓ En el carro · ${dn.length}</li>`);rows.push(...dn.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0)).map(itemRow))}
+  secs.forEach(sec=>{const a=items.filter(i=>(i.section||'Otros')===sec);if(a.length){rows.push(`<li class="sec-head">${esc(sec)} · ${a.length}</li>`);rows.push(...a.map(itemRow))}});
+  const lost=items.filter(i=>!secs.includes(i.section||'Otros'));if(lost.length){rows.push(`<li class="sec-head">Otros</li>`);rows.push(...lost.map(itemRow))}
+
   h+=`<div style="margin-top:14px">${ul(rows)}</div>`;
   if(dn.length)h+=`<div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="clearDone">✅ Terminar compra (${dn.length})</button></div><p class="hint">Al terminar, lo tachado sale de la lista y pasa a casa. Puedes apuntar lo que habéis pagado o subir el tique.</p>`;
   return h+shopLaterSection(L)+histLink();
@@ -882,9 +882,9 @@ function addToList(o,lid){
   save();return true;
 }
 function quickItem(){
-  const el=$('#qItem');const v=el.value.trim();if(!v)return;
+  const el=$('#qItem');if(!el)return;const v=el.value.trim();if(!v)return;
   const sec=$('#qSec').value;ui.lastSec=sec;
-  if(addToList({name:v,qty:$('#qQty').value.trim(),section:sec})){S.secMem[norm(v)]=sec;el.value='';$('#qQty').value='';const b=$('#qSug');if(b)b.innerHTML='';save()}
+  if(addToList({name:v,qty:$('#qQty').value.trim(),section:sec})){S.secMem[norm(v)]=sec;const current=$('#qItem');if(current)current.value='';$('#qQty').value='';const b=$('#qSug');if(b)b.innerHTML='';save()}
 }
 // Sugerencias de Mercadona mientras se escribe en «Añadir producto»
 function drawQSug(){
