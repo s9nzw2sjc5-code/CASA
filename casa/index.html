@@ -548,14 +548,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=57"></script>
-<script src="sync.js?v=57"></script>
-<script src="receipts.js?v=57"></script>
-<script src="receipt-image.js?v=57"></script>
-<script src="receipt-layout.js?v=57"></script>
-<script src="receipt-ocr.js?v=57"></script>
-<script src="cocina.js?v=57"></script>
-<script src="receipt-extras.js?v=57"></script>
+<script src="push.js?v=58"></script>
+<script src="sync.js?v=58"></script>
+<script src="receipts.js?v=58"></script>
+<script src="receipt-image.js?v=58"></script>
+<script src="receipt-layout.js?v=58"></script>
+<script src="receipt-ocr.js?v=58"></script>
+<script src="cocina.js?v=58"></script>
+<script src="receipt-extras.js?v=58"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -610,7 +610,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=57;
+const APP_VERSION=58;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -724,7 +724,7 @@ async function initCloud(){
     const id=await user.id();
     // Preferencias de esta persona (posición de las pestañas), guardadas en su cuenta para que no se pierdan
     if(id){prefRef=db.collection('data/users/'+id).doc('prefs');
-      try{const ps=await prefRef.get();if(ps.exists){const d=ps.data()||{};if(d.navPos){ui.navPos=d.navPos;ui.navAsked=true}if(d.me)ui.me=d.me}}catch(e){}}
+      try{const ps=await prefRef.get();if(ps.exists){const d=ps.data()||{};ui.navPos='bottom';ui.navAsked=true;if(d.me)ui.me=d.me}}catch(e){}}
     prefsReady=true;render();
     docRef=db.doc('hogar/estado');dbRef=db;
     const snap=await docRef.get();
@@ -1010,6 +1010,11 @@ function petRow(x){
     <div class="row-main" data-act="editPet" data-id="${x.id}"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${meta}</div></div>
     <button class="btn" style="padding:8px 12px;font-size:.88rem" data-act="petDone" data-id="${x.id}">Hecho</button></li>`;
 }
+function ringoAppointments(){
+  const entries=S.events.filter(e=>(e.petAppointment==='grooming'||norm(e.title)==='ringo: peluqueria')&&e.date>=today()).map(e=>({...e,legacy:false}));
+  S.pet.filter(x=>norm(x.name)==='peluqueria'&&x.next&&x.next>=today()).forEach(x=>{if(!entries.some(e=>e.date===x.next&&(e.time||'')===(x.time||'')))entries.push({id:x.id,date:x.next,time:x.time||'',title:'Ringo: Peluquería',legacy:true})});
+  return entries.sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
+}
 function vRingo(){
   const t=today(),soon=addDays(t,30);
   const all=S.pet.map(x=>({x,d:petDue(x)}));
@@ -1021,9 +1026,11 @@ function vRingo(){
   h+=`<ul class="list" style="margin:10px 0">${['Baño','Peluquería'].map(name=>{
     const care=S.pet.find(x=>norm(x.name)===norm(name));
     const dates=[care?.last,...petHistory().filter(e=>norm(e.title)===norm(name)).map(e=>e.date)].filter(d=>d&&d<=today()).sort();
-    const last=dates.at(-1);
-    return `<li class="row"><span aria-hidden="true">${name==='Baño'?'🛁':'✂️'}</span><div class="row-main"><div class="row-title">${name}</div><div class="row-meta"><span>${last?'Última vez: '+esc(relDate(last)):'Sin fecha'}${care?.next?' · Próxima: '+esc(relDate(care.next)):''}</span></div></div><button class="link" style="min-height:44px;padding:8px;flex:none" data-act="petHygiene" data-v="${name}" aria-label="Editar fecha de ${name}">Fecha</button></li>`;
+    const last=dates.at(-1),appointment=name==='Peluquería'?ringoAppointments()[0]:null;
+    return `<li class="row"><span aria-hidden="true">${name==='Baño'?'🛁':'✂️'}</span><div class="row-main"><div class="row-title">${name}</div><div class="row-meta"><span>${last?'Última vez: '+esc(relDate(last)):'Sin fecha'}${appointment?' · Próxima: '+esc(relDate(appointment.date))+(appointment.time?' · '+esc(appointment.time):''):care?.next?' · Próxima: '+esc(relDate(care.next)):''}</span></div></div><button class="link" style="min-height:44px;padding:8px;flex:none" data-act="petHygiene" data-v="${name}" aria-label="Editar fecha de ${name}">Fecha</button></li>`;
   }).join('')}</ul>`;
+  const appointments=ringoAppointments();
+  h+=`<div class="head-row"><h2>✂️ Citas de peluquería</h2><button class="link" data-act="newGrooming">+ Añadir cita</button></div>${appointments.length?ul(appointments.map(e=>`<li class="row"><div class="row-main" data-act="${e.legacy?'editPet':'editEvent'}" data-id="${esc(e.id)}"><div class="row-title">${esc(relDate(e.date))}${e.time?' · '+esc(e.time):''}</div><div class="row-meta">${e.place?esc(e.place)+' · ':''}Peluquería · aparece en Calendario</div></div><button class="link" style="min-height:44px" data-act="${e.legacy?'editPet':'editEvent'}" data-id="${esc(e.id)}">Editar</button></li>`)):'<p class="hint">Apunta todas las fechas que tengas reservadas.</p>'}`;
   if(!S.pet.length)h+=`<div class="empty">Añade sus cuidados con +: pastilla de desparasitación, collar, vacunas, visitas al veterinario…</div>`;
   if(nod.length)h+=`<h2>Para tener en cuenta</h2>`+ul(nod);
   if(late.length)h+=`<h2>Toca ya</h2>`+ul(late);
@@ -1218,7 +1225,7 @@ function render(){
   const keepScroll=$('#app').scrollTop;
   const keepVals={};['qTask','qItem','qQty','qNoDate','qRemNoDate','qHist','qNote','qNoteR','qRec','qVeto'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
   document.body.dataset.view=ui.view;
-  replaceAppContent((syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="navPos" data-v="${ui.navPos==='top'?'bottom':'top'}">${ui.navPos==='top'?'Poner las pestañas abajo':'Poner las pestañas arriba'}</button><br><span>Versión ${APP_VERSION}</span> · <button class="link" data-act="refreshApp">Actualizar Casa</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`);
+  replaceAppContent((syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><span>Versión ${APP_VERSION}</span> · <button class="link" data-act="refreshApp">Actualizar Casa</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`);
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});
   if(keepVals.qItem)drawQSug();
   $('#app').scrollTop=keepScroll;
@@ -1226,8 +1233,7 @@ function render(){
   const t=today();
   const badges={tareas:S.tasks.filter(x=>!x.done&&x.date&&x.date<=t).length,recordar:S.reminders.filter(r=>!r.done&&r.date&&r.date<=t).length,ringo:S.pet.filter(x=>{const d=petDue(x);return d&&d<=t}).length,compras:(S.pantry||[]).filter(pantryLow).length};
   const embedded=(()=>{try{return window.self!==window.top}catch(e){return true}})();
-  document.body.classList.toggle('nav-top',ui.navPos==='top');
-  if(embedded&&!ui.navAsked&&prefsReady)$('#app').insertAdjacentHTML('afterbegin',`<div class="navq">¿Ves la barra de pestañas abajo del todo (Hoy, Tareas, Compras…)?<div><button class="btn sec" data-act="navPos" data-v="bottom">Sí, la veo</button><button class="btn" data-act="navPos" data-v="top">No, ponla arriba</button></div></div>`);
+  ui.navPos='bottom';ui.navAsked=true;document.body.classList.remove('nav-top');
   $('#app').insertAdjacentHTML('afterbegin',`<nav class="toptabs" aria-label="Secciones">${TABS.map(([k,l,ic])=>`<button class="toptab ${ui.view===k?'on':''}" style="--tc:var(--c-${k})${k==='recordar'?';--ti:#1A1530':''}" data-act="tab" data-v="${k}"><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join('')}</nav>`);
   $('#tabs').innerHTML=TABS.map(([k,l,ic])=>`<button class="tab ${ui.view===k?'on':''}" style="--tc:var(--c-${k})${k==='recordar'?';--ti:#1A1530':''}" data-act="tab" data-v="${k}" ${ui.view===k?'aria-current="page"':''}><span class="ic"><svg viewBox="0 0 24 24">${ic}</svg>${badges[k]?`<span class="badge">${badges[k]}</span>`:''}</span>${l}</button>`).join('');
   $('#fab').hidden=!['hoy','tareas','recordar','ringo','semana'].includes(ui.view);
@@ -1281,8 +1287,8 @@ function repeatPreview(ov){
   ov.addEventListener('click',()=>setTimeout(upd,0));
   upd();
 }
-function eventSheet(e,date){
-  const n=!e;e=e||{title:'',date:date||today(),time:'',end:'',place:'',who:'ambos',repeat:'none',notes:''};
+function eventSheet(e,date,preset){
+  const n=!e;e=e||{title:preset||'',date:date||today(),time:'',end:'',place:'',who:'ambos',repeat:'none',notes:''};
   const ov0=sheet(n?'Nuevo evento':'Editar evento',`
     <label for="f_t">Evento</label><input class="field" id="f_t" value="${esc(e.title)}" placeholder="Ej.: Cena con amigos / Médico / Cumpleaños">
     <div class="grid2"><div><label for="f_d">Fecha</label><input class="field" type="date" id="f_d" value="${e.date}"></div>
@@ -1303,6 +1309,7 @@ function eventSheet(e,date){
     const tm=val(ov,'f_h'),en=val(ov,'f_he');
     if(tm&&en&&en<=tm){toast('La hora de fin debe ser posterior a la de inicio');return false}
     const o={title,date:d,time:tm,end:tm?en:'',place:val(ov,'f_pl'),who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),...cus};
+    if(preset==='Ringo: Peluquería'){o.petAppointment='grooming';if(S.events.some(x=>x.title===o.title&&x.date===o.date&&x.time===o.time)){toast('Esa cita ya está apuntada');return false}}
     if(n)S.events.push({id:uid(),...o});else{const x=find(S.events,e.id);if(x)Object.assign(x,o)}
     save();toast(n?'Evento creado':'Evento guardado');
   },onDelete:n?null:()=>{S.events=S.events.filter(x=>x.id!==e.id);save();toastUndo('Evento eliminado')}});
@@ -1530,6 +1537,7 @@ function quickRemNoDate(){const el=$('#qRemNoDate');const v=el.value.trim();if(!
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Para tener en cuenta»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  newGrooming:()=>eventSheet(null,today(),'Ringo: Peluquería'),
   petHygiene:d=>{if(!['Baño','Peluquería'].includes(d.v))return;petSheet(S.pet.find(x=>norm(x.name)===norm(d.v)),d.v)},
   answerNotice,
   refreshApp:()=>{location.reload()},
@@ -1573,7 +1581,6 @@ const ACT={
   toTomorrow:d=>{const t=find(S.tasks,d.id);if(!t)return;t.date=addDays(today(),1);save();toastUndo('Pasada a mañana')},
   toToday:d=>{const t=find(S.tasks,d.id);if(!t)return;t.date=today();save();toastUndo('Pasada a hoy')},
   allToToday:()=>{const t0=today();let n=0;S.tasks.forEach(t=>{if(!t.done&&t.date&&t.date<t0){t.date=t0;n++}});if(!n)return;save();toastUndo(n+' tareas pasadas a hoy')},
-  navPos:d=>{ui.navPos=d.v;ui.navAsked=true;savePrefs();render();$('#app').scrollTop=0;toast(d.v==='top'?'Pestañas arriba en este móvil':'Pestañas abajo')},
   backups:()=>backupsSheet(),
   saveNote:d=>saveNote(d.v),
   sendMsg:()=>sendMsg(),
