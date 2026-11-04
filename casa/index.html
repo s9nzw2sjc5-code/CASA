@@ -548,14 +548,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=55"></script>
-<script src="sync.js?v=55"></script>
-<script src="receipts.js?v=55"></script>
-<script src="receipt-image.js?v=55"></script>
-<script src="receipt-layout.js?v=55"></script>
-<script src="receipt-ocr.js?v=55"></script>
-<script src="cocina.js?v=55"></script>
-<script src="receipt-extras.js?v=55"></script>
+<script src="push.js?v=56"></script>
+<script src="sync.js?v=56"></script>
+<script src="receipts.js?v=56"></script>
+<script src="receipt-image.js?v=56"></script>
+<script src="receipt-layout.js?v=56"></script>
+<script src="receipt-ocr.js?v=56"></script>
+<script src="cocina.js?v=56"></script>
+<script src="receipt-extras.js?v=56"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -610,7 +610,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=55;
+const APP_VERSION=56;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1018,6 +1018,12 @@ function vRingo(){
   let h=`<h1>Ringo</h1><p class="sub">${late.length?`${late.length} cuidado${late.length>1?'s':''} pendiente${late.length>1?'s':''}`:'Todo al día'}</p>${heroStats([[late.length,'toca ya'],[next.length,'próximos'],[S.pet.length,'cuidados'],[petHistory().length,'registros']])}`;
   h+=`<div class="chips" style="margin-bottom:6px"><button class="chip ${ui.ringoTab!=='hist'?'on':''}" data-act="ringoTab" data-v="care">Cuidados</button><button class="chip ${ui.ringoTab==='hist'?'on':''}" data-act="ringoTab" data-v="hist">Historial</button></div>`;
   if(ui.ringoTab==='hist')return h+vRingoHist();
+  h+=`<div class="grid2" style="margin:12px 0">${['Baño','Peluquería'].map(name=>{
+    const care=S.pet.find(x=>norm(x.name)===norm(name));
+    const dates=[care?.last,...petHistory().filter(e=>norm(e.title)===norm(name)).map(e=>e.date)].filter(d=>d&&d<=today()).sort();
+    const last=dates.at(-1);
+    return `<div class="summary" style="display:block"><b>${name==='Baño'?'🛁':'✂️'} ${name}</b><p>${last?'Última vez: '+esc(relDate(last)):'Sin fecha registrada'}</p>${care?.next?`<p>Próxima: ${esc(relDate(care.next))}</p>`:''}<button class="btn sec" data-act="petHygiene" data-v="${name}">Apuntar fecha</button></div>`;
+  }).join('')}</div>`;
   if(!S.pet.length)h+=`<div class="empty">Añade sus cuidados con +: pastilla de desparasitación, collar, vacunas, visitas al veterinario…</div>`;
   if(nod.length)h+=`<h2>Para tener en cuenta</h2>`+ul(nod);
   if(late.length)h+=`<h2>Toca ya</h2>`+ul(late);
@@ -1070,8 +1076,8 @@ function histSheet(e){
     S.petLog=S.petLog.filter(y=>y.id!==e.id);save();toastUndo('Registro eliminado');
   }});
 }
-function petSheet(x){
-  const n=!x;x=x||{name:'',kind:'pastilla',last:'',every:'',unit:'m',next:'',notes:'',log:[]};
+function petSheet(x,preset){
+  const n=!x;x=x||{name:preset||'',kind:preset?'higiene':'pastilla',last:'',every:'',unit:'m',next:'',notes:'',log:[]};
   const due=n?'':petDue(x);
   const hist=n?'':petHistory().filter(e=>e.careId===x.id).slice(0,8).map(e=>`<li class="row"><div class="row-main"><div class="row-title">${parse(e.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</div>${e.notes?`<div class="row-meta"><span>${esc(e.notes)}</span></div>`:''}</div></li>`).join('');
   const ov=sheet(n?'Nuevo cuidado de Ringo':'Editar cuidado',`
@@ -1091,8 +1097,9 @@ function petSheet(x){
     const name=val(ov,'f_t');if(!name){toast('Escribe el cuidado');return false}
     const ev=parseInt(val(ov,'f_e'),10);
     const o={name,kind:val(ov,'f_k'),last:val(ov,'f_last'),every:ev>0?ev:0,unit:val(ov,'f_u'),next:val(ov,'f_nx'),time:val(ov,'f_nx')?val(ov,'f_nxh'):'',notes:val(ov,'f_n')};
+    if(o.last&&o.last>today()){toast('La última vez debe ser hoy o una fecha pasada. Para una cita, usa Próxima fecha.');return false}
     if(o.every>0&&!o.last&&!o.next)o.next=addInterval(today(),o.every,o.unit);
-    if(n)S.pet.push({id:uid(),log:o.last?[o.last]:[],...o});else{const y=find(S.pet,x.id);if(y)Object.assign(y,o)}
+    if(n)S.pet.push({id:uid(),log:o.last?[o.last]:[],...o});else{const y=find(S.pet,x.id);if(y){Object.assign(y,o);if(o.last)y.log=[...new Set([...(y.log||[]),o.last])].sort()}}
     save();toast(n?'Cuidado añadido':'Cuidado guardado');
   },onDelete:n?null:()=>{petHistory().filter(e=>e.careId===x.id&&e.src==='care').forEach(e=>S.petLog.push({id:uid(),date:e.date,kind:e.kind,title:e.title,notes:'',careId:x.id}));S.pet=S.pet.filter(y=>y.id!==x.id);save();toastUndo('Cuidado eliminado (el historial se conserva)')}});
   const calc=()=>{
@@ -1523,6 +1530,7 @@ function quickRemNoDate(){const el=$('#qRemNoDate');const v=el.value.trim();if(!
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Para tener en cuenta»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  petHygiene:d=>{if(!['Baño','Peluquería'].includes(d.v))return;petSheet(S.pet.find(x=>norm(x.name)===norm(d.v)),d.v)},
   answerNotice,
   refreshApp:()=>{location.reload()},
   newMaintenance:d=>maintenanceSheet(null,d.date||ui.calDay), editMaintenance:d=>maintenanceSheet(find(S.reminders,d.id)), maintenanceDone:d=>maintenanceDone(d.id),
