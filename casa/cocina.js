@@ -392,7 +392,7 @@ function productSearchHTML(){
       return h;
     }
   }else{
-    h+=`<div class="chips ck-cats">${[['hab','⭐ Habituales'],['higiene','🪥 Higiene'],['bajadas','🏷️ Bajadas de precio'],...MC.cats.filter(c=>!CK_HIDECAT.test(c)).map(c=>[c,(CK_CATEMO[c]||'')+' '+c])].map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-act="prodCat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
+    h+=`<div class="chips ck-cats">${[['hab','⭐ Habituales'],['bajadas','🏷️ Bajadas de precio'],...MC.cats.filter(c=>!CK_HIDECAT.test(c)).map(c=>[c,(CK_CATEMO[c]||'')+' '+c]),['higiene','🪥 Higiene']].map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-act="prodCat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
     if(cat==='hab'){
       const fv=(ck().fav||[]).filter(k=>MC.byId.has(k)),rec=[...new Set([...cartItems().map(i=>i.mid),...(ck().usual||[]),...(S.pantry||[]).map(x=>x.mid)].filter(id=>id&&MC.byId.has(id)&&!fv.includes(id)))];
       if(fv.length)h+=`<h2>⭐ Tus habituales</h2><div class="ck-grid">${fv.map(id=>prodCard(prod(MC.byId.get(id)))).join('')}</div>`;
