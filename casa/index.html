@@ -548,14 +548,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=56"></script>
-<script src="sync.js?v=56"></script>
-<script src="receipts.js?v=56"></script>
-<script src="receipt-image.js?v=56"></script>
-<script src="receipt-layout.js?v=56"></script>
-<script src="receipt-ocr.js?v=56"></script>
-<script src="cocina.js?v=56"></script>
-<script src="receipt-extras.js?v=56"></script>
+<script src="push.js?v=57"></script>
+<script src="sync.js?v=57"></script>
+<script src="receipts.js?v=57"></script>
+<script src="receipt-image.js?v=57"></script>
+<script src="receipt-layout.js?v=57"></script>
+<script src="receipt-ocr.js?v=57"></script>
+<script src="cocina.js?v=57"></script>
+<script src="receipt-extras.js?v=57"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -610,7 +610,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=56;
+const APP_VERSION=57;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1018,12 +1018,12 @@ function vRingo(){
   let h=`<h1>Ringo</h1><p class="sub">${late.length?`${late.length} cuidado${late.length>1?'s':''} pendiente${late.length>1?'s':''}`:'Todo al día'}</p>${heroStats([[late.length,'toca ya'],[next.length,'próximos'],[S.pet.length,'cuidados'],[petHistory().length,'registros']])}`;
   h+=`<div class="chips" style="margin-bottom:6px"><button class="chip ${ui.ringoTab!=='hist'?'on':''}" data-act="ringoTab" data-v="care">Cuidados</button><button class="chip ${ui.ringoTab==='hist'?'on':''}" data-act="ringoTab" data-v="hist">Historial</button></div>`;
   if(ui.ringoTab==='hist')return h+vRingoHist();
-  h+=`<div class="grid2" style="margin:12px 0">${['Baño','Peluquería'].map(name=>{
+  h+=`<ul class="list" style="margin:10px 0">${['Baño','Peluquería'].map(name=>{
     const care=S.pet.find(x=>norm(x.name)===norm(name));
     const dates=[care?.last,...petHistory().filter(e=>norm(e.title)===norm(name)).map(e=>e.date)].filter(d=>d&&d<=today()).sort();
     const last=dates.at(-1);
-    return `<div class="summary" style="display:block"><b>${name==='Baño'?'🛁':'✂️'} ${name}</b><p>${last?'Última vez: '+esc(relDate(last)):'Sin fecha registrada'}</p>${care?.next?`<p>Próxima: ${esc(relDate(care.next))}</p>`:''}<button class="btn sec" data-act="petHygiene" data-v="${name}">Apuntar fecha</button></div>`;
-  }).join('')}</div>`;
+    return `<li class="row"><span aria-hidden="true">${name==='Baño'?'🛁':'✂️'}</span><div class="row-main"><div class="row-title">${name}</div><div class="row-meta"><span>${last?'Última vez: '+esc(relDate(last)):'Sin fecha'}${care?.next?' · Próxima: '+esc(relDate(care.next)):''}</span></div></div><button class="link" style="min-height:44px;padding:8px;flex:none" data-act="petHygiene" data-v="${name}" aria-label="Editar fecha de ${name}">Fecha</button></li>`;
+  }).join('')}</ul>`;
   if(!S.pet.length)h+=`<div class="empty">Añade sus cuidados con +: pastilla de desparasitación, collar, vacunas, visitas al veterinario…</div>`;
   if(nod.length)h+=`<h2>Para tener en cuenta</h2>`+ul(nod);
   if(late.length)h+=`<h2>Toca ya</h2>`+ul(late);
