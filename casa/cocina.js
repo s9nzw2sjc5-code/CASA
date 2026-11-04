@@ -128,6 +128,7 @@ const qWords=q=>{const all=norm(q).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filte
 // Busca por trozos de palabra, en cualquier orden, sin tildes y con pequeños errores; ordena por relevancia
 function searchProducts(q,limit,minHits){
   if(!MC)return[];
+  q=norm(q).replace(/\bpasta(?:s)? (?:de )?dientes\b/g,'dentifrico').replace(/\bpasta dental\b/g,'dentifrico');
   const qw=qWords(q);if(!qw.length)return[];
   const nq=norm(q).trim(),fav=new Set(ck().fav||[]),usual=new Set((ck().usual||[]).slice(0,60)),out=[];
   for(let i=0;i<MC.p.length;i++){
@@ -391,13 +392,15 @@ function productSearchHTML(){
       return h;
     }
   }else{
-    h+=`<div class="chips ck-cats">${[['hab','⭐ Habituales'],['bajadas','🏷️ Bajadas de precio'],...MC.cats.filter(c=>!CK_HIDECAT.test(c)).map(c=>[c,(CK_CATEMO[c]||'')+' '+c])].map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-act="prodCat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
+    h+=`<div class="chips ck-cats">${[['hab','⭐ Habituales'],['higiene','🪥 Higiene'],['bajadas','🏷️ Bajadas de precio'],...MC.cats.filter(c=>!CK_HIDECAT.test(c)).map(c=>[c,(CK_CATEMO[c]||'')+' '+c])].map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-act="prodCat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
     if(cat==='hab'){
       const fv=(ck().fav||[]).filter(k=>MC.byId.has(k)),rec=[...new Set([...cartItems().map(i=>i.mid),...(ck().usual||[]),...(S.pantry||[]).map(x=>x.mid)].filter(id=>id&&MC.byId.has(id)&&!fv.includes(id)))];
       if(fv.length)h+=`<h2>⭐ Tus habituales</h2><div class="ck-grid">${fv.map(id=>prodCard(prod(MC.byId.get(id)))).join('')}</div>`;
       else h+=`<p class="hint ck-help">Marca con <b>☆</b> los productos que compras siempre y los tendrás aquí y en la lista de Compras.</p>`;
       a=rec.map(id=>prod(MC.byId.get(id)));title=a.length?'Recientes y en casa':'';
       if(!fv.length&&!a.length)return h+`<div class="empty" style="margin-top:12px">Busca arriba o elige una sección para empezar.</div>`;
+    }else if(cat==='higiene'){
+      a=MC.p.filter(p=>/Cuidado|Fitoterapia|Maquillaje/.test(MC.cats[p[8]]||'')).map(prod);title='Higiene y cuidado personal';
     }else if(cat==='bajadas'){
       if(!mcFresh())return h+`<div class="empty" style="margin-top:12px">Los precios son del ${mcDate()}. No muestro bajadas de precio con datos de días anteriores porque podrían no estar vigentes.</div>`;
       a=MC.p.filter(p=>p[11]).map(prod);title='Bajadas de precio en tu código postal';
