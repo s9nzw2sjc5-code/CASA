@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v58';
+const CACHE = 'casa-v59';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['push.js?v=58','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=58', 'cocina.js?v=58', 'receipts.js?v=58', 'receipt-image.js?v=58', 'receipt-layout.js?v=58', 'receipt-ocr.js?v=58', 'receipt-extras.js?v=58', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['push.js?v=59','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=59', 'cocina.js?v=59', 'receipts.js?v=59', 'receipt-image.js?v=59', 'receipt-layout.js?v=59', 'receipt-ocr.js?v=59', 'receipt-extras.js?v=59', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

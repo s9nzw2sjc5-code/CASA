@@ -30,7 +30,7 @@
   }
   function duplicates(state,t,id){
     const buys=(state.buys||[]).filter(b=>!b.voided);
-    const exact=buys.find(b=>(id.imageHash&&b.imageHash===id.imageHash)||(b.receiptKey===id.key&&b.lineFingerprint===id.lines)||(b.id===id.id)||(b.ticket&&b.date===t.date&&cents(b.total)===cents(t.total)&&norm(b.store)===norm(t.store)&&Array.isArray(b.items)&&signature(b.items)===signature(t.lines)));
+    const exact=buys.find(b=>(id.imageHash&&b.imageHash===id.imageHash)||(id.key&&id.lines&&b.receiptKey===id.key&&b.lineFingerprint===id.lines)||(b.id===id.id)||(b.ticket&&b.date===t.date&&cents(b.total)===cents(t.total)&&norm(b.store)===norm(t.store)&&Array.isArray(b.items)&&signature(b.items)===signature(t.lines)));
     const candidates=buys.filter(b=>b.date===t.date&&cents(b.total)===cents(t.total)&&(!b.store||norm(b.store)===norm(t.store)));
     return {exact,candidates};
   }
@@ -40,13 +40,15 @@
     const v=validate(t);if(!v.ok)throw new Error(v.reasons.join('. '));
     const match=duplicates(state,t,id);
     if(match.exact)return {patch:{},result:{id:match.exact.id,duplicate:true}};
-    if(match.candidates.length&&!options.matchId&&!options.confirmNew){const e=new Error('Hay una compra del mismo día e importe. Revisa si es el mismo gasto.');e.code='receipt_review';throw e}
-    const old=options.matchId?(state.buys||[]).find(b=>b.id===options.matchId):null;
-    if(options.matchId&&!old)throw new Error('La compra seleccionada ya no existe. Vuelve a revisar el tique.');
-    if(old&&(old.date!==t.date||cents(old.total)!==cents(t.total)||(old.store&&norm(old.store)!==norm(t.store))))throw new Error('El gasto seleccionado no coincide en fecha, comercio e importe.');
+    if(match.candidates.length&&!t.pendingBuyId&&!options.matchId&&!options.confirmNew){const e=new Error('Hay una compra del mismo día e importe. Revisa si es el mismo gasto.');e.code='receipt_review';throw e}
+    const matchId=t.pendingBuyId||options.matchId;
+    const old=matchId?(state.buys||[]).find(b=>b.id===matchId):null;
+    if(matchId&&!old)throw new Error('La compra seleccionada ya no existe. Vuelve a revisar el tique.');
+    if(old&&!old.receiptPending&&(old.date!==t.date||cents(old.total)!==cents(t.total)||(old.store&&norm(old.store)!==norm(t.store))))throw new Error('El gasto seleccionado no coincide en fecha, comercio e importe.');
     if(old?.ticket)return {patch:{},result:{id:old.id,duplicate:true}};
     // Al completar un gasto previo, no volvemos a incrementar existencias.
-    const inventory=!old;
+    const inventory=!old||!!old.receiptPending;
+    const credited=new Map((old?.pendingInventory||[]).map(x=>[x.id,{...x}]));
     const next=copy(state),changes=new Set(['buys']);
     const items=[],effects=[];let added=0,removed=0;const consumed=new Set(),totals={};
     for(const l of t.lines)for(const key of l.plan?.shoppingIds||[])totals[key]=(totals[key]||0)+Number(l.plan.shoppingAmount??(l.kg?0:l.units));
@@ -65,8 +67,12 @@
         const dimension=x.u==='ud'?'ud':'m',from=plan.unit==='ud'?'ud':'m';
         if(dimension!==from){amount=plan.weight?(from==='ud'?amount*plan.weight:amount/plan.weight):dimension==='ud'?l.units:NaN}
         if(!Number.isFinite(amount)||amount<=0)throw new Error('No se puede determinar cuánto añadir a la despensa. Revisa cantidades y unidades.');
-        x.n=Math.round((Number(x.n||0)+amount)*10)/10;x.at=t.date;changes.add('pantry');added++;
-        effects.push({pantryId:x.id,amount,unit:x.u});line.inventoryId=x.id;
+        if(old?.receiptPending){
+          const prior=Object.hasOwn(plan,'creditedId')?credited.get(plan.creditedId):[...credited.values()].find(p=>p.pantryId===x.id);
+          if(prior){prior.used=true;if(prior.pantryId!==x.id||prior.unit!==x.u)throw Error('El producto ya registrado y su destino en casa no coinciden. Revisa la compra.');const deduct=Math.min(amount,prior.amount);amount-=deduct;prior.amount-=deduct}
+        }
+        if(amount>0){x.n=Math.round((Number(x.n||0)+amount)*10)/10;x.at=t.date;changes.add('pantry');added++;
+        effects.push({pantryId:x.id,amount,unit:x.u});line.inventoryId=x.id;}
       }
       next.prices=next.prices||{};
       // Misma estructura de precios que usa la app; conserva el resto de campos.
@@ -92,8 +98,12 @@
         });removed+=before-next.items.length;if(JSON.stringify(state.items)!==JSON.stringify(next.items))changes.add('items');
       }
     }
+    for(const prior of credited.values())if(prior.used&&prior.amount>0){
+      const x=next.pantry.find(x=>x.id===prior.pantryId);if(!x||x.n<prior.amount)throw Error('No se pueden corregir las existencias ya consumidas. Revisa la cantidad comprada.');
+      x.n=Math.round((x.n-prior.amount)*10)/10;changes.add('pantry');effects.push({pantryId:x.id,amount:-prior.amount,unit:x.u});
+    }
     const savedAt=old&&typeof old.at==='number'&&Number.isFinite(old.at)?old.at:typeof options.at==='number'&&Number.isFinite(options.at)?options.at:Date.now();
-    const record={...(old||{}),id:old?old.id:id.id,date:t.date,store:t.store,total:cents(t.total)/100,n:items.length,items,ticket:true,manual:false,at:savedAt,by:old?.by||options.by||'',receiptVersion:2,receiptKey:id.key,lineFingerprint:id.lines,imageHash:id.imageHash,inventoryApplied:inventory,inventoryEffects:effects};
+    const record={...(old||{}),id:old?old.id:id.id,date:t.date,store:t.store,total:cents(t.total)/100,n:items.length,items,ticket:true,manual:false,receiptPending:false,receiptCheckedAt:Date.now(),at:savedAt,by:old?.by||options.by||'',receiptVersion:2,receiptKey:id.key,lineFingerprint:id.lines,imageHash:id.imageHash,inventoryApplied:inventory,inventoryEffects:effects};
     for(const l of t.lines){
       if(l.originalName&&norm(l.originalName)!==norm(l.name)){
         next.cook=next.cook||{};next.cook.receiptAliases={...(next.cook.receiptAliases||{}),[norm(t.store)+'|'+norm(l.originalName)]:{name:l.name,store:t.store}};changes.add('cook');
@@ -145,6 +155,6 @@
     if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype){for(const [key,item] of Object.entries(value))assertData(item,path+'.'+key);return}
     throw new Error('Dato no válido en '+path+'. No se ha enviado el tique.');
   }
-  const api={version:49,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch,undo};
+  const api={version:50,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch,undo};
   root.CasaReceipts=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

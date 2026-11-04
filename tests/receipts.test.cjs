@@ -128,3 +128,15 @@ test('confirmed corrections are learned by store and undo restores the previous 
  const s=state(),t=receipt();t.lines[0].originalName='ABREV';const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.cook.receiptAliases['tienda de prueba|abrev'].name,'Arroz');
  const undone=R.undo({...s,...op.patch},op.result.id);assert.deepEqual(undone.patch.cook,s.cook);
 });
+test('pending receipt replaces provisional spending and adds only additional stock',async()=>{
+ const s=state(),t=receipt();s.pantry[0].n=2500;s.buys=[{id:'pending',store:t.store,date:t.date,total:3,receiptPending:true,items:[{name:'Arroz',mid:'rice',units:2}],pendingInventory:[{id:'credit',name:'Arroz',mid:'rice',pantryId:'pantry',amount:2000,unit:'g'}]}];t.pendingBuyId='pending';t.lines[0].plan.inventory='pantry';t.lines[0].plan.creditedId='credit';t.lines.push({name:'Producto extra',units:1,unit:2,price:2,plan:{inventory:'new',amount:1,unit:'ud'}});t.total=7;
+ const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.buys.length,1);assert.equal(op.patch.buys[0].id,'pending');assert.equal(op.patch.buys[0].total,7);assert.equal(op.patch.buys[0].receiptPending,false);assert.equal(op.patch.pantry.find(p=>p.id==='pantry').n,2500);assert(op.patch.pantry.some(p=>p.name==='Producto extra'));assert(R.patch({...s,...op.patch},t,await R.identify(t)).result.duplicate);
+ const undo=R.undo({...s,...op.patch},'pending');assert(undo.patch.buys[0].receiptPending);assert.equal(undo.patch.buys[0].total,3);
+});
+test('pending receipt started before stock entry adds all stock on confirmation',async()=>{
+ const s=state(),t=receipt();s.buys=[{id:'pending',date:t.date,store:t.store,total:0,receiptPending:true,pendingInventory:[],items:[]}];t.pendingBuyId='pending';const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.pantry[0].n,2500);assert.equal(op.patch.buys.length,1);
+});
+test('pending receipt adjusts an overstated cart quantity without negative stock',async()=>{
+ const s=state(),t=receipt();s.pantry[0].n=2500;s.buys=[{id:'pending',receiptPending:true,pendingInventory:[{id:'credit',pantryId:'pantry',amount:3000,unit:'g'}]}];t.pendingBuyId='pending';t.lines[0].plan.creditedId='credit';t.lines[0].plan.inventory='pantry';const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.pantry[0].n,1500);
+ s.pantry[0].n=100;assert.throws(()=>R.patch(s,t,{}),/consumidas/);
+});

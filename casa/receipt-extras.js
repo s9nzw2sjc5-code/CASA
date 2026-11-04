@@ -30,3 +30,8 @@ async function receiptDoubtPreviews(t,file,ov){
     for(const canvas of ov.querySelectorAll('[data-doubt-preview]')){const line=t.lines[Number(canvas.dataset.doubtPreview)],box=line.readBox;if(!box)continue;const [x,y,r,b]=box,margin=.008,left=Math.max(0,x-margin),top=Math.max(0,y-margin),width=Math.min(1,r+margin)-left,height=Math.min(1,b+margin)-top;canvas.width=800;canvas.height=Math.max(40,Math.round(height*image.naturalHeight/(width*image.naturalWidth)*800));canvas.getContext('2d').drawImage(image,left*image.naturalWidth,top*image.naturalHeight,width*image.naturalWidth,height*image.naturalHeight,0,0,canvas.width,canvas.height)}
   }catch(e){/* La foto completa sigue disponible para revisar. */}finally{URL.revokeObjectURL(url)}
 }
+
+function pendingReceiptsHTML(){
+  const pending=(S.buys||[]).filter(b=>b.receiptPending&&!b.voided);
+  return pending.length?`<section class="ck-box" style="margin-top:12px;padding:14px;border:2px solid var(--accent)"><b>📷 Tickets pendientes de comprobar</b><p class="hint">Comprueba también lo que compraste sin apuntarlo en la lista.</p>${pending.map(b=>`<button class="btn sec" style="width:100%;margin-top:6px" data-act="ckPendingReceipt" data-id="${esc(b.id)}">${esc(b.store)} · ${esc(b.date)} · Añadir ticket</button>`).join('')}</section>`:'';
+}

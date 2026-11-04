@@ -1,7 +1,7 @@
 /* Modelos locales: descarga desde CASA, sin subir la foto a un servidor. */
 (function(root){
   'use strict';
-  const workerURL=new URL('ocr/worker.js?v=49',document.currentScript.src);
+  const workerURL=new URL('ocr/worker.js?v=59',document.currentScript.src);
   async function pixels(file){
     const url=URL.createObjectURL(file),image=new Image();
     try{await new Promise((ok,fail)=>{image.onload=ok;image.onerror=()=>fail(Error('No se puede abrir esta foto. Prueba a compartirla como JPEG o PNG.'));image.src=url});

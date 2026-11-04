@@ -101,6 +101,19 @@ otro móvil muestra que no dispone de la foto. Los artículos y gastos siguen
 sincronizándose por Firestore. Si falla el archivo local, se informa antes de
 intentar guardar el gasto.
 
+Al terminar una compra se ofrece fotografiar el ticket o guardarla con el ticket
+pendiente. El aviso persiste en `buys[].receiptPending`, aparece en Compras y el
+historial y se sincroniza con la casa. Cancelar la selección de foto conserva el
+pendiente. Repetir ese intento desde el mismo carro reutiliza el borrador.
+
+Al comprobar más tarde se completa el mismo registro, reemplazando el importe
+provisional por el total confirmado. `pendingInventory` registra las cantidades
+que ya se añadieron a casa: la revisión permite relacionarlas con las líneas del
+ticket y añadir solo la diferencia, incluyendo los productos extra. Las reducciones
+que dejarían existencias negativas se detienen. Los productos del carro no detectados
+se señalan para revisión y no se eliminan silenciosamente de las existencias.
+El aviso desaparece tras guardar y verificar el ticket; no es una notificación push.
+
 La importación exige sesión iniciada, conexión y una lectura del servidor.
 `receipts.js` prepara una actualización de los campos de `hogar/estado` usados
 por la app; `transactPatch` de `sync.js` la aplica con `transaction.update`,

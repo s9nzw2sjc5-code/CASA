@@ -875,7 +875,7 @@ function vCompras(){
   if(dn.length)h+=`<div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="clearDone">✅ Terminar compra (${dn.length})</button></div><p class="hint">Al terminar, lo tachado sale de la lista y pasa a casa. Puedes apuntar lo que habéis pagado o subir el tique.</p>`;
   return h+shopLaterSection(L)+histLink();
 }
-const histLink=()=>(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:12px" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'';
+const histLink=()=>pendingReceiptsHTML()+((S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:12px" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'');
 // Añadir a la lista sin duplicar: si ya está, ofrece sumar una unidad
 function addToList(o,lid){
   const L=lid||curList().id,ex=S.items.find(i=>i.listId===L&&!i.done&&sameItem(i,o));
@@ -909,7 +909,7 @@ function marketSheet(){
     <input class="field" id="f_o" style="margin-top:8px" placeholder="Otras cosas, separadas por comas">
     <label class="ing-row" style="display:flex;margin-top:12px;color:var(--ink);font-weight:500;font-size:.95rem"><input type="checkbox" id="f_h"><span>Apuntarlo también en 🏠 En casa (nevera)</span></label>
     <p class="hint">Se resta del presupuesto de la semana y del mes. Lo podéis editar o borrar desde el historial.</p>`,
-  {saveLabel:'Guardar compra',onSave:ov=>{
+  {saveLabel:'Guardar y recordar el ticket',onSave:ov=>{
     const a=parseFloat(String(val(ov,'f_a')).replace(',','.'));if(!(a>0)){toast('Escribe el importe');return false}
     const names=[...new Set([...[...ov.querySelectorAll('#f_v .chip.on')].map(b=>b.dataset.v),...val(ov,'f_o').split(',').map(x=>x.trim()).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1))])];
     S.buys=[...(S.buys||[]),{id:uid(),at:Date.now(),manual:true,market:true,date:val(ov,'f_d')||today(),store:'Mercadillo',total:Math.round(a*100)/100,n:names.length,items:names.map(name=>({name,units:1})),note:'',by:meName()}];
@@ -938,7 +938,7 @@ function buysSheet(){
   const all=(S.buys||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||0)-(a.at||0));
   const months=[...new Set(all.map(b=>monthKey(b.date)))];
   const ov=sheet('Historial de compras',`<button type="button" class="btn sec" data-k="add" style="width:100%">+ Añadir gasto de compra</button>
-    ${months.map(m=>{const bs=all.filter(b=>monthKey(b.date)===m);return`<h4>${esc(monthName(m))} · ${eur(spentIn(m))}</h4><div class="ck-box">${bs.map(b=>`<button type="button" class="ck-buy ck-bh" data-b="${b.id}"><span><b>${b.store==='Mercadillo'?'🧺 ':''}${esc(b.store||'—')}</b> · ${relDate(b.date)}${b.voided?' · <small>Anulada</small>':b.market?'':b.manual?' · <small>a mano</small>':b.ticket?' · <small>🧾 tique</small>':''}<br><small>${b.note?esc(b.note)+' · ':''}${buyItems(b).length?buyItems(b).length+' producto'+(buyItems(b).length>1?'s':''):'sin productos'}</small></span><b>${b.total?eur(b.total):'<small>sin importe</small>'}</b></button>`).join('')}</div>`}).join('')||'<p class="hint">Aún no hay compras registradas.</p>'}`,{});
+    ${months.map(m=>{const bs=all.filter(b=>monthKey(b.date)===m);return`<h4>${esc(monthName(m))} · ${eur(spentIn(m))}</h4><div class="ck-box">${bs.map(b=>`<button type="button" class="ck-buy ck-bh" data-b="${b.id}"><span><b>${b.store==='Mercadillo'?'🧺 ':''}${esc(b.store||'—')}</b> · ${relDate(b.date)}${b.receiptPending?' · <small>📷 Ticket pendiente</small>':b.voided?' · <small>Anulada</small>':b.market?'':b.manual?' · <small>a mano</small>':b.ticket?' · <small>🧾 tique</small>':''}<br><small>${b.note?esc(b.note)+' · ':''}${buyItems(b).length?buyItems(b).length+' producto'+(buyItems(b).length>1?'s':''):'sin productos'}</small></span><b>${b.total?eur(b.total):'<small>sin importe</small>'}</b></button>`).join('')}</div>`}).join('')||'<p class="hint">Aún no hay compras registradas.</p>'}`,{});
   ov.addEventListener('click',e=>{if(e.target.closest('[data-k="add"]')){ov.remove();spendSheet();return}
     const b=e.target.closest('[data-b]');if(b){ov.remove();buyDetail(find(S.buys,b.dataset.b))}});
 }
@@ -950,9 +950,10 @@ function buyDetail(b){
     <div class="ck-total"><span>Pagado</span><b>${b.total?eur(b.total):'sin importe'}</b><small>${b.manual?'Gasto añadido a mano':b.ticket?'Registrado con tique':'Registrado al terminar la compra'}${b.by?' · '+esc(b.by):''}${b.note?' · '+esc(b.note):''}</small></div>
     ${its.length?`<h4>Repetir productos</h4><p class="hint" style="margin-top:0">Elige qué volver a añadir a «${esc(L.name)}». No cuenta otra vez el gasto.</p>
       <div class="ck-box">${its.map((x,k)=>{const p=x.mid&&MC&&MC.byId.get(x.mid),dup=inList(x);return`<label class="ing-row" style="display:flex;margin:0;color:var(--ink);font-weight:400;font-size:.95rem"><input type="checkbox" data-r="${k}" ${dup?'disabled':'checked'}>${p?`<img class="ck-th" src="${imgUrl(p[9],72)}" alt="">`:''}<span>${esc(x.name)}${x.units>1?' <small>× '+x.units+'</small>':''}<br><small>${x.price!==undefined?eur(x.price)+' pagado · ':''}${dup?'Ya está en la lista':p?eur(p[3])+' hoy':''}</small></span></label>`}).join('')}</div>`:'<p class="hint">Esta compra no tiene productos apuntados.</p>'}
-    ${b.ticket?`<details><summary>Ver foto del ticket</summary><p class="hint">Guardada en el dispositivo donde se subió.</p><div data-receipt-photo>Cargando foto…</div></details>${b.voided?'<p>Compra anulada: no cuenta como gasto.</p>':''}`:''}<div class="ck-actions" style="margin-top:12px">${!b.voided?'<button type="button" class="btn sec" data-k="edit">✏️ Editar gasto</button>':''}${b.ticket&&b.undoJournal&&!b.voided?'<button type="button" class="btn sec" data-k="undo">Deshacer importación</button>':''}${its.length?`<button type="button" class="btn" data-k="again">🔁 Añadir a la lista</button>`:''}</div>`,{});
+    ${b.receiptPending?'<button type="button" class="btn" data-k="receipt">📷 Comprobar con el ticket</button>':''}${b.ticket?`<details><summary>Ver foto del ticket</summary><p class="hint">Guardada en el dispositivo donde se subió.</p><div data-receipt-photo>Cargando foto…</div></details>${b.voided?'<p>Compra anulada: no cuenta como gasto.</p>':''}`:''}<div class="ck-actions" style="margin-top:12px">${!b.voided?'<button type="button" class="btn sec" data-k="edit">✏️ Editar gasto</button>':''}${b.ticket&&b.undoJournal&&!b.voided?'<button type="button" class="btn sec" data-k="undo">Deshacer importación</button>':''}${its.length?`<button type="button" class="btn" data-k="again">🔁 Añadir a la lista</button>`:''}</div>`,{});
   if(b.ticket)receiptHistoryPhoto(b,ov);
   ov.addEventListener('click',e=>{const k=e.target.closest('[data-k]');if(!k)return;
+    if(k.dataset.k==='receipt'){ov.remove();ticketFlow({pendingId:b.id});return}
     if(k.dataset.k==='undo'){undoReceipt(b,ov);return}
     if(k.dataset.k==='edit'){ov.remove();spendSheet(b);return}
     if(k.dataset.k==='again'){let n=0;ov.querySelectorAll('[data-r]').forEach(cb=>{if(!cb.checked||cb.disabled)return;const x=its[+cb.dataset.r];if(inList(x))return;
@@ -964,14 +965,15 @@ const buyLines=items=>items.slice(0,80).map(i=>({name:i.name,mid:i.mid||'',units
 
 // Al quitar lo comprado: dónde y cuánto se ha pagado
 function buySheet(items,done){
+  const cartItemIds=items.map(i=>i.id),draft=(S.buys||[]).find(b=>b.receiptPending&&b.cartItemIds?.length===cartItemIds.length&&cartItemIds.every(id=>b.cartItemIds.includes(id)));
   const c=ck();let store=ui.store&&c.stores.includes(ui.store)?ui.store:'Mercadona';
   const est=()=>'';const hint=i=>{const up=(S.prices||{})[norm(i.name)];return up&&up.store===store&&up.price?'pagaste '+eur(up.price):i.price?'≈ '+eur(i.price):''};
-  const ov=sheet('¿Dónde has comprado?',`<button type="button" class="btn" data-k="tk" style="width:100%;margin-bottom:12px">📷 Subir foto o PDF del tique</button><div class="chips ck-wrap" id="f_sto">${c.stores.map(x=>`<button type="button" class="chip ${x===store?'on':''}" data-sto="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+  const ov=sheet('Terminar la compra',`<p>Haz una foto del ticket para comprobar todos los productos, también los que añadiste al carro sin apuntarlos.</p><p class="hint">Si lo dejas para después, quedará un aviso pendiente en Casa.</p><button type="button" class="btn" data-k="tk" style="width:100%;margin-bottom:12px">📷 Subir foto o PDF del tique</button><div class="chips ck-wrap" id="f_sto">${c.stores.map(x=>`<button type="button" class="chip ${x===store?'on':''}" data-sto="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     <p class="hint">Apunta lo que habéis pagado (opcional): el total del tique abajo o cada cosa. Lo que no apuntes no cuenta como gastado; las cifras «≈» son solo estimaciones.</p>
     <div class="ck-box" id="f_its">${items.map((i,n)=>`<div class="ck-buy"><span><b>${esc(i.name)}</b><br><small>${esc([i.qty,hint(i)].filter(Boolean).join(' · '))}</small></span><input class="field" data-pr="${n}" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€"></div>`).join('')}</div>
     <div class="ck-total"><span>Total</span><b id="f_tot"></b></div>
     <label for="f_tk">Total pagado (si no apuntas cada cosa)</label><input class="field" id="f_tk" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€">`,
-  {saveLabel:'Guardar compra',onSave:ov=>{
+  {saveLabel:'Guardar y recordar el ticket',onSave:ov=>{
     let tot=0,priced=0;
     ov.querySelectorAll('[data-pr]').forEach(inp=>{const i=items[+inp.dataset.pr],pr=parseFloat(inp.value);if(!(pr>0))return;tot+=pr;priced++;
       const q=parseQty(i.qty);let n=i.pq&&i.pq.n||0,d=i.pq&&i.pq.d||'m';
@@ -979,12 +981,12 @@ function buySheet(items,done){
       if(store!=='Mercadona'||(S.prices||{})[norm(i.name)])savePrice(i.name,{store,price:pr,n,d,qtxt:i.qty})});
     const tk=parseFloat(val(ov,'f_tk'));if(tk>0)tot=tk;
     // Solo cuenta como gasto lo que se apunta como pagado (nunca la estimación)
-    S.buys=[...(S.buys||[]),{id:uid(),date:today(),at:Date.now(),store,total:Math.round(tot*100)/100,n:items.length,items:buyLines(items),by:meName()}];
-    ui.store=store;mcCache.clear();done(store);
+    const record=Object.assign(draft||{id:uid(),date:today(),at:Date.now()},{store,total:Math.round(tot*100)/100,n:items.length,items:buyLines(items),by:meName(),receiptPending:true,pendingInventory:[],cartItemIds});if(!draft)S.buys=[...(S.buys||[]),record];
+    ui.store=store;mcCache.clear();done(store,false,record);toast('Compra guardada. Ticket pendiente de comprobar.');
   }});
   const sum=()=>{let t=0;ov.querySelectorAll('[data-pr]').forEach(i=>{t+=parseFloat(i.value)||0});ov.querySelector('#f_tot').textContent=eur(t)};
   sum();ov.querySelector('#f_its').addEventListener('input',sum);
-  ov.querySelector('[data-k="tk"]').addEventListener('click',()=>{ov.remove();ticketFlow()});
+  ov.querySelector('[data-k="tk"]').addEventListener('click',()=>{const record=draft||{id:uid(),date:today(),at:Date.now(),store,total:0,n:items.length,items:buyLines(items),by:meName(),receiptPending:true,pendingInventory:[],cartItemIds};if(!draft)S.buys=[...(S.buys||[]),record];save();ov.remove();ticketFlow({pendingId:record.id})});
   ov.querySelector('#f_sto').addEventListener('click',ev=>{const b=ev.target.closest('[data-sto]');if(!b)return;store=b.dataset.sto;
     ov.querySelectorAll('[data-sto]').forEach(x=>x.classList.toggle('on',x===b));
     ov.querySelectorAll('[data-pr]').forEach(inp=>{inp.value=est(items[+inp.dataset.pr])});sum()});
@@ -1204,7 +1206,7 @@ async function receiptRemoteState(){
   return state;
 }
 async function commitTicket(t,options={}){
-  if(CasaReceipts.version!==49)throw new Error('Casa tiene una versión antigua abierta. Cierra esta revisión y pulsa Actualizar Casa.');
+  if(CasaReceipts.version!==50)throw new Error('Casa tiene una versión antigua abierta. Cierra esta revisión y pulsa Actualizar Casa.');
   const check=CasaReceipts.validate(t);if(!check.ok)throw new Error(check.reasons.join('. '));
   if(t.date>today())throw new Error('La fecha del tique no puede ser futura.');
   await receiptRemoteState(); // Una lectura de servidor es obligatoria; no se acepta la caché.
@@ -1227,7 +1229,7 @@ function receiptMessage(result){return result.duplicate?'Este tique ya estaba gu
 function receiptFromText(text,meta={}){
   const t=parseTicket(text),clean=s=>String(s).replace(/[€|]/g,' ').replace(/\s+/g,' ').trim();
   for(const line of t.lines){const source=(meta.lines||[]).find(row=>clean(row.text)===line.sourceText);if(source){line.readConfidence=source.confidence;line.readBox=source.box}}
-  return prepareTicket({...t,imageHash:meta.imageHash||'',ocrConfidence:meta.confidence||0,ocrEngine:meta.engine||'',ocrLines:meta.lines||[]});
+  return prepareTicket({...t,imageHash:meta.imageHash||'',ocrConfidence:meta.confidence||0,ocrEngine:meta.engine||'',ocrLines:meta.lines||[],pendingBuyId:meta.pendingId||''});
 }
 function receiptReadOptions(ov){
   const controller=new AbortController(),observer=new MutationObserver(()=>{if(!ov.isConnected){controller.abort();observer.disconnect()}});
@@ -1255,7 +1257,7 @@ function ticketTranscription(text,meta={}){
   });
   return ov;
 }
-async function ticketFlow(){
+async function ticketFlow(context={}){
   const file=await pickFile('image/*,application/pdf,text/plain,.txt');if(!file)return;
   const ov=sheet('Leyendo el tique…',`<p class="hint" id="tkP">Preparando…</p><p class="hint">Primero verás una transcripción editable. Nada se guarda hasta que confirmes la compra. La primera lectura puede tardar mientras se descarga el lector; la foto se procesa en este dispositivo.</p>`,{}),progress=ov.querySelector('#tkP');
   let text='',confidence=0,imageHash='',reading={};const readOptions=receiptReadOptions(ov);
@@ -1267,21 +1269,24 @@ async function ticketFlow(){
     if(!ov.isConnected)return;
     if(!MC)await loadMC();
     if(!ov.isConnected)return;
-    readOptions.dispose();ov.remove();ticketTranscription(text,{file,imageHash,confidence,engine:reading.engine,lines:reading.lines});
+    readOptions.dispose();ov.remove();ticketTranscription(text,{file,imageHash,confidence,engine:reading.engine,lines:reading.lines,pendingId:context.pendingId});
   }catch(e){if(!ov.isConnected||e.name==='AbortError')return;ov.remove();sheet('No se ha podido completar el tique',`<p>${esc(e.message||'Revisa la conexión o prueba con una foto más nítida.')}</p><p class="hint">No se creará un gasto distinto al reintentar el mismo archivo.</p>`,{})}
   finally{readOptions.dispose()}
 }
 function ticketReview(t,text,opts={}){
   const stores=[...new Set([...ck().stores,...(t.store?[t.store]:[])])],pans=S.pantry||[];
+  const pending=(S.buys||[]).find(b=>b.id===t.pendingBuyId&&b.receiptPending);
+  const covered=(i,l)=>(i.mid&&l.plan?.mid===i.mid)||receiptNameMatches(i.name,l.name);
+  const missing=pending?(pending.items||[]).filter(i=>!t.lines.some(l=>covered(i,l))):[],extra=pending?t.lines.filter(l=>!(pending.items||[]).some(i=>covered(i,l))):[];
   const candidates=(opts.candidates||S.buys||[]).filter(b=>b.date===t.date&&CasaReceipts.cents(b.total)===CasaReceipts.cents(t.total)&&(!t.store||!b.store||norm(b.store)===norm(t.store)));
-  const rows=t.lines.map((a,i)=>{const plan=a.plan||ticketLinePlan(a,t.store),matches=ticketShoppingMatches(a,plan),selected=matches.length===1?matches[0].id:'',unknown=!!t.ocrEngine&&a.quantityObserved===false;return `<details class="ck-tl" data-receipt-row ${unknown||a.readConfidence<.9||plan.ambiguous?'open':''}><summary>${esc(a.nice||a.name)} · ${eur(a.price)}${unknown||a.readConfidence<.9?' · Revisar':''}</summary>${a.readBox&&(unknown||a.readConfidence<.9)?`<canvas data-doubt-preview="${i}" style="width:100%;height:auto" aria-label="Recorte del producto en el ticket"></canvas>`:''}<label class="ck-tl-h"><input type="checkbox" data-on="${i}" checked><input class="field" data-nm="${i}" value="${esc(a.nice||a.name)}"><input class="field" data-pr="${i}" type="number" inputmode="decimal" step="0.01" value="${a.price}"></label>${a.readConfidence<.9?'<p class="hint">Texto dudoso: comprueba este producto con la foto.</p>':''}<div class="grid2"><div><label>${unknown?'Cantidad sin leer: confirmar':'Cantidad'}</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" placeholder="Confirmar" value="${unknown?'':a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p><label>Destino en casa</label><select class="field" data-pn="${i}">${opt([['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.inventory)}</select><details><summary>Cuánto añadir a casa</summary><input class="field" data-stockqty="${i}" data-per-unit="${plan.amount/(a.kg||a.units||1)}" type="number" min="0.001" step="any" value="${plan.amount}"><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></details><label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],selected)}</select><div ${a.kg?'':'hidden'}><label>Unidades compradas para descontar de Compras</label><input class="field" data-purchased="${i}" type="number" min="0" step="any" value="${a.kg?0:a.units}"><p class="hint">Si compraste menos de lo apuntado, quedará el resto pendiente. En productos por peso, confirma las unidades de la lista.</p></div>${matches.length>1?'<p class="hint">Hay varias coincidencias: elige cuál has comprado.</p>':''}</details>`});
-  const ov=sheet('Revisar tique',`<p class="hint">${esc((opts.reasons||[]).join('. '))} Los productos claros están plegados; abre cualquiera para corregirlo. Las correcciones confirmadas se recordarán para este comercio.</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><button type="button" class="link" id="tkBackToText">Corregir transcripción</button><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Si ya está guardado, no se repiten gasto ni existencias. Al completar un gasto previo tampoco se vuelven a sumar sus productos.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});
+  const rows=t.lines.map((a,i)=>{const plan=a.plan||ticketLinePlan(a,t.store),credits=pending?.pendingInventory||[],candidates=credits.filter(p=>(plan.mid&&p.mid===plan.mid)||receiptNameMatches(p.name,a.name)),prior=candidates.length===1?candidates[0]:null;if(prior){plan.inventory=prior.pantryId;if(!plan.mid){const originalUnits=(pending.items||[]).filter(i=>(prior.mid&&i.mid===prior.mid)||norm(i.name)===norm(prior.name)).reduce((n,i)=>n+(i.units||1),0);plan.amount=prior.amount/(originalUnits||1)*a.units;plan.unit=prior.unit}}const matches=ticketShoppingMatches(a,plan),selected=matches.length===1?matches[0].id:'',unknown=!!t.ocrEngine&&a.quantityObserved===false;return `<details class="ck-tl" data-receipt-row ${unknown||a.readConfidence<.9||plan.ambiguous?'open':''}><summary>${esc(a.nice||a.name)} · ${eur(a.price)}${unknown||a.readConfidence<.9?' · Revisar':''}</summary>${a.readBox&&(unknown||a.readConfidence<.9)?`<canvas data-doubt-preview="${i}" style="width:100%;height:auto" aria-label="Recorte del producto en el ticket"></canvas>`:''}<label class="ck-tl-h"><input type="checkbox" data-on="${i}" checked><input class="field" data-nm="${i}" value="${esc(a.nice||a.name)}"><input class="field" data-pr="${i}" type="number" inputmode="decimal" step="0.01" value="${a.price}"></label>${a.readConfidence<.9?'<p class="hint">Texto dudoso: comprueba este producto con la foto.</p>':''}<div class="grid2"><div><label>${unknown?'Cantidad sin leer: confirmar':'Cantidad'}</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" placeholder="Confirmar" value="${unknown?'':a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p>${pending?`<label>¿Ya se añadió al terminar la compra?</label><select class="field" data-credit="${i}">${opt([['','Producto adicional / aún no añadido'],...credits.map(p=>[p.id,p.name+' · '+fmtAmt(p.amount,p.unit)])],prior?.id||'')}</select><p class="hint">Se comparará la cantidad total del ticket con lo ya registrado, sin sumarlo dos veces.</p>`:''}<label>Destino en casa</label><select class="field" data-pn="${i}">${opt([['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.inventory)}</select><details><summary>Cuánto añadir a casa</summary><input class="field" data-stockqty="${i}" data-per-unit="${plan.amount/(a.kg||a.units||1)}" type="number" min="0.001" step="any" value="${plan.amount}"><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></details><label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],selected)}</select><div ${a.kg?'':'hidden'}><label>Unidades compradas para descontar de Compras</label><input class="field" data-purchased="${i}" type="number" min="0" step="any" value="${a.kg?0:a.units}"><p class="hint">Si compraste menos de lo apuntado, quedará el resto pendiente. En productos por peso, confirma las unidades de la lista.</p></div>${matches.length>1?'<p class="hint">Hay varias coincidencias: elige cuál has comprado.</p>':''}</details>`});
+  const ov=sheet('Revisar tique',`<p class="hint">${pending?'Completa la compra pendiente de '+esc(pending.store)+' del '+esc(pending.date)+'. El gasto se actualizará con el total del ticket. ':''}${esc((opts.reasons||[]).join('. '))} ${pending?'Extras detectados: '+esc(extra.map(l=>l.name).join(', ')||'ninguno')+'. No detectados del carro: '+esc(missing.map(l=>l.name).join(', ')||'ninguno')+'. Revisa las coincidencias antes de guardar.':''} Los productos claros están plegados; abre cualquiera para corregirlo. Las correcciones confirmadas se recordarán para este comercio.</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><button type="button" class="link" id="tkBackToText">Corregir transcripción</button><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Si ya está guardado, no se repiten gasto ni existencias. Al completar un gasto previo tampoco se vuelven a sumar sus productos.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});
   receiptDoubtPreviews(t,opts.file,ov);
   let busy=false;
   function collect(){
     const lines=[];
     ov.querySelectorAll('[data-on]').forEach(cb=>{if(!cb.checked)return;const i=+cb.dataset.on,name=ov.querySelector(`[data-nm="${i}"]`).value.trim(),price=Number(ov.querySelector(`[data-pr="${i}"]`).value),amount=Number(ov.querySelector(`[data-units="${i}"]`).value),kg=ov.querySelector(`[data-measure="${i}"]`).value==='kg';
-      const line={name,originalName:t.lines[i]?.originalName||t.lines[i]?.name||name,price,units:kg?1:amount,unit:price/amount,...(kg?{kg:amount}:{})};line.plan=ticketLinePlan(line,val(ov,'f_sto'),ov.querySelector(`[data-pn="${i}"]`).value);line.plan.amount=Number(ov.querySelector(`[data-stockqty="${i}"]`).value);line.plan.unit=ov.querySelector(`[data-stockunit="${i}"]`).value;
+      const line={name,originalName:t.lines[i]?.originalName||t.lines[i]?.name||name,price,units:kg?1:amount,unit:price/amount,...(kg?{kg:amount}:{})};line.plan=ticketLinePlan(line,val(ov,'f_sto'),ov.querySelector(`[data-pn="${i}"]`).value);if(pending)line.plan.creditedId=ov.querySelector(`[data-credit="${i}"]`).value;line.plan.amount=Number(ov.querySelector(`[data-stockqty="${i}"]`).value);line.plan.unit=ov.querySelector(`[data-stockunit="${i}"]`).value;
       const shopping=ov.querySelector(`[data-shopping="${i}"]`).value,matched=(S.items||[]).find(x=>x.id===shopping);line.plan.shoppingIds=matched?[matched.id]:[];line.plan.shoppingAmount=Number(ov.querySelector(`[data-purchased="${i}"]`).value);line.plan.shoppingNames=matched?{[matched.id]:matched.name}:{};lines.push(line)});
     return {...t,date:val(ov,'f_dt'),store:val(ov,'f_sto'),total:Number(val(ov,'f_tot')),lines};
   }
@@ -1293,12 +1298,12 @@ function ticketReview(t,text,opts={}){
       const status=ov.querySelector('#tkStatus');status.textContent='Leyendo la zona recortada…';ov.querySelector('[data-s="ok"]').disabled=true;
       const result=await ocrText(cropped,n=>{if(ov.isConnected)status.textContent='Leyendo la zona recortada… '+n+' %'},readOptions);
       if(!ov.isConnected)return;
-      const parsed=receiptFromText(result.text,{...result,imageHash:t.imageHash}),updated={...parsed,store:parsed.store||current.store,date:parsed.date||current.date,total:parsed.total||current.total};
+      const parsed=receiptFromText(result.text,{...result,imageHash:t.imageHash,pendingId:t.pendingBuyId}),updated={...parsed,store:parsed.store||current.store,date:parsed.date||current.date,total:parsed.total||current.total};
       ov.remove();ticketReview(updated,result.text,{...opts,reasons:['Revisa la nueva lectura del recorte antes de guardar.']});
     }catch(e){if(ov.isConnected)ov.querySelector('#tkStatus').textContent=e.message||'No se ha podido volver a leer la foto.'}
     finally{readOptions.dispose();busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
   });
-  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines})});
+  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines,pendingId:t.pendingBuyId})});
   ov.querySelector('#tkAddLine').addEventListener('click',()=>{
     const current=collect();current.lines.push({name:'',nice:'',units:1,unit:0,price:0});
     ov.remove();ticketReview(current,text,opts);
@@ -1309,6 +1314,7 @@ function ticketReview(t,text,opts={}){
     sum();
   });
   ov.addEventListener('change',e=>{
+    if(e.target.dataset.credit!==undefined){const i=e.target.dataset.credit,prior=pending?.pendingInventory.find(p=>p.id===e.target.value);if(prior)ov.querySelector(`[data-pn="${i}"]`).value=prior.pantryId}
     if(e.target.dataset.measure!==undefined){const i=e.target.dataset.measure,stock=ov.querySelector(`[data-stockqty="${i}"]`),unit=ov.querySelector(`[data-stockunit="${i}"]`),qty=Number(ov.querySelector(`[data-units="${i}"]`).value);stock.dataset.perUnit=e.target.value==='kg'?'1000':'1';stock.value=qty*Number(stock.dataset.perUnit);unit.value=e.target.value==='kg'?'g':'ud'}
     sum();
   });sum();
@@ -1408,6 +1414,7 @@ const CK_ACT={
     toast(d.v==='have'?'Lo recordaré más adelante':'No volveré a sugerirlo hoy');
   },
   ckBuys:()=>buysSheet(),
+  ckPendingReceipt:d=>ticketFlow({pendingId:d.id}),
   ckSpend:()=>spendSheet(),
   ckMarket:()=>marketSheet(),
   toggleItem:d=>{const i=find(S.items,d.id);if(!i)return;
@@ -1422,7 +1429,7 @@ const CK_ACT={
   habAdd:d=>{const k=d.v,p=!k.startsWith('n:')&&MC&&MC.byId.get(k);if(addToList(p?{mid:k,name:p[1],units:1}:{name:k.slice(2)}))toast('Añadido a la lista')},
   sugAdd:d=>{if(!MC)return;const p=MC.byId.get(d.id);if(!p)return;if(addToList({mid:d.id,name:p[1],units:1})){const el=$('#qItem');if(el){el.value='';drawQSug()}toast(p[1]+' a la lista')}},
   clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
-    buySheet(dn,(store,fromTicket)=>{const p=fromTicket?0:dn.filter(addToPantry).length;dn.forEach(i=>noteStaplePurchase(i));S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
+    buySheet(dn,(store,fromTicket,record)=>{let p=0;if(!fromTicket)for(const item of dn){const before=new Map(S.pantry.map(x=>[x.id,Number(x.n||0)]));if(addToPantry(item)){p++;for(const x of S.pantry){const amount=Number(x.n||0)-(before.get(x.id)||0);if(amount>0&&record){const prior=record.pendingInventory.find(p=>p.pantryId===x.id&&p.unit===x.u);if(prior)prior.amount+=amount;else record.pendingInventory.push({id:uid(),name:item.name,mid:item.mid||'',pantryId:x.id,amount,unit:x.u})}}}}dn.forEach(i=>noteStaplePurchase(i));S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
   aiPhoto:()=>{MC?photoFlow():loadMC().then(photoFlow)},
   aiKey:()=>aiKeySheet(),
   ckTicket:()=>ticketFlow(),
