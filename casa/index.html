@@ -548,14 +548,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=60"></script>
-<script src="sync.js?v=60"></script>
-<script src="receipts.js?v=60"></script>
-<script src="receipt-image.js?v=60"></script>
-<script src="receipt-layout.js?v=60"></script>
-<script src="receipt-ocr.js?v=60"></script>
-<script src="cocina.js?v=60"></script>
-<script src="receipt-extras.js?v=60"></script>
+<script src="push.js?v=61"></script>
+<script src="sync.js?v=61"></script>
+<script src="receipts.js?v=61"></script>
+<script src="receipt-image.js?v=61"></script>
+<script src="receipt-layout.js?v=61"></script>
+<script src="receipt-ocr.js?v=61"></script>
+<script src="cocina.js?v=61"></script>
+<script src="receipt-extras.js?v=61"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -610,7 +610,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=60;
+const APP_VERSION=61;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1511,14 +1511,11 @@ function responseButton(kind,x,preview){
 function answerNotice(d){
   const collection=d.kind==='task'?S.tasks:S.reminders,x=find(collection,d.id);if(!x||x.done)return;
   const expected=x.date||'';
-  const ov=sheet('Responder al aviso',`<p>${esc(x.title)}</p><div class="ck-actions"><button class="btn" data-response="done">Hecho</button><button class="btn sec" data-response="tomorrow">Mañana</button><button class="btn sec" data-response="dismiss">Ya no hace falta</button></div><p class="hint">Mañana cambia la fecha de este pendiente. «Ya no hace falta» cierra el aviso y detiene sus repeticiones.</p>`,{});
+  const ov=sheet('Responder al aviso',`<p>${esc(x.title)}</p><div class="ck-actions"><button class="btn" data-response="done">Hecho</button><button class="btn sec" data-response="tomorrow">Mañana</button></div><p class="hint">Mañana cambia la fecha de este pendiente.</p>`,{});
   ov.addEventListener('click',e=>{
-    const action=e.target.closest('[data-response]')?.dataset.response;if(!action)return;
+    const action=e.target.closest('[data-response]')?.dataset.response;if(!['done','tomorrow'].includes(action))return;
     const current=find(d.kind==='task'?S.tasks:S.reminders,d.id);
     if(!current||current.done||(current.date||'')!==expected){ov.remove();toast('Este aviso ha cambiado. Revisa su estado actual.');return}
-    if(action==='dismiss'){
-      sheet('¿Cerrar este aviso?',`<p>Se cerrará «${esc(current.title)}» y no volverá a repetirse. Puedes recuperarlo editándolo.</p>`,{saveLabel:'Cerrar aviso',onSave:()=>{const r=find(d.kind==='task'?S.tasks:S.reminders,d.id);if(!r||r.done||(r.date||'')!==expected)return; r.noticePreviousRepeat=r.repeat||'none';r.repeat='none';r.done=true;r.noticeResolution='dismissed';r.doneAt=today();save();ov.remove();toastUndo('Aviso cerrado')}});return;
-    }
     ov.remove();
     if(action==='done'){
       if(d.kind!=='task'&&current.kind==='maintenance'){maintenanceDone(current.id);return}
