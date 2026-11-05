@@ -548,14 +548,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=59"></script>
-<script src="sync.js?v=59"></script>
-<script src="receipts.js?v=59"></script>
-<script src="receipt-image.js?v=59"></script>
-<script src="receipt-layout.js?v=59"></script>
-<script src="receipt-ocr.js?v=59"></script>
-<script src="cocina.js?v=59"></script>
-<script src="receipt-extras.js?v=59"></script>
+<script src="push.js?v=60"></script>
+<script src="sync.js?v=60"></script>
+<script src="receipts.js?v=60"></script>
+<script src="receipt-image.js?v=60"></script>
+<script src="receipt-layout.js?v=60"></script>
+<script src="receipt-ocr.js?v=60"></script>
+<script src="cocina.js?v=60"></script>
+<script src="receipt-extras.js?v=60"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -606,11 +606,11 @@ function toast(msg,undo){
   const t=$('#toast');t.innerHTML='';const sp=document.createElement('span');sp.textContent=msg;t.appendChild(sp);
   if(undo){const b=document.createElement('button');b.className='toast-undo';b.textContent='Deshacer';b.onclick=()=>{t.classList.remove('show');t.style.pointerEvents='none';undo()};t.appendChild(b);t.style.pointerEvents='auto'}
   else t.style.pointerEvents='none';
-  t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>{t.classList.remove('show');t.style.pointerEvents='none'},undo?7000:2200);
+  t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>{t.classList.remove('show');t.style.pointerEvents='none'},undo?3000:2200);
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=59;
+const APP_VERSION=60;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
