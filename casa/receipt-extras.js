@@ -1,6 +1,6 @@
 /* Archivo privado de fotos en este dispositivo, separado de Firestore. */
 const ReceiptArchive={
-  async db(){return new Promise((resolve,reject)=>{const request=indexedDB.open('casa-receipt-photos',1);request.onupgradeneeded=()=>request.result.createObjectStore('photos');request.onerror=()=>reject(Error('No se puede abrir el archivo de fotos de este dispositivo.'));request.onsuccess=()=>resolve(request.result)})},
+  async db(){return new Promise((resolve,reject)=>{const request=indexedDB.open('casa-receipt-photos',1);request.onupgradeneeded=()=>request.result.createObjectStore('photos');let failed=false;request.onblocked=()=>{failed=true;reject(Error('El archivo de fotos está ocupado en otra ventana.'))};request.onerror=()=>{failed=true;reject(Error('No se puede abrir el archivo de fotos de este dispositivo.'))};request.onsuccess=()=>{if(failed)request.result.close();else resolve(request.result)}})},
   async run(mode,key,value){const db=await this.db();try{return await new Promise((resolve,reject)=>{const tx=db.transaction('photos',mode),store=tx.objectStore('photos'),request=mode==='readwrite'?store.put(value,key):store.get(key);let result;request.onsuccess=()=>result=request.result;tx.oncomplete=()=>resolve(result);tx.onabort=tx.onerror=()=>reject(Error('No se pudo conservar la foto. Comprueba el espacio libre del dispositivo.'))})}finally{db.close()}},
   key(hash){return (window.CASA_FIREBASE?.projectId||'casa')+':'+hash},
   put(hash,file){return this.run('readwrite',this.key(hash),file)},
@@ -34,4 +34,43 @@ async function receiptDoubtPreviews(t,file,ov){
 function pendingReceiptsHTML(){
   const pending=(S.buys||[]).filter(b=>b.receiptPending&&!b.voided);
   return pending.length?`<section class="ck-box" style="margin-top:12px;padding:14px;border:2px solid var(--accent)"><b>📷 Tickets pendientes de comprobar</b><p class="hint">Comprueba también lo que compraste sin apuntarlo en la lista.</p>${pending.map(b=>`<button class="btn sec" style="width:100%;margin-top:6px" data-act="ckPendingReceipt" data-id="${esc(b.id)}">${esc(b.store)} · ${esc(b.date)} · Añadir ticket</button>`).join('')}</section>`:'';
+}
+
+function receiptDeadline(promise,ms,message){
+  return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(message)),ms);Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)})});
+}
+function receiptSaveStatus(ov,message,error=false){
+  let status=ov.querySelector('[data-receipt-save-status]');
+  if(!status){status=document.createElement('p');status.dataset.receiptSaveStatus='';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.style='flex-basis:100%;margin:0;font-weight:600';const actions=ov.querySelector('.actions');actions.style.flexWrap='wrap';actions.prepend(status)}
+  status.style.color=error?'var(--danger)':'var(--ink)';status.textContent=message;
+  const existing=ov.querySelector('#tkStatus');if(existing)existing.textContent=message;
+  status.scrollIntoView({block:'nearest'});
+}
+async function saveReceiptPurchase(ticket,file,options={}){
+  const result=await receiptDeadline(commitTicket(ticket,options),45000,'No se ha podido confirmar el guardado a tiempo. Reintenta este mismo ticket; se comprobará si ya se guardó para evitar duplicados.');
+  if(file&&ticket.imageHash){
+    try{await receiptDeadline(ReceiptArchive.put(ticket.imageHash,file),2500,'El archivo de la foto no responde.')}catch(e){result.photoWarning='Compra guardada; no se ha podido conservar la foto en este dispositivo.'}
+  }
+  return result;
+}
+function receiptQuickPlan(t){
+  const pending=(S.buys||[]).find(b=>b.id===t.pendingBuyId&&b.receiptPending),reasons=[...CasaReceipts.validate(t).reasons];
+  if(t.ocrConfidence<85)reasons.push('La lectura necesita confirmación');
+  const ticket={...t,lines:t.lines.map(a=>{
+    const defaults=receiptLineDefaults(a,t,pending),{plan,matches,credits,prior}=defaults;
+    if(a.quantityObserved===false)reasons.push('Confirma las cantidades sin leer');
+    if(a.readConfidence<.9)reasons.push('Confirma los productos con lectura dudosa');
+    if(plan.ambiguous||matches.length>1)reasons.push('Hay coincidencias que necesitan confirmación');
+    if(pending&&!prior&&credits.some(p=>(plan.mid&&p.mid===plan.mid)||receiptNameMatches(p.name,a.name)))reasons.push('Confirma lo ya registrado en casa');
+    const existing=(S.pantry||[]).find(p=>p.id===plan.inventory);
+    if(existing&&existing.u!==plan.unit)reasons.push('Confirma la cantidad y unidad que añadir a casa');
+    if(a.kg&&matches.length)reasons.push('Confirma las unidades de Compras del producto por peso');
+    return {...a,plan};
+  })};
+  if(pending&&(pending.items||[]).some(i=>!ticket.lines.some(l=>(i.mid&&l.plan.mid===i.mid)||receiptNameMatches(i.name,l.name))))reasons.push('Hay productos del carro que no se han detectado');
+  return {ok:reasons.length===0,reasons:[...new Set(reasons)],ticket};
+}
+function receiptSaving(ov,saving){
+  ov.dataset.receiptSaving=String(saving);const cancel=ov.querySelector('[data-s="cancel"]');if(cancel)cancel.disabled=saving;
+  if(!ov.receiptBusyGuard){ov.receiptBusyGuard=true;ov.addEventListener('click',e=>{if(ov.dataset.receiptSaving==='true'&&(e.target===ov||e.target.closest('[data-s="cancel"]'))){e.preventDefault();e.stopImmediatePropagation()}},true)}
 }

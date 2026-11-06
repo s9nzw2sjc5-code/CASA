@@ -70,14 +70,19 @@ El modelo probado es el distribuido con RapidOCR 1.4.4; no se promete precisión
 universal ni se ha certificado su rendimiento en un iPhone real. Licencias,
 versiones y hashes: `casa/ocr/THIRD_PARTY.md` y `casa/ocr/assets.sha256`.
 
-Todos los tiques muestran primero una **transcripción editable**. «Preparar
-compra» interpreta ese texto y abre una revisión; no se escribe nada hasta pulsar
-«Guardar y verificar». La compra se valida en céntimos: comercio y fecha son
-obligatorios y las líneas deben sumar exactamente el total. En la revisión se
-pueden corregir cantidades, añadir líneas omitidas, elegir el destino y la
-cantidad que añadir a casa y el producto concreto que quitar de Compras. Las
-coincidencias ambiguas no se quitan sin selección. Se puede volver a la
-transcripción o recortar y releer la foto manteniendo la huella original.
+Los tiques muestran el total destacado y el resumen. Cuando comercio, fecha,
+cantidades y precios están completos, las líneas suman el total y no hay lecturas
+dudosas o coincidencias ambiguas, «Guardar compra» guarda directamente desde
+ese resumen. «Corregir lectura» permite editar la transcripción. En los demás
+casos se abre la revisión para completar los datos; cuadrar la suma por sí solo
+no demuestra que todos los campos sean correctos.
+
+El progreso y los errores aparecen junto al botón, incluso ante un fallo al
+recoger un campo del formulario. La confirmación espera la transacción y su
+relectura, con un límite de espera y reintento idempotente. La foto se archiva
+**después** de verificar la compra; un bloqueo o error de IndexedDB no impide
+registrar el gasto. Si el archivo local tarda más de 2,5 segundos se informa de
+que la compra se guardó sin poder confirmar el archivo de la foto.
 
 La revisión despliega los productos dudosos y permite abrir los demás. Cuando hay
 coordenadas del OCR muestra un recorte de la foto junto al producto. Las
@@ -94,12 +99,11 @@ su historial con gasto cero; volver a importarla no crea dos registros con el
 mismo identificador.
 
 Las fotos/PDF originales se conservan en IndexedDB **solo en el dispositivo de
-subida**, antes de confirmar el guardado, y se consultan desde el historial. No
+subida**, tras verificar la compra, y se consultan desde el historial. No
 se insertan imágenes en `hogar/estado`, no se publican en GitHub y no se ha
 configurado Firebase Storage. Borrar los datos del navegador elimina esas copias;
 otro móvil muestra que no dispone de la foto. Los artículos y gastos siguen
-sincronizándose por Firestore. Si falla el archivo local, se informa antes de
-intentar guardar el gasto.
+sincronizándose por Firestore. Si falla el archivo local, se informa sin impedir el guardado del gasto.
 
 Al terminar una compra se ofrece fotografiar el ticket o guardarla con el ticket
 pendiente. El aviso persiste en `buys[].receiptPending`, aparece en Compras y el
