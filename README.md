@@ -91,6 +91,13 @@ se retira su aviso. La suma siempre incluye los importes válidos ya leídos,
 aunque falte una cantidad. Un descuadre real indica cuánto falta o sobra sin
 inventar qué producto se omitió.
 
+Cada artículo dudoso conserva el texto original leído y, si hay coordenadas,
+un recorte de su línea en la foto. El precio de la línea admite coma decimal.
+«Validar artículo» confirma esa línea por separado; no guarda aún la compra.
+Los artículos pendientes impiden el guardado final aunque la suma ya cuadre.
+Cambiar después un precio, cantidad o destino invalida esa confirmación.
+Al añadir otra línea se conservan las correcciones y confirmaciones existentes.
+
 La revisión despliega los productos dudosos y permite abrir los demás. Cuando hay
 coordenadas del OCR muestra un recorte de la foto junto al producto. Las
 correcciones de nombre confirmadas se recuerdan por comercio en

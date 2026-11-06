@@ -75,9 +75,9 @@ function receiptSaving(ov,saving){
   if(!ov.receiptBusyGuard){ov.receiptBusyGuard=true;ov.addEventListener('click',e=>{if(ov.dataset.receiptSaving==='true'&&(e.target===ov||e.target.closest('[data-s="cancel"]'))){e.preventDefault();e.stopImmediatePropagation()}},true)}
 }
 
-const receiptFieldNumber=field=>field?.value.trim()===''?NaN:Number(field?.value);
+const receiptFieldNumber=field=>{let value=field?.value.trim();if(!value)return NaN;if(value.includes(','))value=value.replace(/\./g,'').replace(',','.');return Number(value)};
 function receiptIssueField(ov,issue){
-  if(issue?.row!==undefined){const attribute={name:'nm',price:'pr',units:'units',stock:'stockqty',inventory:'pn',shopping:'shopping'}[issue.field];return attribute?ov.querySelector(`[data-${attribute}="${issue.row}"]`):null}
+  if(issue?.row!==undefined){if(issue.field==='confirmation')return ov.querySelector(`[data-validate-line="${issue.row}"]`);const attribute={name:'nm',price:'pr',units:'units',stock:'stockqty',inventory:'pn',shopping:'shopping'}[issue.field];return attribute?ov.querySelector(`[data-${attribute}="${issue.row}"]`):null}
   return ov.querySelector(({store:'#f_sto',date:'#f_dt',total:'#f_tot'})[issue?.field]||'#f_tot');
 }
 function receiptFocusIssue(ov,issue){
@@ -96,22 +96,39 @@ function receiptReviewIssues(ov,t,source){
     if(defaults.plan.ambiguous&&!ov.querySelector(`[data-pn="${row}"]`).value)issues.push({row,field:'inventory',warning:true,message:'Hay varios productos en casa: elige a cuál corresponde'});
     if(defaults.matches.length>1&&!ov.querySelector(`[data-shopping="${row}"]`).value)issues.push({row,field:'shopping',warning:true,message:'Hay varias coincidencias en Compras: elige cuál has comprado'});
   }
+  for(const row of active){
+    const element=ov.querySelector(`[data-receipt-row="${row}"]`),price=receiptFieldNumber(ov.querySelector(`[data-pr="${row}"]`));
+    if(Number.isFinite(price)&&Math.abs(price*100-Math.round(price*100))>1e-6){const issue={row,index:active.indexOf(row),field:'price',message:'Escribe el precio con un máximo de dos decimales'};check.issues.push(issue);issues.push(issue);check.ok=false}
+    if(issues.some(x=>x.row===row&&x.field!=='confirmation'))element.dataset.validationRequired='true';
+    if(element.dataset.validationRequired==='true'&&element.dataset.lineValidated!=='true'&&!issues.some(x=>x.row===row&&x.field==='confirmation')){
+      const issue={row,index:active.indexOf(row),field:'confirmation',message:'Pulsa Validar artículo para confirmar esta línea'};check.issues.push(issue);issues.push(issue);check.ok=false;
+    }
+  }
+  check.issues.sort((a,b)=>(a.field==='confirmation')-(b.field==='confirmation'));
+  issues.sort((a,b)=>(a.field==='confirmation')-(b.field==='confirmation'));
   ov.querySelectorAll('[aria-invalid="true"]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby')});
   for(const row of ov.querySelectorAll('[data-receipt-row]')){
     const index=Number(row.dataset.receiptRow),problems=issues.filter(x=>x.row===index),note=ov.querySelector(`[data-line-issue="${index}"]`),label=ov.querySelector(`[data-review-label="${index}"]`),messages=[...new Set(problems.map(x=>x.message))];
     const signature=messages.join(' · ');row.classList.toggle('receipt-row-error',problems.length>0);
     if(problems.length&&signature!==row.dataset.issueSignature)row.open=true;
     row.dataset.issueSignature=signature;note.textContent=signature;note.hidden=!problems.length;
-    const labels={units:'Falta confirmar cantidad',price:'Revisar importe',stock:'Revisar cantidad en casa',inventory:'Elegir producto en casa',shopping:'Elegir producto de Compras',name:problems[0]?.warning?'Lectura dudosa':'Revisar nombre'};
-    label.textContent=problems.length?' · '+labels[problems[0].field]:'';
+    const labels={confirmation:'Pendiente de validar',units:'Falta confirmar cantidad',price:'Revisar importe',stock:'Revisar cantidad en casa',inventory:'Elegir producto en casa',shopping:'Elegir producto de Compras',name:problems[0]?.warning?'Lectura dudosa':'Revisar nombre'};
+    label.textContent=problems.length?' · '+labels[problems[0].field]:row.dataset.lineValidated==='true'?' · ✓ Validado':'';
+    const validated=row.dataset.lineValidated==='true',button=ov.querySelector(`[data-validate-line="${index}"]`),status=ov.querySelector(`[data-line-validation="${index}"]`);
+    button.disabled=validated||!active.includes(index);button.setAttribute('aria-label',(validated?'Artículo validado: ':'Validar artículo '+(index+1)+': ')+ov.querySelector(`[data-nm="${index}"]`).value);button.textContent=validated?'✓ Artículo validado':'Validar artículo';status.textContent=validated?(problems.length?'Precio confirmado; revisa los otros datos señalados.':'✓ Artículo validado'):row.dataset.validationRequired==='true'?'Escribe el precio de la línea y pulsa Validar artículo.':'';status.style.color=validated?'var(--accent)':'var(--muted)';
+    ov.querySelector(`[data-row-price="${index}"]`).textContent=Number.isFinite(receiptFieldNumber(ov.querySelector(`[data-pr="${index}"]`)))?eur(receiptFieldNumber(ov.querySelector(`[data-pr="${index}"]`))):'Sin leer';
+    ov.querySelector(`[data-row-name="${index}"]`).textContent=ov.querySelector(`[data-nm="${index}"]`).value||'Artículo '+(index+1);
   }
   const panel=ov.querySelector('#tkIssues');panel.replaceChildren();
   if(issues.length){const title=document.createElement('strong');title.textContent='Revisa estos datos:';panel.append(title)}
-  for(const issue of issues){
-    const button=document.createElement('button');button.type='button';button.className='link';button.dataset.receiptIssue=issue.row===undefined?issue.field:String(issue.row);
-    const name=issue.row===undefined?'':ov.querySelector(`[data-nm="${issue.row}"]`).value.trim()||'Artículo '+(issue.row+1);
-    button.textContent=(name?name+' — ':'')+issue.message;button.onclick=()=>receiptFocusIssue(ov,issue);panel.append(button);
+  const groups=[];
+  for(const issue of issues){const key=issue.row===undefined?issue.field:'row'+issue.row;let group=groups.find(x=>x.key===key);if(!group){group={key,issue,messages:[]};groups.push(group)}group.messages.push(issue.message);
     const field=receiptIssueField(ov,issue);if(field&&!issue.warning){field.setAttribute('aria-invalid','true');field.setAttribute('aria-describedby',issue.row===undefined?'tkIssues':'tkLineIssue'+issue.row)}
+  }
+  for(const group of groups){
+    const {issue}=group,button=document.createElement('button');button.type='button';button.className='link';button.dataset.receiptIssue=issue.row===undefined?issue.field:String(issue.row);
+    const name=issue.row===undefined?'':ov.querySelector(`[data-nm="${issue.row}"]`).value.trim()||'Artículo '+(issue.row+1);
+    button.textContent=(name?name+' — ':'')+[...new Set(group.messages)].join('. ');button.onclick=()=>receiptFocusIssue(ov,issue);panel.append(button);
   }
   const sum=ov.querySelector('#f_sum');sum.textContent='Suma de importes leídos: '+eur(check.sumCents/100)+(check.sumCents===check.totalCents?' · Coincide con el total.':'');
   const delta=check.totalCents-check.sumCents;

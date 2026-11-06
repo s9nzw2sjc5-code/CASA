@@ -14,6 +14,7 @@
     if(!(cents(t.total)>0)){reasons.push('Falta el total pagado');issue('total','Introduce el total del ticket')}
     if(!Array.isArray(t.lines)||!t.lines.length)reasons.push('No se han leído artículos');
     (t.lines||[]).forEach((l,index)=>{
+      if(l.reviewRequired&&!l.lineValidated){reasons.push('Hay artículos pendientes de validar');issue('confirmation','Pulsa Validar artículo para confirmar esta línea',index)}
       if(t.ocrEngine&&l.quantityObserved===false){reasons.push('Confirma las cantidades que no se han podido leer');issue('units','Cantidad sin leer: confirma cuánto compraste',index)}
       if(Number.isFinite(cents(l.price)))sum+=cents(l.price);
       if(!norm(l.name)){reasons.push('Hay una línea incompleta');issue('name','Nombre sin leer: escribe el producto',index)}
@@ -58,7 +59,7 @@
     for(const l of t.lines)for(const key of l.plan?.shoppingIds||[])totals[key]=(totals[key]||0)+Number(l.plan.shoppingAmount??(l.kg?0:l.units));
     for(let index=0;index<t.lines.length;index++){
       const l=t.lines[index],plan=l.plan||{},price=cents(l.price)/100;
-      const line={name:l.name,units:l.units,unitPrice:l.unit,price,qty:l.kg?l.kg+' kg':'',...(l.kg?{kg:l.kg}:{}),...(plan.mid?{mid:plan.mid}:{})};
+      const line={...(l.lineValidated?{validated:true}:{}),name:l.name,units:l.units,unitPrice:l.unit,price,qty:l.kg?l.kg+' kg':'',...(l.kg?{kg:l.kg}:{}),...(plan.mid?{mid:plan.mid}:{})};
       items.push(line);
       if(!inventory||price<=0)continue;
       let x;
@@ -159,6 +160,6 @@
     if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype){for(const [key,item] of Object.entries(value))assertData(item,path+'.'+key);return}
     throw new Error('Dato no válido en '+path+'. No se ha enviado el tique.');
   }
-  const api={version:51,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch,undo};
+  const api={version:52,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch,undo};
   root.CasaReceipts=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);
