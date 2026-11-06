@@ -174,3 +174,12 @@ tres variaciones simuladas de brillo y arrugas; bloquea Firebase. Compara tambi�
 nombres y cantidades, no solo el número de líneas o la suma. El código de salida
 2 significa que alguna condición no logró coincidencia exacta. Estas simulaciones
 no sustituyen una muestra de capturas reales ni garantizan calidad universal.
+
+## Orden de Novedades
+
+Novedades muestra primero los productos detectados más recientemente como nuevos
+para el código postal y almacén configurados. `newSince` conserva esa fecha en el
+catálogo diario; no representa una fecha oficial de lanzamiento. Las fechas del
+catálogo inicial se reconstruyeron de su historial Git. Ver un producto no cambia
+su posición, y al entrar se abre el filtro Todo. Si varias novedades tienen la
+misma fecha de detección se ordenan por nombre.

@@ -77,10 +77,31 @@ def walk(node, top, sub, out):
         walk(c, top, sub, out)
 
 
+def novelty_since(previous, products, cp, wh, observed_at):
+    """Fecha de detección, no fecha de lanzamiento oficial del supermercado."""
+    same = str(previous.get('cp')) == str(cp) and str(previous.get('wh')) == str(wh)
+    old = {str(p[0]): p for p in previous.get('p', [])} if same else {}
+    dates = previous.get('newSince', {}) if same else {}
+    result = {}
+    for product in products:
+        if len(product) <= 13 or not product[13]:
+            continue
+        key = str(product[0])
+        before = old.get(key, [])
+        continuing = len(before) > 13 and before[13]
+        result[key] = (dates.get(key) or previous.get('at') or observed_at) if continuing else observed_at
+    return result
+
+
 def main():
     cp = (sys.argv[1] if len(sys.argv) > 1 else open(CP_FILE).read()).strip()
     if not (cp.isdigit() and len(cp) == 5):
         raise SystemExit('Código postal no válido: ' + cp)
+    try:
+        with open(OUT, encoding='utf-8') as f:
+            previous = json.load(f)
+    except (OSError, ValueError):
+        previous = {}
     wh = warehouse(cp)
     root = get(API + 'categories/?lang=es&wh=' + wh)
     out, tops, subs = {}, [], []
@@ -97,6 +118,7 @@ def main():
     data = {'cp': cp, 'wh': wh, 'at': time.strftime('%Y-%m-%dT%H:%M', time.gmtime()), 'cats': tops, 'subs': subs,
             'cols': ['id', 'nombre', 'envase', 'precio', 'tamano', 'unidad', 'precio_ref', 'unidad_ref', 'cat', 'img', 'aprox', 'antes', 'subcats', 'nuevo'],
             'p': sorted(out.values(), key=lambda x: (x[8], x[12][0], x[1]))}
+    data['newSince'] = novelty_since(previous, data['p'], cp, wh, data['at'])
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
     with open(CP_FILE, 'w') as f:

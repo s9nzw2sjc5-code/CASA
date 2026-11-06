@@ -344,18 +344,18 @@ function prodCard(p){
 const CK_HIDECAT=/Mascotas|Maquillaje|Bebé/;
 // Novedades: lo que Mercadona marca como nuevo en el almacén de nuestro código postal
 const isNew=id=>{const p=MC&&MC.byId.get(id);return!!(p&&p[13])};
-const novIds=()=>MC?MC.p.filter(p=>p[13]).map(p=>p[0]):[];
+const novIds=()=>MC?MC.p.filter(p=>p[13]).sort((a,b)=>String(MC.newSince?.[b[0]]||'').localeCompare(String(MC.newSince?.[a[0]]||''))||a[1].localeCompare(b[1],'es')||String(a[0]).localeCompare(String(b[0]))).map(p=>p[0]):[];
 // Cuántas novedades no se han visto aún en este móvil
 function novUnseen(){if(!MC)return 0;const seen=new Set(ui.novSeen||[]);return novIds().filter(id=>!seen.has(id)).length}
 function vCkNovedades(){
   if(!MC)return`<p class="hint" style="margin-top:14px">Cargando productos de Mercadona…</p>`;
   const ids=novIds(),seen=new Set(ui.novSeen||[]),fresh=ids.filter(id=>!seen.has(id));
   if(fresh.length)setTimeout(()=>{ui.novSeen=ids;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(e){}},0);
-  let h=mcNotice()+`<p class="hint ck-help">Productos que Mercadona marca como <b>novedad</b> en su tienda online para el CP ${esc(MC.cp||'18210')}, a fecha de ${mcDate()}.${fresh.length&&seen.size?` Hay <b>${fresh.length}</b> nueva${fresh.length>1?'s':''} desde la última vez.`:''}</p>`;
+  let h=mcNotice()+`<p class="hint ck-help">Productos que Mercadona marca como <b>novedad</b> en su tienda online para el CP ${esc(MC.cp||'18210')}, a fecha de ${mcDate()}. Las detectadas más recientemente aparecen primero.${fresh.length&&seen.size?` Hay <b>${fresh.length}</b> nueva${fresh.length>1?'s':''} desde la última vez.`:''}</p>`;
   if(!ids.length)return h+`<div class="empty" style="margin-top:12px">Ahora mismo Mercadona no marca ninguna novedad.</div>`;
   const cats=[...new Set(ids.map(id=>MC.byId.get(id)[8]))].sort((a,b)=>a-b),cat=ui.novCat!=null&&cats.includes(ui.novCat)?ui.novCat:null;
   h+=`<div class="chips ck-subs"><button class="chip ${cat==null?'on':''}" data-act="novCat" data-v="">Todo · ${ids.length}</button>${cats.map(c=>`<button class="chip ${cat===c?'on':''}" data-act="novCat" data-v="${c}">${CK_CATEMO[MC.cats[c]]||''} ${esc(MC.cats[c])}</button>`).join('')}</div>`;
-  const a=ids.filter(id=>cat==null||MC.byId.get(id)[8]===cat).sort((x,y)=>(seen.size&&!seen.has(y))-(seen.size&&!seen.has(x))).map(id=>prod(MC.byId.get(id)));
+  const a=ids.filter(id=>cat==null||MC.byId.get(id)[8]===cat).map(id=>prod(MC.byId.get(id)));
   return h+`<div class="ck-grid" style="margin-top:10px">${a.map(prodCard).join('')}</div>`;
 }
 
@@ -1400,7 +1400,7 @@ const CK_ACT={
   habitSchedule:d=>habitSchedule(d.v),
   laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),
   panRemove:d=>confirmRemovePantry(d.id),
-  ckTab:d=>{ui.ckTab=d.v==='recetas'?'lista':d.v;render();$('#app').scrollTop=0},
+  ckTab:d=>{ui.ckTab=d.v==='recetas'?'lista':d.v;if(ui.ckTab==='novedades')ui.novCat=null;render();$('#app').scrollTop=0},
   prodCat:d=>{ui.prodCat=d.v;ui.prodSub=null;ui.prodN=40;render();const g=document.querySelector('.ck-cats');if(g)g.querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'})},
   novCat:d=>{ui.novCat=d.v===''?null:+d.v;render()},
   prodMore:()=>{ui.prodN=(ui.prodN||40)+40;render()},

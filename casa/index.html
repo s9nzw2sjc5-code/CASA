@@ -555,14 +555,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=65"></script>
-<script src="sync.js?v=65"></script>
-<script src="receipts.js?v=65"></script>
-<script src="receipt-image.js?v=65"></script>
-<script src="receipt-layout.js?v=65"></script>
-<script src="receipt-ocr.js?v=65"></script>
-<script src="cocina.js?v=65"></script>
-<script src="receipt-extras.js?v=65"></script>
+<script src="push.js?v=66"></script>
+<script src="sync.js?v=66"></script>
+<script src="receipts.js?v=66"></script>
+<script src="receipt-image.js?v=66"></script>
+<script src="receipt-layout.js?v=66"></script>
+<script src="receipt-ocr.js?v=66"></script>
+<script src="cocina.js?v=66"></script>
+<script src="receipt-extras.js?v=66"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -617,7 +617,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=65;
+const APP_VERSION=66;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -630,6 +630,7 @@ try{const r=localStorage.getItem(LS);if(r)S=Object.assign(fresh(),JSON.parse(r))
 CasaReceipts.normalizeHistory(S);
 let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
 try{const u=localStorage.getItem(LS+'-ui');if(u)ui=Object.assign(ui,JSON.parse(u))}catch(e){}
+if(ui.ckTab==='novedades')ui.novCat=null;
 let prefRef=null,prefsReady=false;setTimeout(()=>{if(!prefsReady){prefsReady=true;render()}},3000);
 let docRef=null,dbRef=null,saveTimer=null,syncState='local';
 let lastSaved=null,prevState=null;
@@ -1548,7 +1549,7 @@ const ACT={
   answerNotice,
   refreshApp:()=>{location.reload()},
   newMaintenance:d=>maintenanceSheet(null,d.date||ui.calDay), editMaintenance:d=>maintenanceSheet(find(S.reminders,d.id)), maintenanceDone:d=>maintenanceDone(d.id),
-  tab:d=>{ui.view=d.v;if(d.v==='compras'){autoStaples();autoPantry()}render();$('#app').scrollTop=0},
+  tab:d=>{ui.view=d.v;if(d.v==='compras'){autoStaples();autoPantry();if(ui.ckTab==='novedades')ui.novCat=null}render();$('#app').scrollTop=0},
   quickTask, quickItem, quickNoDate, quickRemNoDate,
   toggleTask:d=>{
     const t=find(S.tasks,d.id);if(!t)return;
