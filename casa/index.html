@@ -548,14 +548,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=61"></script>
-<script src="sync.js?v=61"></script>
-<script src="receipts.js?v=61"></script>
-<script src="receipt-image.js?v=61"></script>
-<script src="receipt-layout.js?v=61"></script>
-<script src="receipt-ocr.js?v=61"></script>
-<script src="cocina.js?v=61"></script>
-<script src="receipt-extras.js?v=61"></script>
+<script src="push.js?v=62"></script>
+<script src="sync.js?v=62"></script>
+<script src="receipts.js?v=62"></script>
+<script src="receipt-image.js?v=62"></script>
+<script src="receipt-layout.js?v=62"></script>
+<script src="receipt-ocr.js?v=62"></script>
+<script src="cocina.js?v=62"></script>
+<script src="receipt-extras.js?v=62"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -610,7 +610,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=61;
+const APP_VERSION=62;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1205,6 +1205,7 @@ const TABS=[
 // Conserva las imágenes ya cargadas cuando cambian cantidades o llega la sincronización.
 function replaceAppContent(html){
   const app=$('#app'),images=new Map();
+  const horizontal=['.ck-habs','.ck-cats'].map(selector=>[selector,app.querySelector(selector)?.scrollLeft]);
   app.querySelectorAll('img').forEach(img=>{const key=img.getAttribute('src');if(!images.has(key))images.set(key,[]);images.get(key).push(img)});
   const next=document.createElement('template');next.innerHTML=html;
   next.content.querySelectorAll('img').forEach(img=>{
@@ -1214,6 +1215,7 @@ function replaceAppContent(html){
     img.replaceWith(previous);
   });
   app.replaceChildren(next.content);
+  horizontal.forEach(([selector,left])=>{const el=app.querySelector(selector);if(el&&left!=null)el.scrollLeft=left});
 }
 function render(){
   // No interrumpir el teclado con actualizaciones de fondo mientras se busca.
