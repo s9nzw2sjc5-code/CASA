@@ -140,3 +140,12 @@ test('pending receipt adjusts an overstated cart quantity without negative stock
  const s=state(),t=receipt();s.pantry[0].n=2500;s.buys=[{id:'pending',receiptPending:true,pendingInventory:[{id:'credit',pantryId:'pantry',amount:3000,unit:'g'}]}];t.pendingBuyId='pending';t.lines[0].plan.creditedId='credit';t.lines[0].plan.inventory='pantry';const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.pantry[0].n,1500);
  s.pantry[0].n=100;assert.throws(()=>R.patch(s,t,{}),/consumidas/);
 });
+test('a missing quantity identifies its line without omitting its already-read price',()=>{
+ const t={store:'Prueba',date:'2026-11-06',total:78.17,lines:[{name:'Producto completo',units:1,unit:74.62,price:74.62},{name:'Cantidad pendiente',units:NaN,unit:NaN,price:3.55}]};
+ const check=R.validate(t);assert.equal(check.sumCents,7817);assert(!check.ok);assert(!check.reasons.some(r=>r.includes('suma')));assert(check.issues.some(i=>i.index===1&&i.field==='units'));assert(!check.issues.some(i=>i.index===0));
+ t.lines[1].units=1;assert(R.validate(t).ok);
+});
+test('field diagnostics distinguish missing prices, names and quantities',()=>{
+ const t={store:'Prueba',date:'2026-11-06',total:5,lines:[{name:'Sin precio',units:1,price:NaN},{name:'',units:1,unit:5,price:5}]};
+ const check=R.validate(t);assert(check.issues.some(i=>i.index===0&&i.field==='price'));assert(check.issues.some(i=>i.index===1&&i.field==='name'));assert.equal(check.sumCents,500);
+});

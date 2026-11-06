@@ -74,3 +74,50 @@ function receiptSaving(ov,saving){
   ov.dataset.receiptSaving=String(saving);const cancel=ov.querySelector('[data-s="cancel"]');if(cancel)cancel.disabled=saving;
   if(!ov.receiptBusyGuard){ov.receiptBusyGuard=true;ov.addEventListener('click',e=>{if(ov.dataset.receiptSaving==='true'&&(e.target===ov||e.target.closest('[data-s="cancel"]'))){e.preventDefault();e.stopImmediatePropagation()}},true)}
 }
+
+const receiptFieldNumber=field=>field?.value.trim()===''?NaN:Number(field?.value);
+function receiptIssueField(ov,issue){
+  if(issue?.row!==undefined){const attribute={name:'nm',price:'pr',units:'units',stock:'stockqty',inventory:'pn',shopping:'shopping'}[issue.field];return attribute?ov.querySelector(`[data-${attribute}="${issue.row}"]`):null}
+  return ov.querySelector(({store:'#f_sto',date:'#f_dt',total:'#f_tot'})[issue?.field]||'#f_tot');
+}
+function receiptFocusIssue(ov,issue){
+  const field=receiptIssueField(ov,issue);if(!field)return;
+  for(let parent=field.parentElement;parent&&parent!==ov;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+  field.focus({preventScroll:true});field.scrollIntoView({block:'center'});
+}
+function receiptReviewIssues(ov,t,source){
+  const check=CasaReceipts.validate(t),active=[...ov.querySelectorAll('[data-on]')].filter(el=>el.checked).map(el=>Number(el.dataset.on));
+  check.issues=check.issues.map(issue=>({...issue,...(issue.index===undefined?{}:{row:active[issue.index]})}));
+  const issues=check.issues.slice();
+  for(const row of active){const original=source.lines[row],element=ov.querySelector(`[data-receipt-row="${row}"]`);if(original?.readConfidence<.9&&element.dataset.readConfirmed!=='true')issues.push({row,field:'name',warning:true,message:'Lectura dudosa: comprueba el nombre y el importe con la foto'})}
+  const pending=(S.buys||[]).find(b=>b.id===source.pendingBuyId&&b.receiptPending);
+  for(const row of active){
+    const defaults=receiptLineDefaults(source.lines[row],source,pending);
+    if(defaults.plan.ambiguous&&!ov.querySelector(`[data-pn="${row}"]`).value)issues.push({row,field:'inventory',warning:true,message:'Hay varios productos en casa: elige a cuál corresponde'});
+    if(defaults.matches.length>1&&!ov.querySelector(`[data-shopping="${row}"]`).value)issues.push({row,field:'shopping',warning:true,message:'Hay varias coincidencias en Compras: elige cuál has comprado'});
+  }
+  ov.querySelectorAll('[aria-invalid="true"]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby')});
+  for(const row of ov.querySelectorAll('[data-receipt-row]')){
+    const index=Number(row.dataset.receiptRow),problems=issues.filter(x=>x.row===index),note=ov.querySelector(`[data-line-issue="${index}"]`),label=ov.querySelector(`[data-review-label="${index}"]`),messages=[...new Set(problems.map(x=>x.message))];
+    const signature=messages.join(' · ');row.classList.toggle('receipt-row-error',problems.length>0);
+    if(problems.length&&signature!==row.dataset.issueSignature)row.open=true;
+    row.dataset.issueSignature=signature;note.textContent=signature;note.hidden=!problems.length;
+    const labels={units:'Falta confirmar cantidad',price:'Revisar importe',stock:'Revisar cantidad en casa',inventory:'Elegir producto en casa',shopping:'Elegir producto de Compras',name:problems[0]?.warning?'Lectura dudosa':'Revisar nombre'};
+    label.textContent=problems.length?' · '+labels[problems[0].field]:'';
+  }
+  const panel=ov.querySelector('#tkIssues');panel.replaceChildren();
+  if(issues.length){const title=document.createElement('strong');title.textContent='Revisa estos datos:';panel.append(title)}
+  for(const issue of issues){
+    const button=document.createElement('button');button.type='button';button.className='link';button.dataset.receiptIssue=issue.row===undefined?issue.field:String(issue.row);
+    const name=issue.row===undefined?'':ov.querySelector(`[data-nm="${issue.row}"]`).value.trim()||'Artículo '+(issue.row+1);
+    button.textContent=(name?name+' — ':'')+issue.message;button.onclick=()=>receiptFocusIssue(ov,issue);panel.append(button);
+    const field=receiptIssueField(ov,issue);if(field&&!issue.warning){field.setAttribute('aria-invalid','true');field.setAttribute('aria-describedby',issue.row===undefined?'tkIssues':'tkLineIssue'+issue.row)}
+  }
+  const sum=ov.querySelector('#f_sum');sum.textContent='Suma de importes leídos: '+eur(check.sumCents/100)+(check.sumCents===check.totalCents?' · Coincide con el total.':'');
+  const delta=check.totalCents-check.sumCents;
+  if(Number.isFinite(delta)&&check.totalCents>0&&delta!==0){
+    const note=document.createElement('p');note.textContent=(delta>0?'Faltan ':'Sobran ')+eur(Math.abs(delta)/100)+' para cuadrar con el total. El descuadre no permite identificar por sí solo qué producto falta o tiene un precio incorrecto. Compara el ticket y añade el artículo si falta.';panel.append(note);
+    const button=document.createElement('button');button.type='button';button.className='link';button.textContent='Comprobar total del ticket';button.onclick=()=>receiptFocusIssue(ov,{field:'total'});panel.append(button);
+  }
+  return check;
+}

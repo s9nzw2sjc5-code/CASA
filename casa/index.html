@@ -394,6 +394,12 @@ body.nav-top .toast{bottom:90px}
 .ck-total{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:12px}
 .ck-total b{font-size:1.3rem}
 .ck-total small{color:var(--muted);width:100%}
+.ck-tl.receipt-row-error{border:2px solid var(--danger);border-radius:12px;padding:10px;margin:8px 0}
+.receipt-line-issue{color:var(--danger);font-weight:600;font-size:.9rem}
+.receipt-issues:not(:empty){border:2px solid var(--danger);border-radius:12px;padding:12px;margin:10px 0}
+.receipt-issues button{display:block;text-align:left;text-decoration:underline;margin:8px 0;white-space:normal}
+.sheet [aria-invalid="true"]{border:2px solid var(--danger)}
+
 .tk-read-total{display:grid;gap:4px;padding:16px;margin:14px 0;background:var(--accent-soft);border:2px solid var(--accent);border-radius:16px}
 .tk-read-total strong{font-size:2rem;line-height:1.2;color:var(--accent);font-variant-numeric:tabular-nums}
 .tk-read-total small{font-size:.85rem}
@@ -548,14 +554,14 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=63"></script>
-<script src="sync.js?v=63"></script>
-<script src="receipts.js?v=63"></script>
-<script src="receipt-image.js?v=63"></script>
-<script src="receipt-layout.js?v=63"></script>
-<script src="receipt-ocr.js?v=63"></script>
-<script src="cocina.js?v=63"></script>
-<script src="receipt-extras.js?v=63"></script>
+<script src="push.js?v=64"></script>
+<script src="sync.js?v=64"></script>
+<script src="receipts.js?v=64"></script>
+<script src="receipt-image.js?v=64"></script>
+<script src="receipt-layout.js?v=64"></script>
+<script src="receipt-ocr.js?v=64"></script>
+<script src="cocina.js?v=64"></script>
+<script src="receipt-extras.js?v=64"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -610,7 +616,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=63;
+const APP_VERSION=64;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

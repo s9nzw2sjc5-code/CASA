@@ -7,19 +7,23 @@
   const validDate=d=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(d||''))return false;const time=new Date(d+'T12:00:00Z');return !Number.isNaN(time.getTime())&&time.toISOString().slice(0,10)===d};
   const signature=lines=>JSON.stringify(lines.map(l=>[norm(l.name),Number(l.units)||1,cents(l.price),Number(l.kg)||0]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
   function validate(t){
-    const reasons=[];let sum=0;
-    if(!t.store||!norm(t.store))reasons.push('Falta el comercio');
-    if(!validDate(t.date))reasons.push('Falta una fecha válida');
-    if(!(cents(t.total)>0))reasons.push('Falta el total pagado');
+    const reasons=[],issues=[];let sum=0;
+    const issue=(field,message,index)=>issues.push({field,message,...(index===undefined?{}:{index})});
+    if(!t.store||!norm(t.store)){reasons.push('Falta el comercio');issue('store','Selecciona el comercio')}
+    if(!validDate(t.date)){reasons.push('Falta una fecha válida');issue('date','Confirma la fecha de compra')}
+    if(!(cents(t.total)>0)){reasons.push('Falta el total pagado');issue('total','Introduce el total del ticket')}
     if(!Array.isArray(t.lines)||!t.lines.length)reasons.push('No se han leído artículos');
-    for(const l of t.lines||[]){
-      if(t.ocrEngine&&l.quantityObserved===false)reasons.push('Confirma las cantidades que no se han podido leer');
-      if(!norm(l.name)||!Number.isFinite(cents(l.price))||!Number.isFinite(Number(l.units))||l.units<=0)reasons.push('Hay una línea incompleta');
-      else sum+=cents(l.price);
-      if(Number.isFinite(l.unit)&&Math.abs(cents(l.unit*(l.kg||l.units))-cents(l.price))>1)reasons.push('Hay una cantidad o precio unitario que no cuadra');
-    }
+    (t.lines||[]).forEach((l,index)=>{
+      if(t.ocrEngine&&l.quantityObserved===false){reasons.push('Confirma las cantidades que no se han podido leer');issue('units','Cantidad sin leer: confirma cuánto compraste',index)}
+      if(Number.isFinite(cents(l.price)))sum+=cents(l.price);
+      if(!norm(l.name)){reasons.push('Hay una línea incompleta');issue('name','Nombre sin leer: escribe el producto',index)}
+      if(!Number.isFinite(cents(l.price))){reasons.push('Hay una línea incompleta');issue('price','Importe sin leer: introduce el precio de esta línea',index)}
+      if(!Number.isFinite(Number(l.units))||l.units<=0||(l.kg!==undefined&&(!Number.isFinite(l.kg)||l.kg<=0))){reasons.push('Hay una línea incompleta');issue('units','Cantidad sin leer: confirma cuánto compraste',index)}
+      if(Number.isFinite(l.unit)&&Math.abs(cents(l.unit*(l.kg||l.units))-cents(l.price))>1){reasons.push('Hay una cantidad o precio unitario que no cuadra');issue('units','La cantidad y el precio unitario no coinciden con el importe',index)}
+      if(l.plan?.inventory&&(!(Number(l.plan.amount)>0)||!Number.isFinite(Number(l.plan.amount)))){reasons.push('Falta confirmar cuánto añadir a casa');issue('stock','Confirma la cantidad que se añadirá a casa',index)}
+    });
     if(sum!==cents(t.total))reasons.push('La suma de artículos no coincide con el total');
-    return {ok:!reasons.length,reasons:[...new Set(reasons)],sumCents:sum,totalCents:cents(t.total)};
+    return {ok:!reasons.length,reasons:[...new Set(reasons)],issues:issues.filter((x,i,a)=>a.findIndex(y=>y.field===x.field&&y.index===x.index)===i),sumCents:sum,totalCents:cents(t.total)};
   }
   async function hash(text){
     const bytes=new TextEncoder().encode(text);return Array.from(new Uint8Array(await root.crypto.subtle.digest('SHA-256',bytes))).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -155,6 +159,6 @@
     if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype){for(const [key,item] of Object.entries(value))assertData(item,path+'.'+key);return}
     throw new Error('Dato no válido en '+path+'. No se ha enviado el tique.');
   }
-  const api={version:50,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch,undo};
+  const api={version:51,assertData,historyEntry,normalizeHistory,norm,cents,validDate,signature,validate,hash,identify,duplicates,patch,undo};
   root.CasaReceipts=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

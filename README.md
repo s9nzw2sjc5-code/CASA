@@ -84,6 +84,13 @@ relectura, con un límite de espera y reintento idempotente. La foto se archiva
 registrar el gasto. Si el archivo local tarda más de 2,5 segundos se informa de
 que la compra se guardó sin poder confirmar el archivo de la foto.
 
+La revisión enumera cada producto y el campo pendiente (cantidad, nombre,
+importe o cantidad para casa). Los avisos abren el producto y enfocan ese campo;
+los campos inválidos tienen una marca visible y `aria-invalid`. Al corregirlos
+se retira su aviso. La suma siempre incluye los importes válidos ya leídos,
+aunque falte una cantidad. Un descuadre real indica cuánto falta o sobra sin
+inventar qué producto se omitió.
+
 La revisión despliega los productos dudosos y permite abrir los demás. Cuando hay
 coordenadas del OCR muestra un recorte de la foto junto al producto. Las
 correcciones de nombre confirmadas se recuerdan por comercio en
