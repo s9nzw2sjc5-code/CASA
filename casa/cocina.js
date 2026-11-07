@@ -948,6 +948,28 @@ function spendSheet(b){
   },onDelete:n?null:()=>{S.buys=S.buys.filter(x=>x.id!==b.id);save();toastUndo('Gasto eliminado')}});
 }
 const buyItems=b=>(b.items||[]).map(x=>typeof x==='string'?{name:x}:x);
+const repeatableBuyItem=x=>!!x&&typeof x.name==='string'&&!!x.name.trim()&&!(x.price<0||x.unitPrice<0||x.units<0);
+const repeatBuyItem=(x,units=1)=>({name:x.name,mid:x.mid&&MC?.byId.has(x.mid)?x.mid:'',units,qty:x.qty||''});
+const buyFavKey=x=>x.mid&&MC?.byId.has(x.mid)?x.mid:'n:'+x.name;
+function buyProductSheet(x,list,onChange=()=>{}){
+  if(!repeatableBuyItem(x))return;
+  const p=x.mid&&MC?.byId.get(x.mid),key=buyFavKey(x);
+  const inList=()=>S.items.some(i=>i.listId===list.id&&!i.done&&sameItem(i,repeatBuyItem(x)));
+  const ov=sheet('Producto del ticket',`${p?productSheetPhoto(p[9],x.name):''}<p><b>${esc(x.name)}</b></p><p class="hint">${x.price!==undefined?eur(x.price)+' pagado en aquel ticket. ':''}${p?eur(p[3])+' por envase hoy. ':''}Se añadirá a «${esc(list.name)}».</p><label for="historyProductUnits">Cantidad para la cesta</label><input class="field" id="historyProductUnits" type="number" inputmode="numeric" min="1" max="99" step="1" value="1"><div class="ck-actions" style="margin-top:12px"><button type="button" class="btn" data-history-add>🛒 Añadir a la cesta</button><button type="button" class="btn sec" data-history-fav></button></div><p class="hint" data-history-status role="status" aria-live="polite"></p>`,{autoFocus:false});
+  ov.querySelector('[data-s="cancel"]').textContent='Volver al ticket';
+  const update=()=>{const add=ov.querySelector('[data-history-add]'),fav=ov.querySelector('[data-history-fav]');add.disabled=inList();add.textContent=add.disabled?'✓ Ya está en la cesta':'🛒 Añadir a la cesta';fav.textContent=isFav(key)?'★ Quitar de Habituales':'☆ Guardar en Habituales';fav.setAttribute('aria-pressed',String(isFav(key)))};
+  ov.querySelector('[data-history-add]').addEventListener('click',()=>{
+    const quantity=Number(ov.querySelector('#historyProductUnits').value),status=ov.querySelector('[data-history-status]');
+    if(!Number.isInteger(quantity)||quantity<1||quantity>99){status.textContent='Indica de 1 a 99 unidades.';return}
+    if(!S.lists.some(l=>l.id===list.id)){status.textContent='Esta lista ya no existe. Vuelve a Compras para elegir otra.';return}
+    if(inList()){update();return}
+    if(addToList(repeatBuyItem(x,quantity),list.id)){status.textContent='Añadido a «'+list.name+'».';toast('Producto añadido a la cesta')}
+    update();onChange();
+  });
+  ov.querySelector('[data-history-fav]').addEventListener('click',()=>{toggleFav(key);update();onChange();ov.querySelector('[data-history-status]').textContent=isFav(key)?'Guardado en Habituales.':'Quitado de Habituales.'});
+  update();
+  return ov;
+}
 function buysSheet(){
   const all=(S.buys||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||0)-(a.at||0));
   const months=[...new Set(all.map(b=>monthKey(b.date)))];
@@ -959,19 +981,21 @@ function buysSheet(){
 // Una compra del historial: ver, editar, borrar o repetir productos (sin volver a contar el gasto)
 function buyDetail(b){
   if(!b)return;const its=buyItems(b),L=curList();
-  const inList=x=>S.items.some(i=>i.listId===L.id&&!i.done&&sameItem(i,x));
+  const inList=x=>S.items.some(i=>i.listId===L.id&&!i.done&&sameItem(i,repeatBuyItem(x)));
   const ov=sheet((b.store||'Compra')+' · '+parse(b.date).toLocaleDateString('es-ES',{day:'numeric',month:'long'}),`
     <div class="ck-total"><span>Pagado</span><b>${b.total?eur(b.total):'sin importe'}</b><small>${b.manual?'Gasto añadido a mano':b.ticket?'Registrado con tique':'Registrado al terminar la compra'}${b.by?' · '+esc(b.by):''}${b.note?' · '+esc(b.note):''}</small></div>
-    ${its.length?`<h4>Repetir productos</h4><p class="hint" style="margin-top:0">Elige qué volver a añadir a «${esc(L.name)}». No cuenta otra vez el gasto.</p>
-      <div class="ck-box">${its.map((x,k)=>{const p=x.mid&&MC&&MC.byId.get(x.mid),dup=inList(x);return`<label class="ing-row" style="display:flex;margin:0;color:var(--ink);font-weight:400;font-size:.95rem"><input type="checkbox" data-r="${k}" ${dup?'disabled':'checked'}>${p?`<img class="ck-th" src="${imgUrl(p[9],72)}" alt="">`:''}<span>${esc(x.name)}${x.units>1?' <small>× '+x.units+'</small>':''}<br><small>${x.price!==undefined?eur(x.price)+' pagado · ':''}${dup?'Ya está en la lista':p?eur(p[3])+' hoy':''}</small></span></label>`}).join('')}</div>`:'<p class="hint">Esta compra no tiene productos apuntados.</p>'}
+    ${its.length?`<h4>Productos de la compra</h4><p class="hint" style="margin-top:0">Toca un producto para añadirlo a la cesta o guardarlo en Habituales. Usa las casillas para repetir varios en «${esc(L.name)}».</p>
+      <div class="ck-box">${its.map((x,k)=>{const p=x.mid&&MC&&MC.byId.get(x.mid),dup=inList(x),canRepeat=repeatableBuyItem(x);return`<div class="ing-row history-product-row">${canRepeat?`<input type="checkbox" data-r="${k}" aria-label="Repetir ${esc(x.name)}" ${dup?'disabled':'checked'}>`:''}<${canRepeat?'button type="button"':'div'} class="history-product-pick" ${canRepeat?`data-history-product="${k}" aria-label="Ver opciones de ${esc(x.name)}"`:''}>${p?`<img class="ck-th" src="${imgUrl(p[9],72)}" alt="">`:''}<span>${esc(x.name)}${x.units>1?' <small>× '+x.units+'</small>':''}<br><small>${x.price!==undefined?eur(x.price)+' pagado · ':''}<span data-history-meta="${k}">${dup?'Ya está en la cesta':canRepeat?(p?eur(p[3])+' hoy':''):'Ajuste del ticket'}</span></small></span>${canRepeat?'<b aria-hidden="true">›</b>':''}</${canRepeat?'button':'div'}></div>`}).join('')}</div>`:'<p class="hint">Esta compra no tiene productos apuntados.</p>'}
     ${b.receiptPending?'<button type="button" class="btn" data-k="receipt">📷 Comprobar con el ticket</button>':''}${b.ticket?`<details><summary>Ver foto del ticket</summary><p class="hint">Guardada en el dispositivo donde se subió.</p><div data-receipt-photo>Cargando foto…</div></details>${b.voided?'<p>Compra anulada: no cuenta como gasto.</p>':''}`:''}<div class="ck-actions" style="margin-top:12px">${!b.voided?'<button type="button" class="btn sec" data-k="edit">✏️ Editar gasto</button>':''}${b.ticket&&b.undoJournal&&!b.voided?'<button type="button" class="btn sec" data-k="undo">Deshacer importación</button>':''}${its.length?`<button type="button" class="btn" data-k="again">🔁 Añadir a la lista</button>`:''}</div>`,{});
   if(b.ticket)receiptHistoryPhoto(b,ov);
-  ov.addEventListener('click',e=>{const k=e.target.closest('[data-k]');if(!k)return;
+  const refresh=()=>{its.forEach((x,index)=>{const cb=ov.querySelector(`[data-r="${index}"]`),meta=ov.querySelector(`[data-history-meta="${index}"]`);if(!cb)return;const dup=inList(x),p=x.mid&&MC?.byId.get(x.mid);cb.disabled=dup;if(dup)cb.checked=false;if(meta)meta.textContent=[dup?'Ya está en la cesta':p?eur(p[3])+' hoy':'',isFav(buyFavKey(x))?'★ Habitual':''].filter(Boolean).join(' · ')})};
+  refresh();
+  ov.addEventListener('click',e=>{const product=e.target.closest('[data-history-product]');if(product){buyProductSheet(its[+product.dataset.historyProduct],L,refresh);return}const k=e.target.closest('[data-k]');if(!k)return;
     if(k.dataset.k==='receipt'){ov.remove();ticketFlow({pendingId:b.id});return}
     if(k.dataset.k==='undo'){undoReceipt(b,ov);return}
     if(k.dataset.k==='edit'){ov.remove();spendSheet(b);return}
-    if(k.dataset.k==='again'){let n=0;ov.querySelectorAll('[data-r]').forEach(cb=>{if(!cb.checked||cb.disabled)return;const x=its[+cb.dataset.r];if(inList(x))return;
-      if(x.mid&&MC&&MC.byId.get(x.mid))cartSet(prod(MC.byId.get(x.mid)),x.units||1,L.id);else S.items.push({id:uid(),listId:L.id,name:x.name,qty:x.qty||'',section:S.secMem[norm(x.name)]||'Otros',by:'',done:false,units:x.units||1,added:Date.now()});n++});
+    if(k.dataset.k==='again'){let n=0;ov.querySelectorAll('[data-r]').forEach(cb=>{if(!cb.checked||cb.disabled)return;const x=its[+cb.dataset.r];if(!repeatableBuyItem(x)||inList(x))return;
+      if(x.mid&&MC&&MC.byId.get(x.mid))cartSet(prod(MC.byId.get(x.mid)),x.units||1,L.id);else S.items.push({id:uid(),listId:L.id,name:x.name,mid:repeatBuyItem(x).mid,qty:x.qty||'',section:S.secMem[norm(x.name)]||'Otros',by:'',done:false,units:x.units||1,added:Date.now()});n++});
       ov.remove();save();toast(n?n+' producto'+(n>1?'s':'')+' añadido'+(n>1?'s':'')+' a la lista':'Nada nuevo que añadir')}});
 }
 // Productos de una compra para el historial (sirven para repetirla)

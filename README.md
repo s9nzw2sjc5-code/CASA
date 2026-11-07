@@ -190,3 +190,20 @@ La versión 70 ofrece cámara/galería y recorte de etiquetas en Compras, coinci
 la foto al producto. Tolera etiquetas parciales y pequeñas erratas. Exige confirmar los envases y recuerda las asociaciones
 confirmadas en el estado compartido del hogar, sin subir las fotos. Consultar
 [validación, límites y pruebas](docs/foto-productos.md).
+
+
+## Productos de tickets anteriores
+
+En el historial de compras, tocar el nombre de un producto abre una ficha breve
+para elegir la cantidad y añadirlo a la cesta de la lista abierta o guardarlo en
+Habituales. También funciona con nombres antiguos sin enlace al catálogo. Los
+artículos ya presentes en esa lista se indican para evitar duplicarlos. Las
+casillas permiten seguir repitiendo varios artículos a la vez; los descuentos
+no se vuelven a añadir como productos. Estas acciones no modifican el gasto del
+ticket ni las existencias de casa.
+
+Prueba de navegador con datos ficticios y Firebase bloqueado:
+
+```sh
+node tests/history-products.cjs
+```
