@@ -17,7 +17,7 @@
     progress(0,'Abriendo foto');const frame=await pixels(file);
     if(options.signal?.aborted)throw new DOMException('Lectura cancelada','AbortError');
     return new Promise((resolve,reject)=>{
-      const worker=new Worker(workerURL),timer=setTimeout(()=>finish(Error('La lectura ha tardado demasiado. Recorta la foto para que solo aparezca el ticket y reintenta.')),180000);
+      const worker=new Worker(workerURL),timer=setTimeout(()=>finish(Error(options.kind==='product'?'La lectura ha tardado demasiado. Acerca la etiqueta y vuelve a intentarlo.':'La lectura ha tardado demasiado. Recorta la foto para que solo aparezca el ticket y reintenta.')),180000);
       const abort=()=>finish(new DOMException('Lectura cancelada','AbortError'));
       let done=false;
       function finish(error,result){if(done)return;done=true;clearTimeout(timer);options.signal?.removeEventListener('abort',abort);worker.terminate();if(error)reject(error);else resolve(result)}
