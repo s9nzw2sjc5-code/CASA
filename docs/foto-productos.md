@@ -104,7 +104,7 @@ Para un control que no debe proponer nada, usar `expectedIds: []` y
 cumplió su resultado esperado. El informe conserva texto, confianza y propuestas
 para revisar los fallos, sin modificar los datos de producción.
 
-## Corrección de etiquetas parciales en la versión 69
+## Corrección de etiquetas parciales en la versión 70
 
 Una etiqueta puede decir «Elimina olores» y el catálogo empezar por «Limpiahogar».
 Ya no se exige que aparezca la primera palabra del catálogo si hay al menos dos
