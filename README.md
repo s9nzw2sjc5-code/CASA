@@ -184,8 +184,9 @@ catálogo inicial se reconstruyeron de su historial Git. Ver un producto no camb
 su posición, y al entrar se abre el filtro Todo. Si varias novedades tienen la
 misma fecha de detección se ordenan por nombre.
 
-## Producto a Compras mediante foto (borrador local)
+## Producto a Compras mediante foto
 
-La versión 68 en preparación añade cámara/galería a Compras, reutiliza el lector
-local y exige seleccionar el producto y confirmar los envases antes de añadirlo.
-**No publicar aún**: consultar [validación, límites y pruebas](docs/foto-productos.md).
+La versión 68 añade cámara/galería a Compras, coincidencias y búsqueda para asociar
+la foto al producto. Exige confirmar los envases y recuerda las asociaciones
+confirmadas en el estado compartido del hogar, sin subir las fotos. Consultar
+[validación, límites y pruebas](docs/foto-productos.md).

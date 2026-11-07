@@ -8,7 +8,30 @@
     const lines=ocr.lines?.length?ocr.lines:String(ocr.text||'').split('\n').map(text=>({text,confidence:1}));
     return lines.filter(l=>(l.confidence??1)>=.65&&!/ingrediente|nutricion|valor(?:es)? energetico|conservar|distribuid|fabricad|consumir|consumo preferente|\bkj\b|\bkcal\b/.test(norm(l.text))).map(l=>l.text).join('\n');
   }
-  function rank(ocr,catalogue,limit=8){
+  async function fingerprint(kind,bytes){
+    if(!root.crypto?.subtle)return '';
+    const hash=await root.crypto.subtle.digest('SHA-256',bytes);
+    return 'photo:v1:'+kind+':'+Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const imageKey=file=>file.arrayBuffer().then(bytes=>fingerprint('image',bytes));
+  function labelKey(ocr){
+    const text=evidence(ocr);
+    if(tokens(text).length<2)return Promise.resolve('');
+    // Conservar variedad, negaciones y tamaño; tolerar cambios de orden y puntuación.
+    const label=[...new Set(norm(text).match(/[a-z0-9]+/g)||[])].sort().join(' ');
+    return fingerprint('label',new TextEncoder().encode(label));
+  }
+  const validKey=key=>/^photo:v1:(image|label):[a-f0-9]{64}$/.test(key);
+  function learnedIds(keys,map,catalogue){
+    const ids=new Set(catalogue.map(p=>p[0]));
+    return [...new Set(keys.filter(validKey).map(k=>map?.[k]).filter(id=>typeof id==='string'&&ids.has(id)))];
+  }
+  function learn(map,keys,id){
+    const next={...map};
+    if(typeof id==='string'&&id)for(const key of keys.filter(validKey))next[key]=id;
+    return next;
+  }
+  function rank(ocr,catalogue,limit=8,remembered=[]){
     const text=evidence(ocr),seen=tokens(text),rows=catalogue.map(p=>({p,words:tokens(p[1])})),freq=new Map();
     rows.forEach(r=>r.words.forEach(w=>freq.set(w,(freq.get(w)||0)+1)));
     // Separar palabras pegadas por el OCR solo si ambas existen en el catálogo.
@@ -31,7 +54,9 @@
       out.push({id:p[0],score,coverage,matched:hits});
     }
     out.sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
-    return {text,candidates:out.slice(0,limit),needsConfirmation:true};
+    const known=[...new Set(remembered)].filter(id=>catalogue.some(p=>p[0]===id));
+    const candidates=[...known.map(id=>({...out.find(p=>p.id===id),id,learned:true})),...out.filter(p=>!known.includes(p.id))];
+    return {text,candidates:candidates.slice(0,limit),needsConfirmation:true};
   }
-  const api={rank,evidence};root.CasaProductPhoto=api;if(typeof module!=='undefined')module.exports=api;
+  const api={rank,evidence,imageKey,labelKey,learnedIds,learn};root.CasaProductPhoto=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

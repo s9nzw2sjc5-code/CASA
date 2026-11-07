@@ -1,8 +1,8 @@
 # Foto de producto a la lista de la compra
 
-Borrador local para la versión 68. **No publicar todavía**: la usuaria ha pedido
-validar el reconocimiento antes del despliegue. No se ha enviado esta versión a
-GitHub ni ejecutado ninguna publicación.
+Versión 68. Publicación autorizada con propuestas, búsqueda manual y
+asociaciones confirmadas por el usuario. La confirmación es obligatoria incluso
+cuando existe una asociación anterior.
 
 En Compras, «Añadir producto con foto» permite usar la cámara trasera o elegir una
 imagen. Reutiliza RapidOCR de CASA, compara las palabras de la etiqueta con el
@@ -13,7 +13,7 @@ permanece en memoria mientras está abierta la ficha.
 El usuario debe seleccionar una propuesta y confirmar la cantidad. La operación
 usa la lista abierta y las funciones actuales de cesta/guardado; si el producto
 ya estaba en esa lista, suma envases. No registra compras ni modifica inventario.
-Una lectura fallida, cerrar la ficha o cancelar no añade nada. Se puede corregir
+Una lectura fallida, cerrar la ficha o cancelar no añade nada ni enseña una asociación. Se puede corregir
 la búsqueda o volver a fotografiar el producto. No se identifica automáticamente
 un envase solo por su color, forma o código de barras.
 
@@ -42,7 +42,7 @@ Fuente pública de los recortes de envases: captura
 Las etiquetas simuladas no se presentan como fotografías reales. Las imágenes,
 recortes y resultados completos se guardan fuera del repositorio.
 
-## Pendiente antes de publicar
+## Límites y validación adicional
 
 Ampliar la muestra con fotografías reales de productos distintos, fondos de casa,
 envases curvos, laterales, formatos casi idénticos, ausencia de texto y productos
@@ -55,8 +55,35 @@ dominio conservando los permisos anteriores, pendiente de revisión y aplicació
 en los ajustes del entorno. Publicar esa configuración de entorno no publica CASA.
 
 Ningún conjunto finito de pruebas garantiza cero errores con cualquier producto
-y cualquier foto. La confirmación humana sigue siendo necesaria; el criterio de
-publicación solicitado aún no puede darse por cumplido.
+y cualquier foto. La confirmación humana sigue siendo necesaria. La publicación se autoriza con
+ese paso de revisión y una búsqueda manual, sin garantía de reconocimiento universal.
+
+## Asociaciones confirmadas
+
+La búsqueda está encima de las propuestas y se puede utilizar durante la lectura
+para elegir el producto manualmente. Al confirmar y añadir, CASA guarda en el
+mapa compartido `prodMap` el identificador del producto asociado a dos huellas
+SHA-256: archivo original y texto fiable de su etiqueta. Las claves usan el
+prefijo `photo:v1:` y no alteran los alias de ingredientes existentes.
+
+Solo se aprende tras confirmar. Una selección cancelada o una lectura sin confirmar
+no modifica las asociaciones. Repetir la foto o leer la misma etiqueta puede dar
+prioridad a la elección anterior, que aparece como «Asociado anteriormente por
+vosotros». No se selecciona ni añade automáticamente. Buscar y confirmar otro
+producto sustituye la asociación de esa foto y de la etiqueta leída.
+
+Se conserva el tamaño, la variedad y las negaciones al calcular la huella de la
+etiqueta. El aprendizaje solo ayuda si coincide la huella de la foto o el texto
+normalizado: no entrena un modelo visual ni garantiza reconocer fotos nuevas cuyo
+texto cambie. Las asociaciones siguen la sincronización y la fusión por claves
+que ya utiliza CASA; no se suben fotos ni transcripciones para este aprendizaje.
+
+Pruebas adicionales: huellas estables, variantes distintas, producto retirado,
+correcciones y conservación de los alias anteriores. En Playwright se verifican
+la persistencia después de recargar, la corrección mediante búsqueda y la
+reutilización del estado compartido en un segundo navegador simulado. Esto no
+sustituye una comprobación de sincronización en dos teléfonos reales conectados
+a Firestore.
 
 ## Repetir las pruebas
 
