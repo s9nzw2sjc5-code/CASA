@@ -1098,11 +1098,12 @@ async function pdfText(file){
   return out.join('\n');
 }
 // Recorte local: la foto no se envía a un servicio externo.
-async function cropTicketImage(file){
+async function cropTicketImage(file,{kind='ticket'}={}){
   const image=new Image(),url=URL.createObjectURL(file);
   try{await new Promise((ok,fail)=>{image.onload=ok;image.onerror=()=>fail(new Error('No se puede abrir esta imagen. Prueba una foto en JPEG o PNG.'));image.src=url})}finally{URL.revokeObjectURL(url)}
   return new Promise(resolve=>{
-    const ov=sheet('Encuadra solo el papel',`<p class="hint">Arrastra las esquinas para quitar el fondo. Incluye la cabecera, la fecha y el total si aparecen en la foto.</p><canvas class="ticket-crop" aria-label="Vista previa del recorte del tique"></canvas><details><summary>Ajustar con controles</summary>${[['left','Izquierda',0],['top','Arriba',0],['right','Derecha',100],['bottom','Abajo',100]].map(([k,label,n])=>`<label for="crop-${k}">${label}</label><input id="crop-${k}" data-crop="${k}" type="range" min="0" max="100" value="${n}" aria-label="Borde ${label.toLowerCase()}">`).join('')}</details>`,{autoFocus:false,saveLabel:'Volver a leer',onSave:()=>{finish();return false}});
+    const product=kind==='product';
+    const ov=sheet(product?'Acerca la etiqueta':'Encuadra solo el papel',`<p class="hint">${product?'Arrastra las esquinas para dejar solo la etiqueta de un envase. Incluye el nombre, la variedad y el tamaño si se ven.':'Arrastra las esquinas para quitar el fondo. Incluye la cabecera, la fecha y el total si aparecen en la foto.'}</p><canvas class="ticket-crop" aria-label="${product?'Vista previa del recorte del producto':'Vista previa del recorte del tique'}"></canvas><details><summary>Ajustar con controles</summary>${[['left','Izquierda',0],['top','Arriba',0],['right','Derecha',100],['bottom','Abajo',100]].map(([k,label,n])=>`<label for="crop-${k}">${label}</label><input id="crop-${k}" data-crop="${k}" type="range" min="0" max="100" value="${n}" aria-label="Borde ${label.toLowerCase()}">`).join('')}</details>`,{autoFocus:false,saveLabel:'Volver a leer',onSave:()=>{finish();return false}});
     let done=false,drag=null,rect={left:0,top:0,right:1,bottom:1};
     const canvas=ov.querySelector('canvas'),scale=Math.min(1,480/image.naturalWidth);canvas.width=Math.round(image.naturalWidth*scale);canvas.height=Math.round(image.naturalHeight*scale);
     const ctx=canvas.getContext('2d');
@@ -1126,7 +1127,7 @@ async function cropTicketImage(file){
     const observer=new MutationObserver(()=>{if(!ov.isConnected&&!done){done=true;observer.disconnect();resolve(null)}});observer.observe(document.body,{childList:true,subtree:true});
     function finish(){
       if(done)return;
-      const width=Math.round((rect.right-rect.left)*image.naturalWidth),height=Math.round((rect.bottom-rect.top)*image.naturalHeight);if(width<40||height<40){toast('Selecciona una zona más grande del tique');return}
+      const width=Math.round((rect.right-rect.left)*image.naturalWidth),height=Math.round((rect.bottom-rect.top)*image.naturalHeight);if(width<40||height<40){toast(product?'Selecciona una zona más grande de la etiqueta':'Selecciona una zona más grande del tique');return}
       const output=document.createElement('canvas');output.width=width;output.height=height;output.getContext('2d').drawImage(image,rect.left*image.naturalWidth,rect.top*image.naturalHeight,width,height,0,0,width,height);
       ov.querySelector('[data-s="ok"]').disabled=true;
       output.toBlob(blob=>{if(!blob){ov.querySelector('[data-s="ok"]').disabled=false;toast('No se ha podido recortar la imagen');return}if(!ov.isConnected)return;done=true;observer.disconnect();ov.remove();resolve(blob)},'image/png');

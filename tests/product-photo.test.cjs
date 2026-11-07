@@ -31,3 +31,8 @@ test('learned matches are proposed first but remain unselected; correction repla
  const match=P.rank({text:'Arroz redondo'},catalogue,8,P.learnedIds([key],corrected,catalogue));assert.equal(match.candidates[0].id,'5042');assert(match.candidates[0].learned);assert(match.needsConfirmation);
  assert.deepEqual(P.learnedIds([key],{[key]:'missing-product'},catalogue),[]);assert.deepEqual(P.learn({},['not-a-photo-key'],'5044'),{});
 });
+
+test('label wording can match a product without its catalogue prefix',()=>{
+ for(const text of ['ELIMINA OLORES','ELININA\nOLORES','ELIMINA\nOL0RES','ELIMINAOLORES']){const r=P.rank({text},catalogue);assert(r.candidates.some(p=>p.id==='24076'),text);assert.equal(r.candidates[0].id,'24076');assert(r.needsConfirmation)}
+});
+test('one secondary word cannot infer an unrelated product',()=>{for(const text of ['OLORES','PERU','CHOURICO PERU','ELININA'])assert.equal(P.rank({text},catalogue).candidates.length,0,text)});

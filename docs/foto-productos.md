@@ -103,3 +103,34 @@ Para un control que no debe proponer nada, usar `expectedIds: []` y
 `expectNoCandidates: true`. El código de salida 2 significa que algún ejemplo no
 cumplió su resultado esperado. El informe conserva texto, confianza y propuestas
 para revisar los fallos, sin modificar los datos de producción.
+
+## Corrección de etiquetas parciales en la versión 69
+
+Una etiqueta puede decir «Elimina olores» y el catálogo empezar por «Limpiahogar».
+Ya no se exige que aparezca la primera palabra del catálogo si hay al menos dos
+palabras coincidentes y suficiente cobertura del nombre. Se tolera una errata en
+palabras de cinco o más caracteres solo si hay una única corrección posible en
+el vocabulario. Una pista aislada como «olores» o «Perú» sigue sin justificar una
+propuesta de otro producto.
+
+Se reprodujo la ausencia de coincidencias con un recorte del producto mostrado
+en una captura externa. El OCR lee «ELININA» y «OLORES» y ahora propone el
+limpiahogar correspondiente. La prueba usa el OCR local real, exige confirmación
+y comprueba que solo se añade la unidad solicitada. No es el archivo original de
+la cámara; otras degradaciones del recorte pequeño pueden seguir sin texto
+suficiente. No se incluyen la captura ni el recorte en este repositorio público.
+
+«Acercar etiqueta y volver a leer» reutiliza el recorte local existente de CASA,
+con indicaciones específicas para productos. La asociación puede conservar la
+huella de la foto inicial y la del recorte confirmado. Recortar o cancelar por sí
+solos no modifica la lista ni enseña asociaciones. Los mensajes distinguen una
+lectura sin texto de una etiqueta con texto pero sin coincidencias fiables.
+
+Validación: 65 pruebas unitarias, flujo de cámara/galería y recorte en Playwright,
+y caso externo real con confirmación. El clasificador actualizado conserva los
+resultados esperados al reaplicarlo a los 36 casos positivos y 18 negativos del
+informe anterior; eso no representa nuevas fotografías ni precisión universal.
+
+```sh
+node tests/product-photo-case.cjs /tmp/foto-producto.jpg 24076
+```

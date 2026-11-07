@@ -186,7 +186,7 @@ misma fecha de detección se ordenan por nombre.
 
 ## Producto a Compras mediante foto
 
-La versión 68 añade cámara/galería a Compras, coincidencias y búsqueda para asociar
-la foto al producto. Exige confirmar los envases y recuerda las asociaciones
+La versión 69 ofrece cámara/galería y recorte de etiquetas en Compras, coincidencias y búsqueda para asociar
+la foto al producto. Tolera etiquetas parciales y pequeñas erratas. Exige confirmar los envases y recuerda las asociaciones
 confirmadas en el estado compartido del hogar, sin subir las fotos. Consultar
 [validación, límites y pruebas](docs/foto-productos.md).
