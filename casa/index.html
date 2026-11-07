@@ -568,16 +568,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=71"></script>
-<script src="sync.js?v=71"></script>
-<script src="receipts.js?v=71"></script>
-<script src="receipt-image.js?v=71"></script>
-<script src="receipt-layout.js?v=71"></script>
-<script src="receipt-ocr.js?v=71"></script>
-<script src="product-photo.js?v=71"></script>
-<script src="product-photo-ui.js?v=71"></script>
-<script src="cocina.js?v=71"></script>
-<script src="receipt-extras.js?v=71"></script>
+<script src="push.js?v=72"></script>
+<script src="sync.js?v=72"></script>
+<script src="receipts.js?v=72"></script>
+<script src="receipt-image.js?v=72"></script>
+<script src="receipt-layout.js?v=72"></script>
+<script src="receipt-ocr.js?v=72"></script>
+<script src="product-photo.js?v=72"></script>
+<script src="product-photo-ui.js?v=72"></script>
+<script src="cocina.js?v=72"></script>
+<script src="receipt-extras.js?v=72"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -632,7 +632,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=71;
+const APP_VERSION=72;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1408,7 +1408,7 @@ function remSheet(r){
   repeatPreview(ov0);
 }
 function itemSheet(i){
-  const fk=i.mid||'n:'+i.name,fv=isFav(fk),u=i.units||1;
+  const fk=i.mid||'n:'+i.name,fv=isFav(fk,i.listId),u=i.units||1;
   const info=i.done&&i.doneAt?`<p class="hint" style="margin-top:0">✓ Tachado${i.doneBy?' por <b>'+esc(i.doneBy)+'</b>':''} el ${new Date(i.doneAt).toLocaleString('es-ES',{weekday:'long',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>`:'';
   const ov=sheet('Producto de la compra',`${productSheetPhoto(itemImg(i),i.name)}<p class="hint">${esc(i.qty||'')}${i.price?' · ≈ '+eur(i.price):''}</p>${info}
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(i.name)}">
@@ -1438,7 +1438,7 @@ function itemSheet(i){
   }});
   ov.querySelector('[data-schedule]').addEventListener('click',()=>habitSchedule(fk,i.listId,i));
   ov.querySelectorAll('[data-units]').forEach(b=>b.addEventListener('click',()=>{const f=ov.querySelector('#f_u');f.value=Math.max(1,(parseInt(f.value,10)||1)+Number(b.dataset.units))}));
-  ov.querySelector('[data-fav]').addEventListener('click',e=>{toggleFav(fk);const now=isFav(fk);e.target.textContent=now?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual';toast(now?'⭐ Añadido a habituales':'Quitado de habituales (sigue en la lista)')});
+  ov.querySelector('[data-fav]').addEventListener('click',e=>{toggleFav(fk,i.listId);const now=isFav(fk,i.listId);e.target.textContent=now?'★ Es habitual · quitar de habituales':'☆ Marcar como habitual';toast(now?'⭐ Añadido a habituales':'Quitado de habituales (sigue en la lista)')});
 }
 function stapleSheet(s,create=false){
   const n=!s||create;const L=curList();

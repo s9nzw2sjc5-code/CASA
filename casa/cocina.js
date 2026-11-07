@@ -285,9 +285,12 @@ function setUnits(i,units){
   if(p){const q=prod(p);Object.assign(i,{qty:units+' × '+prodSize(q),price:Math.round(q.price*units*100)/100,pq:{n:q.size*units,d:q.d}})}
   else if(i.uprice||i.price){if(!i.uprice)i.uprice=i.price;i.price=Math.round(i.uprice*units*100)/100}
 }
-// Habituales marcados con estrella: códigos de Mercadona o «n:nombre» para los demás
-const isFav=k=>(ck().fav||[]).includes(k);
-function toggleFav(k){const f=ck().fav||[];ckSet('fav',f.includes(k)?f.filter(x=>x!==k):[k,...f])}
+// Los favoritos existentes pertenecen a Súper. Cada otra lista guarda su propio
+// campo en cook, que se sincroniza por claves sin sustituir las demás listas.
+const favStorageKey=lid=>lid===cartList()?'fav':'favList:'+lid;
+const favKeys=(lid=curList().id)=>{const keys=ck()[favStorageKey(lid)];return Array.isArray(keys)?keys:[]};
+const isFav=(k,lid=curList().id)=>favKeys(lid).includes(k);
+function toggleFav(k,lid=curList().id){const f=favKeys(lid);ckSet(favStorageKey(lid),f.includes(k)?f.filter(x=>x!==k):[k,...f])}
 // Productos que sueles comprar o tener (para «Habituales»)
 function usual(mid){const u=(ck().usual||[]).filter(x=>x!==mid);u.unshift(mid);S.cook=Object.assign({},S.cook,{usual:u.slice(0,150)})}
 
@@ -332,9 +335,9 @@ function cartBar(){
 }
 // Tarjeta de producto, como en la app de Mercadona
 function prodCard(p){
-  const ic=cartOf(p.id),u=ic?ic.units||1:0,x=pantryOf(p.id),prev=mcFresh()?MC.byId.get(p.id)[11]:0,fv=isFav(p.id);
+  const ic=cartOf(p.id),u=ic?ic.units||1:0,x=pantryOf(p.id),prev=mcFresh()?MC.byId.get(p.id)[11]:0,fv=isFav(p.id,cartList());
   return`<div class="ck-card ${u?'in':''}">${prev?`<span class="ck-offer">Bajada</span>`:isNew(p.id)?`<span class="ck-offer ck-new">Nuevo</span>`:''}<button class="ck-fav ${fv?'on':''}" data-act="favToggle" data-id="${p.id}" aria-label="${fv?'Quitar de habituales':'Marcar como habitual'}">${fv?'★':'☆'}</button>
-    <div class="ck-ci">${fv?`<button class="link" style="width:100%;height:100%" data-act="habitSchedule" data-v="${p.id}" aria-label="Ver habitual ${esc(p.name)}">`:''}${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}${fv?'</button>':''}</div>
+    <div class="ck-ci">${fv?`<button class="link" style="width:100%;height:100%" data-act="habitSchedule" data-v="${p.id}" data-lid="${esc(cartList())}" aria-label="Ver habitual ${esc(p.name)}">`:''}${p.img?`<img src="https://prod-mercadona.imgix.net/images/${p.img}?fit=contain&h=480&w=480" alt="" loading="eager">`:''}${fv?'</button>':''}</div>
     <div class="ck-cp">${prev?`<s>${eur(prev)}</s> `:''}<b class="${prev?'red':''}">${eur(p.price)}</b><small>/${p.d==='ud'&&p.size>1?'pack':'ud'}</small></div>
     <div class="ck-cn">${esc(p.name)}</div><small class="ck-cs">${esc(p.pack)} ${prodSize(p)}${p.ref?' · '+eur(p.ref)+'/'+esc(p.refFmt):''}</small>
     ${x?`<small class="ck-home">🏠 En casa: ${x.n>0?fmtAmt(x.n,x.u):'agotado'}</small>`:''}
@@ -798,7 +801,7 @@ function itemRow(i){
   return`<li class="row ck-it ${i.done?'is-done':''}">
     <button class="check sq ${i.done?'on':''}" data-act="toggleItem" data-id="${i.id}" aria-label="${i.done?'Desmarcar':'Tachar'} ${esc(i.name)}"></button>
     ${img?`<img class="ck-ith" src="${imgUrl(img,96)}" alt="" loading="eager">`:`<span class="ck-ith ck-ith0">${i.auto?'🔁':'🛒'}</span>`}
-    <div class="row-main" data-act="editItem" data-id="${i.id}"><div class="row-title">${esc(i.name)}${isFav(i.mid||'n:'+i.name)?' <span class="ck-star">★</span>':''}</div>${meta.length?`<div class="row-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>`:''}
+    <div class="row-main" data-act="editItem" data-id="${i.id}"><div class="row-title">${esc(i.name)}${isFav(i.mid||'n:'+i.name,i.listId)?' <span class="ck-star">★</span>':''}</div>${meta.length?`<div class="row-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>`:''}
       <div class="ck-irow">${i.done?`<span class="ck-u2">${u} ud</span>`:`<button class="ck-st sm" data-act="itemStep" data-id="${i.id}" data-v="-1" aria-label="${u>1?'Uno menos':'Quitar'}">${u>1?'−':'🗑'}</button><b class="ck-u2">${u}</b><button class="ck-st sm plus" data-act="itemStep" data-id="${i.id}" data-v="1" aria-label="Uno más">+</button>`}<span class="ck-ipr">${i.price?'≈ '+eur(i.price):''}</span></div></div></li>`;
 }
 // Habituales: los marcados con ☆ (con foto) y los de «cada X días»
@@ -811,13 +814,13 @@ function habitSchedule(key,lid=curList().id,item){
   stapleSheet(seed,!existing);
 }
 function habSection(L){
-  const fv=(ck().fav||[]),cards=fv.map(k=>{
+  const fv=favKeys(L.id),cards=fv.map(k=>{
     const p=!k.startsWith('n:')&&MC&&MC.byId.get(k),name=p?p[1]:k.slice(2),inL=S.items.find(i=>i.listId===L.id&&!i.done&&sameItem(i,{mid:p?k:'',name}));
-    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Ver habitual ${esc(name)}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}</button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:''}
-      ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}">+ Añadir</button>`}</div>`});
+    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Ver habitual ${esc(name)}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}</button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:''}
+      ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}" data-lid="${esc(L.id)}">+ Añadir</button>`}</div>`});
   const st=S.staples.filter(s=>s.listId===L.id&&!fv.some(k=>matchesStaple(s,{listId:L.id,mid:k.startsWith('n:')?'':k,name:k.startsWith('n:')?k.slice(2):MC?.byId.get(k)?.[1]||''}))).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
-  if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.</p>`;
-  return`<div class="head-row"><h2>⭐ Habituales</h2><button class="link" data-act="ckTab" data-v="productos">+ Buscar</button></div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Habitual</button></div>`;
+  if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">${L.id===cartList()?'Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.':'Marca con ☆ un producto de «'+esc(L.name)+'» para guardarlo entre los habituales de esta lista.'}</p>`;
+  return`<div class="head-row"><h2>⭐ Habituales</h2>${L.id===cartList()?'<button class="link" data-act="ckTab" data-v="productos">+ Buscar</button>':''}</div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Habitual</button></div>`;
 }
 function shopLaterSection(L){
   const entries=(S.shopLater||[]).filter(x=>x.listId===L.id);
@@ -957,7 +960,7 @@ function buyProductSheet(x,list,onChange=()=>{}){
   const inList=()=>S.items.some(i=>i.listId===list.id&&!i.done&&sameItem(i,repeatBuyItem(x)));
   const ov=sheet('Producto del ticket',`${p?productSheetPhoto(p[9],x.name):''}<p><b>${esc(x.name)}</b></p><p class="hint">${x.price!==undefined?eur(x.price)+' pagado en aquel ticket. ':''}${p?eur(p[3])+' por envase hoy. ':''}Se añadirá a «${esc(list.name)}».</p><label for="historyProductUnits">Cantidad para la cesta</label><input class="field" id="historyProductUnits" type="number" inputmode="numeric" min="1" max="99" step="1" value="1"><div class="ck-actions" style="margin-top:12px"><button type="button" class="btn" data-history-add>🛒 Añadir a la cesta</button><button type="button" class="btn sec" data-history-fav></button></div><p class="hint" data-history-status role="status" aria-live="polite"></p>`,{autoFocus:false});
   ov.querySelector('[data-s="cancel"]').textContent='Volver al ticket';
-  const update=()=>{const add=ov.querySelector('[data-history-add]'),fav=ov.querySelector('[data-history-fav]');add.disabled=inList();add.textContent=add.disabled?'✓ Ya está en la cesta':'🛒 Añadir a la cesta';fav.textContent=isFav(key)?'★ Quitar de Habituales':'☆ Guardar en Habituales';fav.setAttribute('aria-pressed',String(isFav(key)))};
+  const update=()=>{const add=ov.querySelector('[data-history-add]'),fav=ov.querySelector('[data-history-fav]');add.disabled=inList();add.textContent=add.disabled?'✓ Ya está en la cesta':'🛒 Añadir a la cesta';fav.textContent=isFav(key,list.id)?'★ Quitar de Habituales':'☆ Guardar en Habituales';fav.setAttribute('aria-pressed',String(isFav(key,list.id)))};
   ov.querySelector('[data-history-add]').addEventListener('click',()=>{
     const quantity=Number(ov.querySelector('#historyProductUnits').value),status=ov.querySelector('[data-history-status]');
     if(!Number.isInteger(quantity)||quantity<1||quantity>99){status.textContent='Indica de 1 a 99 unidades.';return}
@@ -966,7 +969,7 @@ function buyProductSheet(x,list,onChange=()=>{}){
     if(addToList(repeatBuyItem(x,quantity),list.id)){status.textContent='Añadido a «'+list.name+'».';toast('Producto añadido a la cesta')}
     update();onChange();
   });
-  ov.querySelector('[data-history-fav]').addEventListener('click',()=>{toggleFav(key);update();onChange();ov.querySelector('[data-history-status]').textContent=isFav(key)?'Guardado en Habituales.':'Quitado de Habituales.'});
+  ov.querySelector('[data-history-fav]').addEventListener('click',()=>{toggleFav(key,list.id);update();onChange();ov.querySelector('[data-history-status]').textContent=isFav(key,list.id)?'Guardado en Habituales de «'+list.name+'».':'Quitado de Habituales de «'+list.name+'».'});
   update();
   return ov;
 }
@@ -988,7 +991,7 @@ function buyDetail(b){
       <div class="ck-box">${its.map((x,k)=>{const p=x.mid&&MC&&MC.byId.get(x.mid),dup=inList(x),canRepeat=repeatableBuyItem(x);return`<div class="ing-row history-product-row">${canRepeat?`<input type="checkbox" data-r="${k}" aria-label="Repetir ${esc(x.name)}" ${dup?'disabled':'checked'}>`:''}<${canRepeat?'button type="button"':'div'} class="history-product-pick" ${canRepeat?`data-history-product="${k}" aria-label="Ver opciones de ${esc(x.name)}"`:''}>${p?`<img class="ck-th" src="${imgUrl(p[9],72)}" alt="">`:''}<span>${esc(x.name)}${x.units>1?' <small>× '+x.units+'</small>':''}<br><small>${x.price!==undefined?eur(x.price)+' pagado · ':''}<span data-history-meta="${k}">${dup?'Ya está en la cesta':canRepeat?(p?eur(p[3])+' hoy':''):'Ajuste del ticket'}</span></small></span>${canRepeat?'<b aria-hidden="true">›</b>':''}</${canRepeat?'button':'div'}></div>`}).join('')}</div>`:'<p class="hint">Esta compra no tiene productos apuntados.</p>'}
     ${b.receiptPending?'<button type="button" class="btn" data-k="receipt">📷 Comprobar con el ticket</button>':''}${b.ticket?`<details><summary>Ver foto del ticket</summary><p class="hint">Guardada en el dispositivo donde se subió.</p><div data-receipt-photo>Cargando foto…</div></details>${b.voided?'<p>Compra anulada: no cuenta como gasto.</p>':''}`:''}<div class="ck-actions" style="margin-top:12px">${!b.voided?'<button type="button" class="btn sec" data-k="edit">✏️ Editar gasto</button>':''}${b.ticket&&b.undoJournal&&!b.voided?'<button type="button" class="btn sec" data-k="undo">Deshacer importación</button>':''}${its.length?`<button type="button" class="btn" data-k="again">🔁 Añadir a la lista</button>`:''}</div>`,{});
   if(b.ticket)receiptHistoryPhoto(b,ov);
-  const refresh=()=>{its.forEach((x,index)=>{const cb=ov.querySelector(`[data-r="${index}"]`),meta=ov.querySelector(`[data-history-meta="${index}"]`);if(!cb)return;const dup=inList(x),p=x.mid&&MC?.byId.get(x.mid);cb.disabled=dup;if(dup)cb.checked=false;if(meta)meta.textContent=[dup?'Ya está en la cesta':p?eur(p[3])+' hoy':'',isFav(buyFavKey(x))?'★ Habitual':''].filter(Boolean).join(' · ')})};
+  const refresh=()=>{its.forEach((x,index)=>{const cb=ov.querySelector(`[data-r="${index}"]`),meta=ov.querySelector(`[data-history-meta="${index}"]`);if(!cb)return;const dup=inList(x),p=x.mid&&MC?.byId.get(x.mid);cb.disabled=dup;if(dup)cb.checked=false;if(meta)meta.textContent=[dup?'Ya está en la cesta':p?eur(p[3])+' hoy':'',isFav(buyFavKey(x),L.id)?'★ Habitual':''].filter(Boolean).join(' · ')})};
   refresh();
   ov.addEventListener('click',e=>{const product=e.target.closest('[data-history-product]');if(product){buyProductSheet(its[+product.dataset.historyProduct],L,refresh);return}const k=e.target.closest('[data-k]');if(!k)return;
     if(k.dataset.k==='receipt'){ov.remove();ticketFlow({pendingId:b.id});return}
@@ -1436,7 +1439,7 @@ function seedPantry(){
 
 /* ---------- acciones ---------- */
 const CK_ACT={
-  habitSchedule:d=>habitSchedule(d.v),
+  habitSchedule:d=>habitSchedule(d.v,d.lid||curList().id),
   laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),
   panRemove:d=>confirmRemovePantry(d.id),
   ckTab:d=>{ui.ckTab=d.v==='recetas'?'lista':d.v;if(ui.ckTab==='novedades')ui.novCat=null;render();$('#app').scrollTop=0},
@@ -1446,7 +1449,7 @@ const CK_ACT={
   prodClear:()=>{const f=$('#qProd');ui.prodQ='';ui.prodN=40;clearTimeout(ui._pt);if(f){f.value='';updateProductSearch();f.focus()}else render()},
   prodQ:d=>{ui.prodQ=d.v;ui.prodN=40;render();const f=$('#qProd');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},
   prodSub:d=>{ui.prodSub=d.v===''?null:+d.v;ui.prodN=40;render()},
-  favToggle:d=>{const was=isFav(d.id);toggleFav(d.id);toast(was?'Quitado de habituales':'⭐ Añadido a habituales')},
+  favToggle:d=>{const was=isFav(d.id,cartList());toggleFav(d.id,cartList());toast(was?'Quitado de habituales':'⭐ Añadido a habituales')},
   cartStep:d=>{if(!MC)return;const p=prod(MC.byId.get(d.id));const i=cartOf(d.id);cartSet(p,(i?i.units||1:0)+(+d.v));save()},
   homeAdd:d=>{if(!MC)return;const p=prod(MC.byId.get(d.id));const x=pantryAddProd(p,1);save();toastUndo('🏠 '+x.loc+': '+fmtAmt(x.n,x.u)+' de '+p.name)},
   panCart:d=>{const x=find(S.pantry||[],d.id);if(!x)return;const p=x.mid&&MC&&MC.byId.get(x.mid);
@@ -1487,7 +1490,7 @@ const CK_ACT={
   itemStep:d=>{const i=find(S.items,d.id);if(!i)return;const u=(i.units||1)+(+d.v);
     if(u<=0){S.items=S.items.filter(x=>x.id!==i.id);save();toastUndo(i.name+' quitado de la lista');return}
     setUnits(i,u);save()},
-  habAdd:d=>{const k=d.v,p=!k.startsWith('n:')&&MC&&MC.byId.get(k);if(addToList(p?{mid:k,name:p[1],units:1}:{name:k.slice(2)}))toast('Añadido a la lista')},
+  habAdd:d=>{const k=d.v,p=!k.startsWith('n:')&&MC&&MC.byId.get(k);if(addToList(p?{mid:k,name:p[1],units:1}:{name:k.slice(2)},d.lid||curList().id))toast('Añadido a la lista')},
   sugAdd:d=>{if(!MC)return;const p=MC.byId.get(d.id);if(!p)return;if(addToList({mid:d.id,name:p[1],units:1})){const el=$('#qItem');if(el){el.value='';drawQSug()}toast(p[1]+' a la lista')}},
   clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
     buySheet(dn,(store,fromTicket,record)=>{let p=0;if(!fromTicket)for(const item of dn){const before=new Map(S.pantry.map(x=>[x.id,Number(x.n||0)]));if(addToPantry(item)){p++;for(const x of S.pantry){const amount=Number(x.n||0)-(before.get(x.id)||0);if(amount>0&&record){const prior=record.pendingInventory.find(p=>p.pantryId===x.id&&p.unit===x.u);if(prior)prior.amount+=amount;else record.pendingInventory.push({id:uid(),name:item.name,mid:item.mid||'',pantryId:x.id,amount,unit:x.u})}}}}dn.forEach(i=>noteStaplePurchase(i));S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},

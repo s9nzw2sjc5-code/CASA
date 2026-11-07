@@ -207,3 +207,21 @@ Prueba de navegador con datos ficticios y Firebase bloqueado:
 ```sh
 node tests/history-products.cjs
 ```
+
+
+## Habituales por lista
+
+Los Habituales existentes se conservan en Súper. Farmacia, Para la casa y las
+listas nuevas tienen sus propios favoritos. Las estrellas de un artículo y las
+acciones del historial usan la lista correspondiente; el catálogo de Mercadona
+mantiene las estrellas de Súper. Quitar un favorito de una lista no lo quita de
+las demás. La reposición automática sigue asociada a su lista.
+
+Se conserva `cook.fav` para Súper y las demás listas guardan sus claves de
+favoritos en campos independientes `cook["favList:" + listId]`. Esto utiliza la
+sincronización por claves existente, sin borrar ni redistribuir favoritos antiguos.
+
+```sh
+node --test tests/fav-lists.test.cjs
+node tests/fav-lists.cjs
+```
