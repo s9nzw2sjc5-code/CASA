@@ -225,3 +225,25 @@ sincronización por claves existente, sin borrar ni redistribuir favoritos antig
 node --test tests/fav-lists.test.cjs
 node tests/fav-lists.cjs
 ```
+
+
+## Habituales que faltan en el catálogo
+
+La versión 74 mantiene los nombres e imágenes disponibles en la información del
+favorito, registros de la casa y etiquetas archivadas del catálogo público.
+`tools/mercadona.py` conserva las etiquetas retiradas en `mercadona.json.retired`,
+fuera de los productos y precios actuales; el archivo inicial se reconstruyó de
+las versiones públicas guardadas en Git. No se han cambiado los precios activos.
+
+Un identificador perdido nunca se usa como nombre recortado ni se añade como
+un número a la cesta. Si no se puede recuperar la ficha, «Identificar» permite
+asociar el favorito a otro producto o quitarlo de esa lista. Las reposiciones de
+ese favorito en la misma lista conservan sus plazos al volver a asociarlo. Si
+falla una foto, se muestra un marcador manteniendo el nombre. Los favoritos de
+otras listas y los tickets anteriores se conservan.
+
+```sh
+node tests/habit-recovery.cjs
+node --test tests/habit-metadata.test.cjs
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_retired_products.py'
+```

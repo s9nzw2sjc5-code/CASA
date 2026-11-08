@@ -527,6 +527,7 @@ body.nav-top .toast{bottom:90px}
 .ck-habs{padding-bottom:6px}
 .ck-hab{flex:none;width:118px;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:8px;display:flex;flex-direction:column;gap:3px}
 .ck-hab.in{box-shadow:inset 0 0 0 2px var(--c-compras),var(--shadow)}
+.ck-hab img[hidden],.ck-hab0[hidden]{display:none}
 .ck-hab img,.ck-hab0{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:12px;display:grid;place-items:center;font-size:1.8rem}
 .ck-hab b{font-size:.78rem;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em}
 .ck-hab small{color:var(--muted);font-size:.74rem}
@@ -568,16 +569,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=73"></script>
-<script src="sync.js?v=73"></script>
-<script src="receipts.js?v=73"></script>
-<script src="receipt-image.js?v=73"></script>
-<script src="receipt-layout.js?v=73"></script>
-<script src="receipt-ocr.js?v=73"></script>
-<script src="product-photo.js?v=73"></script>
-<script src="product-photo-ui.js?v=73"></script>
-<script src="cocina.js?v=73"></script>
-<script src="receipt-extras.js?v=73"></script>
+<script src="push.js?v=74"></script>
+<script src="sync.js?v=74"></script>
+<script src="receipts.js?v=74"></script>
+<script src="receipt-image.js?v=74"></script>
+<script src="receipt-layout.js?v=74"></script>
+<script src="receipt-ocr.js?v=74"></script>
+<script src="product-photo.js?v=74"></script>
+<script src="product-photo-ui.js?v=74"></script>
+<script src="cocina.js?v=74"></script>
+<script src="receipt-extras.js?v=74"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -632,7 +633,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=73;
+const APP_VERSION=74;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

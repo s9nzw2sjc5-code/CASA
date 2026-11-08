@@ -93,6 +93,17 @@ def novelty_since(previous, products, cp, wh, observed_at):
     return result
 
 
+def retired_products(previous, products):
+    """Conservar nombres e imágenes; estos productos no son precios actuales."""
+    current = {str(p[0]) for p in products}
+    retired = {str(k): v for k, v in previous.get('retired', {}).items() if str(k) not in current}
+    for p in previous.get('p', []):
+        key = str(p[0])
+        if key not in current:
+            retired[key] = {'name': p[1], 'img': p[9], 'pack': p[2]}
+    return retired
+
+
 def main():
     cp = (sys.argv[1] if len(sys.argv) > 1 else open(CP_FILE).read()).strip()
     if not (cp.isdigit() and len(cp) == 5):
@@ -119,6 +130,7 @@ def main():
             'cols': ['id', 'nombre', 'envase', 'precio', 'tamano', 'unidad', 'precio_ref', 'unidad_ref', 'cat', 'img', 'aprox', 'antes', 'subcats', 'nuevo'],
             'p': sorted(out.values(), key=lambda x: (x[8], x[12][0], x[1]))}
     data['newSince'] = novelty_since(previous, data['p'], cp, wh, data['at'])
+    data['retired'] = retired_products(previous, data['p'])
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
     with open(CP_FILE, 'w') as f:

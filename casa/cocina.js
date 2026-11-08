@@ -37,7 +37,7 @@ let MC=null,mcLoading=null;const mcCache=new Map();
 function loadMC(){
   if(MC||mcLoading)return mcLoading;
   mcLoading=fetch('mercadona.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{
-    d.byId=new Map(d.p.map(p=>[p[0],p]));d.w=d.p.map(p=>words(p[1]));d.subs=d.subs||[];buildVocab(d);MC=d;mcCache.clear();
+    d.p.forEach(p=>p[0]=String(p[0]));d.byId=new Map(d.p.map(p=>[p[0],p]));d.w=d.p.map(p=>words(p[1]));d.subs=d.subs||[];buildVocab(d);MC=d;mcCache.clear();
     if(ui.view==='compras'&&!document.querySelector('.overlay'))render();
   }).catch(()=>{mcLoading=null});
   return mcLoading;
@@ -130,7 +130,7 @@ function searchProducts(q,limit,minHits){
   if(!MC)return[];
   q=norm(q).replace(/\bpasta(?:s)? (?:de )?dientes\b/g,'dentifrico').replace(/\bpasta dental\b/g,'dentifrico');
   const qw=qWords(q);if(!qw.length)return[];
-  const nq=norm(q).trim(),fav=new Set(ck().fav||[]),usual=new Set((ck().usual||[]).slice(0,60)),out=[];
+  const nq=norm(q).trim(),fav=new Set(favKeys(cartList())),usual=new Set((ck().usual||[]).slice(0,60)),out=[];
   for(let i=0;i<MC.p.length;i++){
     const pw=MC.w[i];let sc=0,hits=0;
     qw.forEach((q2,k)=>{let b=0,at=-1;pw.forEach((w,j)=>{const h=wordHit(q2,w);if(h>b){b=h;at=j}});if(b){hits++;sc+=b;if(at===k)sc+=.6;if(at===0)sc+=1}});
@@ -288,9 +288,21 @@ function setUnits(i,units){
 // Los favoritos existentes pertenecen a Súper. Cada otra lista guarda su propio
 // campo en cook, que se sincroniza por claves sin sustituir las demás listas.
 const favStorageKey=lid=>lid===cartList()?'fav':'favList:'+lid;
-const favKeys=(lid=curList().id)=>{const keys=ck()[favStorageKey(lid)];return Array.isArray(keys)?keys:[]};
-const isFav=(k,lid=curList().id)=>favKeys(lid).includes(k);
-function toggleFav(k,lid=curList().id){const f=favKeys(lid);ckSet(favStorageKey(lid),f.includes(k)?f.filter(x=>x!==k):[k,...f])}
+const favKeys=(lid=curList().id)=>{const keys=ck()[favStorageKey(lid)];return Array.isArray(keys)?keys.map(String):[]};
+const isFav=(k,lid=curList().id)=>favKeys(lid).includes(String(k));
+function toggleFav(k,lid=curList().id){k=String(k);const f=favKeys(lid);if(!f.includes(k))rememberHabit(k);ckSet(favStorageKey(lid),f.includes(k)?f.filter(x=>x!==k):[k,...f])}
+function rememberHabit(key){
+  const p=MC?.byId.get(String(key));if(!p)return;
+  S.cook={...S.cook,['favInfo:'+key]:{name:p[1],img:p[9]||'',pack:p[2]||''}};
+}
+function habitInfo(key){
+  key=String(key);const manual=key.startsWith('n:'),p=!manual&&MC?.byId.get(key),saved=S.cook?.['favInfo:'+key],old=MC?.retired?.[key];
+  const records=[...(S.items||[]),...(S.pantry||[]),...(S.staples||[]),...(S.buys||[]).flatMap(b=>b.items||[])];
+  const record=records.find(x=>x&&String(x.mid)===key&&typeof x.name==='string'&&/[^\d\s]/.test(x.name));
+  const name=[manual?key.slice(2):'',p?.[1],saved?.name,old?.name,record?.name].find(n=>typeof n==='string'&&n.trim()&&/[^\d\s]/.test(n))||'';
+  const img=[p?.[9],saved?.img,old?.img].find(i=>typeof i==='string'&&/^[a-z0-9_/-]+\.(jpe?g|png|webp)$/i.test(i))||'';
+  return {key,p,name:name||(!MC&&!manual?'Cargando producto…':'Producto por identificar'),known:!!name,img,manual};
+}
 // Productos que sueles comprar o tener (para «Habituales»)
 function usual(mid){const u=(ck().usual||[]).filter(x=>x!==mid);u.unshift(mid);S.cook=Object.assign({},S.cook,{usual:u.slice(0,150)})}
 
@@ -397,7 +409,7 @@ function productSearchHTML(){
   }else{
     h+=`<div class="chips ck-cats">${[['hab','⭐ Habituales'],['bajadas','🏷️ Bajadas de precio'],...MC.cats.filter(c=>!CK_HIDECAT.test(c)).map(c=>[c,(CK_CATEMO[c]||'')+' '+c]),['higiene','🪥 Higiene']].map(([k,l])=>`<button class="chip ${cat===k?'on':''}" data-act="prodCat" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
     if(cat==='hab'){
-      const fv=(ck().fav||[]).filter(k=>MC.byId.has(k)),rec=[...new Set([...cartItems().map(i=>i.mid),...(ck().usual||[]),...(S.pantry||[]).map(x=>x.mid)].filter(id=>id&&MC.byId.has(id)&&!fv.includes(id)))];
+      const fv=favKeys(cartList()).filter(k=>MC.byId.has(k)),rec=[...new Set([...cartItems().map(i=>i.mid),...(ck().usual||[]),...(S.pantry||[]).map(x=>x.mid)].filter(id=>id&&MC.byId.has(id)&&!fv.includes(id)))];
       if(fv.length)h+=`<h2>⭐ Tus habituales</h2><div class="ck-grid">${fv.map(id=>prodCard(prod(MC.byId.get(id)))).join('')}</div>`;
       else h+=`<p class="hint ck-help">Marca con <b>☆</b> los productos que compras siempre y los tendrás aquí y en la lista de Compras.</p>`;
       a=rec.map(id=>prod(MC.byId.get(id)));title=a.length?'Recientes y en casa':'';
@@ -770,7 +782,7 @@ function panSheet(x){
 
 /* ---------- Compras: lista con fotos, cantidades y tachado ---------- */
 const imgUrl=(img,s)=>img?`https://prod-mercadona.imgix.net/images/${img}?fit=contain&h=${s}&w=${s}`:'';
-const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(i.mid);return p?p[9]:''};
+const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(String(i.mid));return p?p[9]:i.mid?habitInfo(i.mid).img:''};
 const monthKey=d=>(d||today()).slice(0,7);
 const spentIn=m=>(S.buys||[]).filter(b=>monthKey(b.date)===m).reduce((a,b)=>a+(+b.total||0),0);
 const monthName=m=>new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
@@ -806,18 +818,40 @@ function itemRow(i){
 }
 // Habituales: los marcados con ☆ (con foto) y los de «cada X días»
 function habitSchedule(key,lid=curList().id,item){
-  const p=MC&&!key.startsWith('n:')&&MC.byId.get(key),name=p?p[1]:item?.name||(key.startsWith('n:')?key.slice(2):'');
-  if(!name){toast('Espera a que cargue el catálogo');return}
+  key=String(key);
+  const info=habitInfo(key),p=info.p,name=p?p[1]:item?.name||(info.known?info.name:'');
+  if(!name){repairHabit(key,lid);return}
   const mid=p?key:item?.mid||(!key.startsWith('n:')?key:'');
   const existing=S.staples.find(s=>matchesStaple(s,{listId:lid,name,mid}));
   const seed=existing||{name,mid,listId:lid,days:7,last:today(),section:item?.section||S.secMem[norm(name)]||'Despensa',auto:true,basePrice:p?p[3]:item?.uprice||item?.price||0,packQty:p?prodSize(prod(p)):item?.qty||''};
   stapleSheet(seed,!existing);
 }
+function repairHabit(key,lid){
+  key=String(key);
+  const info=habitInfo(key),ov=sheet('Recuperar habitual',`<p>${info.known?esc(info.name)+' ya no aparece en el catálogo actual.':'No se ha podido recuperar el nombre de este habitual.'}</p><p class="hint">Elige el producto para volver a asociarlo a esta lista.</p><div class="ck-actions"><button type="button" class="btn" data-repair-search>Buscar producto</button><button type="button" class="btn sec" data-repair-remove>Quitar de Habituales</button></div><p class="hint" data-repair-status role="status"></p>`,{autoFocus:false});
+  ov.querySelector('[data-repair-remove]').onclick=()=>{if(isFav(key,lid))toggleFav(key,lid);ov.remove()};
+  ov.querySelector('[data-repair-search]').onclick=async()=>{
+    if(!MC)await loadMC();if(!ov.isConnected)return;
+    if(!MC){ov.querySelector('[data-repair-status]').textContent='No se puede cargar el catálogo. Revisa la conexión e inténtalo de nuevo.';return}
+    ov.remove();productPicker(info.known?info.name:'',p=>{
+      const f=favKeys(lid);if(!f.includes(key))return;
+      rememberHabit(p.id);
+      S.staples.forEach(s=>{if(s.listId===lid&&(String(s.mid)===key||(key.startsWith('n:')&&norm(s.name)===norm(key.slice(2))))){s.mid=p.id;s.name=p.name;s.basePrice=p.price;s.packQty=prodSize(p)}});
+      ckSet(favStorageKey(lid),[...new Set(f.map(k=>k===key?p.id:k))]);toast('Habitual recuperado');
+    });
+  };
+}
+function habitAdd(key,lid){
+  key=String(key);
+  const info=habitInfo(key);
+  if(!info.known){repairHabit(key,lid);return}
+  if(addToList(info.p?{mid:String(key),name:info.p[1],units:1}:{name:info.name,mid:info.manual?'':String(key),units:1},lid))toast('Añadido a la lista');
+}
 function habSection(L){
   const fv=favKeys(L.id),cards=fv.map(k=>{
-    const p=!k.startsWith('n:')&&MC&&MC.byId.get(k),name=p?p[1]:k.slice(2),inL=S.items.find(i=>i.listId===L.id&&!i.done&&sameItem(i,{mid:p?k:'',name}));
-    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Ver habitual ${esc(name)}">${p?`<img src="${imgUrl(p[9],120)}" alt="" loading="eager">`:'<span class="ck-hab0">⭐</span>'}</button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:''}
-      ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}" data-lid="${esc(L.id)}">+ Añadir</button>`}</div>`});
+    const info=habitInfo(k),p=info.p,name=info.name,inL=info.known&&S.items.find(i=>i.listId===L.id&&!i.done&&(sameItem(i,{mid:p?k:'',name})||String(i.mid)===k));
+    return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Ver habitual ${esc(name)}">${info.img?`<img data-habit-img src="${imgUrl(info.img,120)}" alt="" loading="eager">`:''}<span class="ck-hab0" role="img" aria-label="Sin imagen" ${info.img?'hidden':''}>🛍️</span></button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:!info.manual?`<small>${info.known?'Fuera del catálogo actual':'Toca para identificarlo'}</small>`:''}${!p&&info.known&&!info.manual?`<button class="link" data-act="repairHabit" data-v="${esc(k)}" data-lid="${esc(L.id)}">Buscar sustituto</button>`:''}
+      ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}" data-lid="${esc(L.id)}">${info.known?'+ Añadir':'Identificar'}</button>`}</div>`});
   const st=S.staples.filter(s=>s.listId===L.id&&!fv.some(k=>matchesStaple(s,{listId:L.id,mid:k.startsWith('n:')?'':k,name:k.startsWith('n:')?k.slice(2):MC?.byId.get(k)?.[1]||''}))).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
   if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">${L.id===cartList()?'Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.':'Marca con ☆ un producto de «'+esc(L.name)+'» para guardarlo entre los habituales de esta lista.'}</p>`;
   return`<div class="head-row"><h2>⭐ Habituales</h2>${L.id===cartList()?'<button class="link" data-act="ckTab" data-v="productos">+ Buscar</button>':''}</div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Habitual</button></div>`;
@@ -1440,6 +1474,7 @@ function seedPantry(){
 /* ---------- acciones ---------- */
 const CK_ACT={
   habitSchedule:d=>habitSchedule(d.v,d.lid||curList().id),
+  repairHabit:d=>repairHabit(d.v,d.lid||curList().id),
   laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),
   panRemove:d=>confirmRemovePantry(d.id),
   ckTab:d=>{ui.ckTab=d.v==='recetas'?'lista':d.v;if(ui.ckTab==='novedades')ui.novCat=null;render();$('#app').scrollTop=0},
@@ -1490,7 +1525,7 @@ const CK_ACT={
   itemStep:d=>{const i=find(S.items,d.id);if(!i)return;const u=(i.units||1)+(+d.v);
     if(u<=0){S.items=S.items.filter(x=>x.id!==i.id);save();toastUndo(i.name+' quitado de la lista');return}
     setUnits(i,u);save()},
-  habAdd:d=>{const k=d.v,p=!k.startsWith('n:')&&MC&&MC.byId.get(k);if(addToList(p?{mid:k,name:p[1],units:1}:{name:k.slice(2)},d.lid||curList().id))toast('Añadido a la lista')},
+  habAdd:d=>habitAdd(d.v,d.lid||curList().id),
   sugAdd:d=>{if(!MC)return;const p=MC.byId.get(d.id);if(!p)return;if(addToList({mid:d.id,name:p[1],units:1})){const el=$('#qItem');if(el){el.value='';drawQSug()}toast(p[1]+' a la lista')}},
   clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
     buySheet(dn,(store,fromTicket,record)=>{let p=0;if(!fromTicket)for(const item of dn){const before=new Map(S.pantry.map(x=>[x.id,Number(x.n||0)]));if(addToPantry(item)){p++;for(const x of S.pantry){const amount=Number(x.n||0)-(before.get(x.id)||0);if(amount>0&&record){const prior=record.pendingInventory.find(p=>p.pantryId===x.id&&p.unit===x.u);if(prior)prior.amount+=amount;else record.pendingInventory.push({id:uid(),name:item.name,mid:item.mid||'',pantryId:x.id,amount,unit:x.u})}}}}dn.forEach(i=>noteStaplePurchase(i));S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
@@ -1522,3 +1557,6 @@ document.addEventListener('change',e=>{
   if(e.target.id==='ckSort'){ui.recSort=e.target.value;render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='qVeto')CK_ACT.ckVetoAdd()});
+
+// Si falla la foto de un habitual, conservar su nombre y mostrar un marcador estable.
+document.addEventListener('error',e=>{const img=e.target;if(img.matches?.('[data-habit-img]')){img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false}},true);
