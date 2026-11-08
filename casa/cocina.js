@@ -242,8 +242,57 @@ function addToPantry(i){
 }
 function autoPantry(){
   let c=0;const L=S.lists.find(l=>l.id==='super')||S.lists[0];
-  (S.pantry||[]).forEach(x=>{if(x.auto&&pantryLow(x)&&x.snooze!==today()&&!S.items.some(i=>!i.done&&norm(i.name)===norm(x.name))){S.items.push(pantryItem(x,L.id));c++}});
+  (S.pantry||[]).forEach(x=>{if(x.auto&&pantryLow(x)&&x.snooze!==today()&&!pantryShoppingItem(x,L.id)){S.items.push(pantryItem(x,L.id));c++}});
   if(c)save();return c;
+}
+function pantryShoppingItem(x,lid){
+  return S.items.find(i=>i.listId===lid&&((x.mid&&String(i.mid)===String(x.mid))||norm(i.name)===norm(x.name)));
+}
+function finishedPantryQuery(text){
+  return String(text||'').trim().replace(/^(?:(?:ya\s+)?(?:se\s+(?:(?:ha|han)\s+(?:acabado|terminado)|acab[oó])|no\s+(?:queda|quedan))|(?:he|hemos)\s+(?:acabado|terminado))(?:\s+|$)(?:(?:el|la|los|las)(?:\s+|$))?/i,'').trim();
+}
+function finishedPantryMatches(query){
+  const terms=text=>norm(text).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w&&!['de','del','la','el','los','las','en','y','para','al','a','un','una','o'].includes(w));
+  const q=norm(query),w=terms(query);if(!q)return [];
+  return (S.pantry||[]).filter(x=>{const have=terms(x.name);return norm(x.name)===q||(w.length&&w.every(need=>have.some(word=>same(word,need)||(!['sin','con'].includes(need)&&need.length>=3&&word.startsWith(need)))))}).sort((a,b)=>(norm(b.name)===q)-(norm(a.name)===q)||a.name.localeCompare(b.name,'es'));
+}
+function markPantryFinished(id,name){
+  const x=id?find(S.pantry||[],id):null;
+  if(id&&!x)throw Error('Ese producto ya no está en casa. Vuelve a escribir su nombre.');
+  const label=x?x.name:finishedPantryQuery(name);
+  if(!label||/[,;\n]/.test(label))throw Error('Escribe un producto cada vez.');
+  const lid=cartList();if(!S.lists.some(l=>l.id===lid))throw Error('No se encuentra la lista de la compra.');
+  const existing=pantryShoppingItem(x||{name:label},lid),p=x?.mid&&MC?.byId.get(String(x.mid));
+  if(x){x.full=pantryFull(x);x.n=0;x.at=today()}
+  if(!existing){
+    if(p)cartSet(prod(p),1,lid);
+    else S.items.push({id:uid(),listId:lid,name:label,mid:x?.mid?String(x.mid):'',qty:'',units:1,section:ckSection(null,label),by:'',done:false,added:Date.now()});
+  }
+  return {name:label,added:!existing,matched:!!x};
+}
+function finishedPantrySheet(){
+  let selected='';
+  const ov=sheet('¿Qué se ha acabado?',`<p class="hint">Escribe un producto. Lo marcaremos como agotado y lo añadiremos a «${esc((S.lists.find(l=>l.id===cartList())||{}).name||'Compras')}» si aún no está en la lista.</p><label for="finishedPantryName">Producto que se ha acabado</label><input id="finishedPantryName" class="field" type="search" autocomplete="off" enterkeyhint="done" placeholder="Ej.: leche"><p class="hint" id="finishedPantryHint"></p><div id="finishedPantryMatches"></div><p class="hint" id="finishedPantryStatus" role="status" aria-live="polite"></p>`,{saveLabel:'Se ha acabado',onSave:()=>{submit();return false}});
+  const input=ov.querySelector('#finishedPantryName'),box=ov.querySelector('#finishedPantryMatches'),hint=ov.querySelector('#finishedPantryHint'),status=ov.querySelector('#finishedPantryStatus'),button=ov.querySelector('[data-s="ok"]');
+  const draw=()=>{
+    const q=finishedPantryQuery(input.value),matches=finishedPantryMatches(q),exact=matches.filter(x=>norm(x.name)===norm(q));
+    selected=exact.length===1?exact[0].id:matches.length===1?matches[0].id:!matches.length?'new':'';
+    status.textContent='';button.disabled=!q||/[,;\n]/.test(q)||!selected;
+    hint.textContent=!q?'':/[,;\n]/.test(q)?'Escribe un producto cada vez.':!matches.length?'No está apuntado en casa. Lo añadiremos a la compra con este nombre: '+q:matches.length>8?'Hay varias coincidencias. Escribe un nombre más concreto o elige un producto.':matches.length>1?'Elige el producto que se ha acabado.':'Encontrado en casa:';
+    box.innerHTML=q?matches.slice(0,8).map(x=>`<label class="finished-pantry-option"><input type="radio" name="finishedPantryChoice" value="${esc(x.id)}" ${selected===x.id?'checked':''}><span><b>${esc(x.name)}</b><small>${esc(x.loc||'Despensa')} · ${x.n>0?'Queda '+fmtAmt(x.n,x.u):'Agotado'}</small></span></label>`).join(''):'';
+  };
+  const submit=()=>{
+    const q=finishedPantryQuery(input.value),matches=finishedPantryMatches(q);
+    if(!q||!selected){status.textContent='Escribe o elige el producto que se ha acabado.';return}
+    if(selected==='new'&&matches.length){draw();return}
+    if(selected!=='new'&&!matches.some(x=>x.id===selected)){draw();status.textContent='La información ha cambiado. Elige de nuevo el producto.';return}
+    try{const result=markPantryFinished(selected==='new'?'':selected,q);save();input.value='';draw();status.textContent=(result.matched?result.name+': marcado como agotado. ':result.name+': ')+(result.added?'Añadido a Compras.':'Ya estaba en la lista de la compra.');input.focus();toastUndo(result.name+' · '+(result.added?'añadido a Compras':'ya estaba en Compras'))}
+    catch(e){status.textContent=e.message||'No se ha podido apuntar el producto.'}
+  };
+  input.addEventListener('input',e=>{if(!e.isComposing)draw()});input.addEventListener('compositionend',draw);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();submit()}});
+  box.addEventListener('change',e=>{if(e.target.name!=='finishedPantryChoice')return;selected=e.target.value;button.disabled=false});
+  draw();return ov;
 }
 function pantryItem(x,lid){
   const p=x.mid&&MC&&MC.byId.get(x.mid)?prod(MC.byId.get(x.mid)):matchProduct(x.name);
@@ -460,7 +509,7 @@ function vCkDespensa(){
   let a=all.slice();
   if(f==='low')a=a.filter(pantryLow);else if(f!=='todo')a=a.filter(x=>(x.loc||'Despensa')===f);
   const low=all.filter(pantryLow);
-  let h=`<div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="aiPhoto">📸 Foto de la nevera o despensa</button></div>
+  let h=`<button class="btn sec" data-act="pantryFinished" style="width:100%;margin-top:12px">🛒 ¿Qué se ha acabado?</button><div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="aiPhoto">📸 Foto de la nevera o despensa</button></div>
   <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckTab" data-v="productos">+ Añadir productos</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
   ${low.length?`<button class="btn sec ck-lowbtn" data-act="ckLowShop">🛒 Pasar a la cesta lo que se acaba (${low.length})</button>`:''}
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','⚠️ Se acaba'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
@@ -1495,6 +1544,7 @@ const CK_ACT={
   ckRec:d=>recipeView(find(S.recipes,d.id)),
   recF:d=>{ui.recF=d.v;render()},
   panF:d=>{ui.panF=d.v;render()},
+  pantryFinished:()=>finishedPantrySheet(),
   ckNewPan:()=>panSheet(null),
   ckPan:d=>panSheet(find(S.pantry||[],d.id)),
   panStep:d=>{const x=find(S.pantry||[],d.id);if(!x)return;x.n=Math.max(0,Math.round((x.n+(+d.v)*pantryStep(x))*10)/10);x.at=today();save()},

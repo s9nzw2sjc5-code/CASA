@@ -247,3 +247,22 @@ node tests/habit-recovery.cjs
 node --test tests/habit-metadata.test.cjs
 PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_retired_products.py'
 ```
+
+## Apuntar lo que se ha acabado
+
+En «En casa», encima de la foto de la nevera, «¿Qué se ha acabado?» abre una entrada
+rápida de texto. Acepta el nombre o frases como «se ha acabado la leche». Muestra
+coincidencias de la despensa, mantiene las variedades y negaciones del nombre y
+pide elegir cuando hay varias coincidencias. Se apunta un producto cada vez.
+
+Al confirmar, el producto seleccionado queda con cantidad cero y se añade una
+unidad a la lista Súper si no estaba allí. También se comprueban los productos ya
+tachados en el carro para no duplicarlos ni aumentar su cantidad. Si no existe en
+la despensa, se añade el nombre a Compras sin crear existencias ficticias. La
+ventana permanece abierta para apuntar el siguiente producto; las acciones se
+pueden deshacer con el mecanismo existente de Casa. Los gastos no se modifican.
+
+```sh
+node --test tests/finished-pantry.test.cjs
+node tests/finished-pantry.cjs
+```
