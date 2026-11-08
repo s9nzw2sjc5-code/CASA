@@ -559,6 +559,84 @@ function pantryLastPurchase(x){
   return(S.buys||[]).filter(b=>!b.voided&&CasaReceipts.validDate(b.date)&&((b.items||[]).some(matches)||(b.pendingInventory||[]).some(p=>p.pantryId===x.id)))
     .sort((a,b)=>b.date.localeCompare(a.date)||(Number(b.at)||0)-(Number(a.at)||0))[0]||null;
 }
+// Evidence for photo association comes from recorded purchases, never cart estimates.
+function purchaseNameScore(requested,actual){
+  const measure=s=>{const m=String(s||'').match(/\b(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|cl|l)\b/i);if(!m)return null;const u=m[2].toLowerCase();return {kind:/^(kg|g|gr)$/.test(u)?'mass':'volume',n:Number(m[1].replace(',','.'))*(/^(kg|l)$/.test(u)?1000:u==='cl'?10:1)}};
+  const ma=measure(requested),mb=measure(actual);if(ma&&mb&&(ma.kind!==mb.kind||Math.abs(ma.n-mb.n)>.01))return 0;
+  const clean=s=>CasaReceipts.norm(String(s||'').replace(/\b\d+(?:[.,]\d+)?\s*(kg|gr|g|ml|cl|l)\b/gi,' ')).replace(/(\d)([a-z])/g,'$1 $2').replace(/\b(hacendado|deliplus|bosque verde)\b/g,'').trim();
+  const stop=new Set(['de','del','la','el','los','las','en','con','y','para','al','a','un','una','o','bipack','pack','paquete','botella','brick','bote']);
+  const tokens=s=>{const words=clean(s).split(/\s+/).filter(w=>w&&!stop.has(w));return words.some(w=>w==='caf'||w==='cafe')?words.map(w=>({caf:'cafe',mol:'molido',nat:'natural'}[w]||w)):words},a=tokens(requested),b=tokens(actual);
+  if(!a.some(w=>/[a-z]/.test(w))||!b.length)return 0;
+  const rawA=CasaReceipts.norm(requested),rawB=CasaReceipts.norm(actual);
+  const attribute=w=>w.startsWith('azucar')?'azucar(?:es)?':w;
+  for(const m of rawA.matchAll(/\bsin\s+(lactosa|gluten|azucar(?:es)?|sal|alcohol|cafeina)\b/g))if(!new RegExp('\\bsin\\s+'+attribute(m[1])+'\\b').test(rawB))return 0;
+  for(const m of rawA.matchAll(/\bcon\s+(lactosa|gluten|azucar(?:es)?|sal|alcohol|cafeina)\b/g))if(new RegExp('\\bsin\\s+'+attribute(m[1])+'\\b').test(rawB))return 0;
+  const milk=s=>/\bsemi\s*desnatad[oa]/.test(s)?'semi':/\bdesnatad[oa]/.test(s)?'skim':/\benter[oa]/.test(s)?'whole':'';
+  if(milk(rawA)&&milk(rawA)!==milk(rawB))return 0;
+  for(const w of ['natural','mezcla','torrefacto','descafeinado','integral','molido','grano','soluble'])if(a.includes(w)&&!b.some(t=>same(w,t)))return 0;
+  const hit=(w,t)=>same(w,t)||(w.length>=4&&w!=='cafe'&&t.startsWith(w));
+  if(a.filter(w=>/^\d+$/.test(w)).some(w=>!b.includes(w)))return 0;
+  if(!b.some(w=>hit(a[0],w)))return 0;
+  const hits=a.filter(w=>b.some(t=>hit(w,t))).length,coverage=hits/a.length;
+  if(coverage<.8)return 0;
+  const score=coverage-Math.max(0,b.length-a.length)*.015;
+  return a.length===1&&b.length>1?Math.min(.7,score):score;
+}
+function purchaseLinePrice(line){
+  const total=Number(line.price),unit=Number(line.unitPrice);
+  if(!(total>0)||!Number.isFinite(total))return null;
+  const weightText=String(line.qty||'').match(/^\s*(\d+(?:[.,]\d+)?)\s*kg\s*$/i),weighted=Object.hasOwn(line,'kg')||!!weightText,qty=Number(weighted?(Object.hasOwn(line,'kg')?line.kg:weightText[1].replace(',','.')):line.units),basis=weighted?'kg':'ud';
+  if(!(qty>0)||!Number.isFinite(qty))return !weighted&&line.units===undefined&&unit>0&&Number.isFinite(unit)?{price:unit,basis}:null;
+  if(line.unitPrice!==undefined){if(!(unit>0)||!Number.isFinite(unit)||Math.abs(CasaReceipts.cents(unit*qty)-CasaReceipts.cents(total))>1)return null;return {price:unit,basis}}
+  return {price:total/qty,basis};
+}
+function pantryPriceHistory(x){
+  const out=[];
+  for(const buy of (S.buys||[]).filter(b=>!b.voided&&CasaReceipts.norm(b.store)==='mercadona'&&CasaReceipts.validDate(b.date)).sort((a,b)=>b.date.localeCompare(a.date)||(Number(b.at)||0)-(Number(a.at)||0))){
+    for(const line of buy.items||[]){
+      const price=purchaseLinePrice(line);if(!price)continue;
+      if(x.mid&&line.mid&&String(x.mid)!==String(line.mid))continue;
+      const alias=S.cook?.receiptAliases?.['mercadona|'+CasaReceipts.norm(line.name)],known=line.mid&&MC?.byId.get(String(line.mid));
+      const names=[line.name,alias?.name,known?.[1]].filter(n=>typeof n==='string'&&n.trim());
+      const linked=(x.id&&line.inventoryId===x.id)||!!(x.mid&&String(line.mid)===String(x.mid))||(buy.pendingInventory||[]).some(p=>p.pantryId===x.id&&((p.mid&&String(p.mid)===String(line.mid))||norm(p.name||'')===norm(line.name||'')));
+      if(!linked&&!names.some(n=>purchaseNameScore(x.name,n)>=.65))continue;
+      const id=String(line.mid||''),key=(id||norm(names[0]))+'|'+price.basis+'|'+CasaReceipts.cents(price.price);
+      if(!out.some(h=>h.key===key))out.push({...price,key,mid:id,names,date:buy.date,store:buy.store,linked});
+    }
+  }
+  return out.slice(0,12);
+}
+function pantryProductMatches(x){
+  const history=pantryPriceHistory(x),pool=new Map();if(!MC||!history.length)return {history,matches:[]};
+  const searches=new Map(),search=q=>{const key=norm(q);if(!searches.has(key))searches.set(key,searchProducts(q,120));return searches.get(key)};
+  const add=p=>{if(p?.img&&p.price>0)pool.set(p.id,p)};
+  for(const h of history){
+    if(h.mid){add(prod(MC.byId.get(h.mid)));continue}
+    for(const name of new Set([x.name,...h.names])){
+      let results=search(name);
+      if(!results.length){const tokens=qWords(name);results=search(tokens.slice(0,2).join(' '));if(!results.length)results=search(tokens[0]||'')}
+      results.forEach(add);
+    }
+  }
+  const matches=[];
+  for(const p of pool.values()){
+    let best=null;
+    for(const h of history){
+      if(h.mid&&h.mid!==p.id)continue;
+      const identified=h.mid===p.id,nameScore=Math.max(...[x.name,...h.names].map(n=>purchaseNameScore(n,p.name+' '+p.pack+' '+prodSize(p))));
+      if(!identified&&nameScore<.65)continue;
+      const current=h.basis==='kg'?(p.refFmt==='kg'?p.ref:NaN):p.price;
+      if(!(current>0)||!Number.isFinite(current))continue;
+      const equal=CasaReceipts.cents(current)===CasaReceipts.cents(h.price);
+      if(!identified&&!equal&&(nameScore<.9||!h.names.some(n=>CasaReceipts.norm(n)===CasaReceipts.norm(p.name))))continue;
+      const score=(identified?10:0)+(equal?4:0)+nameScore;
+      if(!best||score>best.score||(score===best.score&&h.date>best.history.date))best={product:p,history:h,current,equal,identified,score};
+    }
+    if(best)matches.push(best);
+  }
+  matches.sort((a,b)=>b.score-a.score||b.history.date.localeCompare(a.history.date)||a.product.name.localeCompare(b.product.name,'es'));
+  return {history,matches:matches.slice(0,4)};
+}
 
 const CK_SRC={instagram:['📸','Instagram'],tiktok:['🎵','TikTok'],youtube:['▶️','YouTube'],web:['🌐','Web'],propia:['🏠','Propia']};
 const srcOf=u=>!u?'propia':/instagram\./i.test(u)?'instagram':/tiktok\./i.test(u)?'tiktok':/youtu\.?be/i.test(u)?'youtube':'web';
@@ -776,23 +854,26 @@ function parseCaption(txt){
   return out;
 }
 
-function productPicker(q,onPick,key){
-  const c=ck(),e=key&&(S.prices||{})[norm(key)];
+function productPicker(q,onPick,key,context){
+  const c=ck(),e=key&&(S.prices||{})[norm(key)],catalogDate=String(MC?.at||'').slice(0,10);
   const ov=sheet(key?'¿Dónde compras '+key.toLowerCase()+'?':'Producto de Mercadona',`${key?`<details ${e&&e.use!==false?'open':''}><summary class="link">🏪 Lo compro en otro supermercado</summary>
     <div class="grid2"><div><label for="f_st">Supermercado</label><select class="field" id="f_st">${opt(c.stores.filter(x=>x!=='Mercadona').map(x=>[x,x]),e&&e.store!=='Mercadona'?e.store:'')}</select></div>
     <div><label for="f_pr">Precio (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${e&&e.price||''}"></div></div>
     <label for="f_en">Envase (opcional)</label><input class="field" id="f_en" value="${e?esc(e.qtxt||(e.n?(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):'')):''}" placeholder="Ej.: 1 kg, 500 g, 6 ud">
     <button type="button" class="btn" data-k="own" style="width:100%;margin-top:10px">Usar este precio</button>
     ${e&&e.hist&&e.hist.length?`<p class="hint">Has pagado: ${e.hist.slice(-4).reverse().map(CasaReceipts.historyEntry).map(h=>esc(h.store)+' '+eur(h.price)+' ('+parse(h.date).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+')').join(' · ')}</p>`:''}</details>
-    <h4>O elige el de Mercadona</h4>`:''}<input class="field" id="f_q" value="${esc(q)}" placeholder="Buscar producto" autocomplete="off"><div id="ckPP" class="ck-pick" style="max-height:52vh"></div><p class="hint">Precios de la tienda online de Mercadona (CP 18210)${MC?' del '+parse(MC.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):''}.</p>`,{});
+    <h4>O elige el de Mercadona</h4>`:''}<input class="field" id="f_q" value="${esc(q)}" placeholder="Buscar producto" autocomplete="off"><div id="ckPP" class="ck-pick" style="max-height:52vh"></div><p class="hint">Precios de la tienda online de Mercadona (CP 18210)${CasaReceipts.validDate(catalogDate)?' del '+parse(catalogDate).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):''}.</p>`,{});
   ov.addEventListener('click',ev=>{if(!ev.target.closest('[data-k="own"]'))return;
     const pr=parseFloat(String(val(ov,'f_pr')).replace(',','.'));if(!(pr>0)){toast('Escribe el precio');return}
     const q2=parseQty(val(ov,'f_en'));savePrice(key,{store:val(ov,'f_st'),price:pr,n:q2?q2.n:0,d:q2?q2.d:'m',qtxt:val(ov,'f_en')});mcCache.clear();
     ov.remove();onPick(userPrice(key))});
   const inp=ov.querySelector('#f_q'),box=ov.querySelector('#ckPP');
   const draw=()=>{if(!MC){box.innerHTML='<p class="hint">Cargando precios…</p>';loadMC().then(draw);return}
-    const a=searchProducts(inp.value,40);
-    box.innerHTML=a.map(p=>`<button type="button" class="ck-opt ck-prod" data-id="${p.id}">${p.img?`<img src="${prodImg(p)}" alt="" loading="eager">`:''}<span><b>${esc(p.name)}</b><small>${esc(p.pack)} ${prodSize(p)} · <b>${eur(p.price)}</b> · ${eur(p.ref)}/${esc(p.refFmt)}</small></span></button>`).join('')||'<p class="hint">Sin resultados</p>'};
+    if(context?.pantry&&!ov.priceMatches)ov.priceMatches=pantryProductMatches(context.pantry);
+    const evidence=ov.priceMatches,suggestions=norm(inp.value)===norm(q)?evidence?.matches||[]:[],ids=new Set(suggestions.map(m=>m.product.id)),a=searchProducts(inp.value,40).filter(p=>!ids.has(p.id));
+    const option=(p,extra='')=>`<button type="button" class="ck-opt ck-prod" data-id="${p.id}">${p.img?`<img src="${prodImg(p)}" alt="" loading="eager">`:''}<span><b>${esc(p.name)}</b><small>${esc(p.pack)} ${prodSize(p)} · <b>${eur(p.price)}</b> · ${eur(p.ref)}/${esc(p.refFmt)}</small>${extra}</span></button>`;
+    const previous=norm(inp.value)===norm(q)?evidence?.history[0]:null,summary=previous?`<p class="hint" data-picker-paid>En tus compras: ${eur(previous.price)}/${previous.basis==='kg'?'kg':'envase'} · ${esc(previous.date)}.</p>`:'';
+    box.innerHTML=summary+(suggestions.length?`<h4>Coincidencias con tus compras</h4><p class="hint">${suggestions.length>1?'Hay varias posibilidades. ':''}Confirma el producto antes de asociarlo.</p>`+suggestions.map(m=>option(m.product,`<small data-price-match>${m.identified?'Identificado en tu historial':'Nombre similar'} · ${m.equal?'mismo precio':'precio distinto'}<br>Pagaste ${eur(m.history.price)}/${m.history.basis==='kg'?'kg':'envase'} el ${esc(m.history.date)} · Ahora ${eur(m.current)}/${m.history.basis==='kg'?'kg':'envase'}</small>`)).join('')+(a.length?'<h4>Otros resultados</h4>':''):previous?'<p class="hint">Puedes buscar otra referencia por su nombre.</p>':'')+a.map(p=>option(p)).join('')||'<p class="hint">Sin resultados</p>'};
   draw();let t;inp.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(draw,150)});
   box.addEventListener('click',ev=>{const b=ev.target.closest('[data-id]');if(!b)return;const p=prod(MC.byId.get(b.dataset.id));
     if(key&&(S.prices||{})[norm(key)]){S.prices=Object.assign({},S.prices);S.prices[norm(key)]=Object.assign({},S.prices[norm(key)],{use:false})}
@@ -848,7 +929,7 @@ function panSheet(x){
       ov.querySelector('#f_mc').textContent=p.name;ov.querySelector('[data-k="mc"]').textContent='🖼️ Cambiar foto y categoría';
       const preview=ov.querySelector('#pantryPhotoPreview');preview.hidden=false;preview.innerHTML=pantryImage({...x,mid:p.id,name:t.value},480);
       const category=ov.querySelector('[data-pantry-category]');if(category)category.textContent=p.cat;
-    });
+    },undefined,{pantry:x});
   });
 }
 

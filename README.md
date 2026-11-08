@@ -269,7 +269,7 @@ node tests/finished-pantry.cjs
 
 ## Inventario visual sin medir lo que queda
 
-Desde la versión 82, «En casa» usa miniaturas para los productos con foto y filas
+Desde la versión 83, «En casa» usa miniaturas para los productos con foto y filas
 con el nombre para los que no tienen foto o no pueden cargarla. Los productos
 siguen agrupados por categorías y con filtros de ubicación. Solo hay una papelera y un carrito 🛒 sin fondo;
 este último se desactiva cuando el producto ya está agotado. Al tocar la foto o el nombre
@@ -285,6 +285,13 @@ la ubicación y la caducidad, sin añadir compras ni marcarlo como habitual. La
 asociación se guarda con el producto y se sincroniza con el resto de la casa.
 Cancelar conserva la ficha anterior y una referencia ya asociada a otro artículo
 se rechaza para evitar duplicados.
+El buscador de asociación muestra coincidencias por nombre y precio pagado en
+compras anteriores de Mercadona. Compara precio por envase o por kg, muestra la
+fecha del precio anterior y el precio actual, y mantiene visibles las alternativas
+para confirmar. Excluye tickets anulados, importes sin cantidades comprobables,
+ajustes negativos y precios estimados de la cesta. Una referencia identificada
+previamente puede aparecer aunque su precio haya cambiado. Las sugerencias no
+modifican artículos, gastos ni existencias antes de confirmar y guardar.
 Se mantienen los estados «En casa» y «Agotado», sin barras, porcentajes ni cantidades.
 El carrito 🛒 marca el producto como agotado y lo añade a Súper sin duplicarlo.
 En la ficha, «En casa» lo marca como disponible. También se puede seguir escribiendo su nombre
@@ -300,5 +307,6 @@ migración masiva ni cambios en Firebase.
 ```sh
 node --test tests/inventory-presence.test.cjs
 node --test tests/pantry-purchase-history.test.cjs
+node --test tests/pantry-price-matches.test.cjs
 node tests/inventory-grid.cjs
 ```
