@@ -487,6 +487,13 @@ body.nav-top .toast{bottom:90px}
 .pantry-card-actions .ck-ib{width:44px;height:44px;font-size:1rem}
 .pantry-finish{min-width:0;min-height:44px;padding:4px;font-size:.7rem;line-height:1.2;white-space:normal;box-shadow:none}
 .pantry-finish:disabled{opacity:.45;cursor:default}
+.pantry-name{font-size:.92rem;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.pantry-name[hidden]{display:none}
+.pantry-card.is-text{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px}
+.pantry-card.is-text .pantry-picture{flex:1;display:flex;align-items:center;height:auto;min-height:44px;text-align:left}
+.pantry-card.is-text .pantry-picture img,.pantry-card.is-text .pantry-icon{display:none}
+.pantry-card.is-text .pantry-card-actions{flex:none;grid-template-columns:44px 88px;margin-top:0}
+.pantry-card.is-text .pantry-finish{font-size:.75rem}
 .pantry-detail-picture{width:176px;height:176px;margin:0 auto 12px;background:#fff;border-radius:16px;overflow:hidden}
 .pantry-detail-picture img,.pantry-detail-picture .pantry-icon{width:100%;height:100%;object-fit:contain}
 .pantry-detail-picture .pantry-icon{font-size:6rem}
@@ -577,16 +584,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=78"></script>
-<script src="sync.js?v=78"></script>
-<script src="receipts.js?v=78"></script>
-<script src="receipt-image.js?v=78"></script>
-<script src="receipt-layout.js?v=78"></script>
-<script src="receipt-ocr.js?v=78"></script>
-<script src="product-photo.js?v=78"></script>
-<script src="product-photo-ui.js?v=78"></script>
-<script src="cocina.js?v=78"></script>
-<script src="receipt-extras.js?v=78"></script>
+<script src="push.js?v=79"></script>
+<script src="sync.js?v=79"></script>
+<script src="receipts.js?v=79"></script>
+<script src="receipt-image.js?v=79"></script>
+<script src="receipt-layout.js?v=79"></script>
+<script src="receipt-ocr.js?v=79"></script>
+<script src="product-photo.js?v=79"></script>
+<script src="product-photo-ui.js?v=79"></script>
+<script src="cocina.js?v=79"></script>
+<script src="receipt-extras.js?v=79"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -641,7 +648,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=78;
+const APP_VERSION=79;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

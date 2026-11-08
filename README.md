@@ -269,9 +269,10 @@ node tests/finished-pantry.cjs
 
 ## Inventario visual sin medir lo que queda
 
-Desde la versión 78, «En casa» usa iconos pequeños, agrupados por categorías y con
-filtros de ubicación. Debajo de cada producto solo hay una papelera y «Se ha acabado»;
-este último se desactiva cuando el producto ya está agotado. Al tocar el icono
+Desde la versión 79, «En casa» usa miniaturas para los productos con foto y filas
+con el nombre para los que no tienen foto o no pueden cargarla. Los productos
+siguen agrupados por categorías y con filtros de ubicación. Solo hay una papelera y «Se ha acabado»;
+este último se desactiva cuando el producto ya está agotado. Al tocar la foto o el nombre
 se abre una imagen grande, el nombre, la última compra
 registrada y su comercio, la ubicación y el estado. La fecha se obtiene del
 historial de compras por producto o vínculo al inventario, excluyendo tickets

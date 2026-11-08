@@ -522,7 +522,7 @@ function vCkDespensa(){
   <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckTab" data-v="productos">+ Añadir productos</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
   ${low.length?`<button class="btn sec ck-lowbtn" data-act="ckLowShop">🛒 Añadir agotados a Compras</button>`:''}
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','🛒 Agotados'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
-  <p class="hint">Toca un icono para ver el producto, su última compra o marcar que se ha acabado.</p>`;
+  <p class="hint">Toca la foto o el nombre para ver los detalles y la última compra.</p>`;
   if(!all.length)return h+`<div class="empty" style="margin-top:14px">Aún no hay nada. Haz una <b>📸 foto</b> de la nevera o la despensa, pulsa <b>🏠+</b> en <b>Productos</b> o sube un tique.<br><br><button class="btn sec" data-act="ckSeedPan">Empezar con los básicos</button></div>`;
   if(!a.length)return h+`<div class="empty" style="margin-top:14px">Nada por aquí.</div>`;
   const groups=new Map();
@@ -545,13 +545,14 @@ function pantryPhoto(x){
   const candidate=searchMC(x.name,8).find(p=>p.img&&p.s>0&&allIn(query,words(p.name)));
   return candidate?{path:candidate.img,label:'Imagen orientativa: '+candidate.name}:null;
 }
-function pantryImage(x,size){
-  const photo=pantryPhoto(x),icon=CK_CATEMO[pantryCategory(x)]||'🥫';
-  return`${photo?`<img data-pantry-img src="${esc(imgUrl(photo.path,size))}" alt="" title="${esc(photo.label)}" loading="eager">`:''}<span class="pantry-icon" ${photo?'hidden':''} aria-hidden="true">${icon}</span>`;
+const pantryPhotoFailures=new Set();
+function pantryImage(x,size,photo=pantryPhoto(x)){
+  const icon=CK_CATEMO[pantryCategory(x)]||'🥫';
+  return`${photo?`<img data-pantry-img data-pantry-path="${esc(photo.path)}" src="${esc(imgUrl(photo.path,size))}" alt="" title="${esc(photo.label)}" loading="eager">`:''}<span class="pantry-icon" ${photo?'hidden':''} aria-hidden="true">${icon}</span>`;
 }
 function panRow(x){
-  const empty=pantryLow(x);
-  return`<article class="pantry-card ${empty?'is-empty':''}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160)}</button><div class="pantry-card-actions"><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button><button type="button" class="btn pantry-finish" data-act="panFinished" data-id="${esc(x.id)}" aria-label="Se ha acabado ${esc(x.name)}" ${empty?'disabled':''}>Se ha acabado</button></div></article>`;
+  const empty=pantryLow(x),candidate=pantryPhoto(x),photo=candidate&&!pantryPhotoFailures.has(candidate.path)?candidate:null;
+  return`<article class="pantry-card ${empty?'is-empty':''} ${photo?'':'is-text'}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160,photo)}<span class="pantry-name" ${photo?'hidden':''}>${esc(x.name)}</span></button><div class="pantry-card-actions"><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button><button type="button" class="btn pantry-finish" data-act="panFinished" data-id="${esc(x.id)}" aria-label="Se ha acabado ${esc(x.name)}" ${empty?'disabled':''}>Se ha acabado</button></div></article>`;
 }
 function pantryLastPurchase(x){
   const matches=i=>(x.id&&i.inventoryId===x.id)||(x.mid&&i.mid?String(i.mid)===String(x.mid):norm(i.name||'')===norm(x.name));
@@ -1618,5 +1619,5 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='qVeto')CK_ACT.ckVetoAdd()});
 
-// Si falla una foto, conservar el nombre y mostrar un icono estable.
-document.addEventListener('error',e=>{const img=e.target;if(img.matches?.('[data-habit-img],[data-pantry-img]')){img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false}},true);
+// Si falla una foto del inventario, mostrar su nombre en una fila estable.
+document.addEventListener('error',e=>{const img=e.target;if(img.matches?.('[data-habit-img],[data-pantry-img]')){img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false;if(img.matches('[data-pantry-img]')){pantryPhotoFailures.add(img.dataset.pantryPath);const card=img.closest('[data-pantry-card]');if(card){card.classList.add('is-text');card.querySelector('.pantry-name').hidden=false}}}},true);
