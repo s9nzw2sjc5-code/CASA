@@ -269,9 +269,9 @@ node tests/finished-pantry.cjs
 
 ## Inventario visual sin medir lo que queda
 
-Desde la versión 79, «En casa» usa miniaturas para los productos con foto y filas
+Desde la versión 80, «En casa» usa miniaturas para los productos con foto y filas
 con el nombre para los que no tienen foto o no pueden cargarla. Los productos
-siguen agrupados por categorías y con filtros de ubicación. Solo hay una papelera y «Se ha acabado»;
+siguen agrupados por categorías y con filtros de ubicación. Solo hay una papelera y un carrito 🛒;
 este último se desactiva cuando el producto ya está agotado. Al tocar la foto o el nombre
 se abre una imagen grande, el nombre, la última compra
 registrada y su comercio, la ubicación y el estado. La fecha se obtiene del
@@ -279,7 +279,7 @@ historial de compras por producto o vínculo al inventario, excluyendo tickets
 anulados; si no hay registro se indica. Editar la ficha no inventa una compra.
 Los campos para cambiar nombre, ubicación o caducidad están plegados.
 Se mantienen los estados «En casa» y «Agotado», sin barras, porcentajes ni cantidades.
-«Se ha acabado» actualiza el inventario y añade el producto a Súper sin duplicarlo.
+El carrito 🛒 marca el producto como agotado y lo añade a Súper sin duplicarlo.
 En la ficha, «En casa» lo marca como disponible. También se puede seguir escribiendo su nombre
 en «¿Qué se ha acabado?».
 
