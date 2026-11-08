@@ -266,3 +266,24 @@ pueden deshacer con el mecanismo existente de Casa. Los gastos no se modifican.
 node --test tests/finished-pantry.test.cjs
 node tests/finished-pantry.cjs
 ```
+
+## Inventario visual sin medir lo que queda
+
+Desde la versión 76, «En casa» usa tarjetas con foto o icono, agrupadas por
+categorías y con filtros de ubicación. Solo muestra «En casa» o «Agotado»;
+se han retirado las barras, porcentajes y campos de cantidad de la ficha.
+«Se ha acabado» actualiza el inventario y añade el producto a Súper sin duplicarlo.
+«Lo tengo» lo marca como disponible. También se puede seguir escribiendo su nombre
+en «¿Qué se ha acabado?».
+
+Al terminar una compra o guardar un ticket, los productos comprados vuelven a
+estar disponibles. Los nuevos productos de Súper se incorporan a casa; si no se
+conoce su peso se registran como envases, sin inventar gramos. Las medidas ya
+guardadas se conservan y las compras pendientes mantienen los créditos del
+importador de tickets para evitar sumar existencias o gastos dos veces. No hay
+migración masiva ni cambios en Firebase.
+
+```sh
+node --test tests/inventory-presence.test.cjs
+node tests/inventory-grid.cjs
+```
