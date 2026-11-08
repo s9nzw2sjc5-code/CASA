@@ -476,14 +476,17 @@ body.nav-top .toast{bottom:90px}
 .product-photo-option span{min-width:0}
 .product-photo-option small{display:block;color:var(--muted);margin-top:4px}
 /* Iconos compactos; los datos del producto se muestran al abrir su ficha. */
-.pantry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px}
-.pantry-card{position:relative;min-width:0;padding:4px 4px 28px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);border:2px solid transparent}
+.pantry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.pantry-card{min-width:0;padding:4px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);border:2px solid transparent}
 .pantry-card.is-empty{border-color:var(--line);border-style:dashed}
 .pantry-picture{display:grid;place-items:center;width:100%;height:68px;padding:2px;color:var(--ink);min-width:0;border-radius:10px}
 .pantry-picture img,.pantry-icon{width:100%;height:64px;object-fit:contain;border-radius:10px;background:#fff}
 .pantry-icon{display:grid;place-items:center;font-size:2.2rem}
 .pantry-picture img[hidden],.pantry-icon[hidden],.pantry-detail-picture img[hidden]{display:none}
-.pantry-card>.ck-ib{position:absolute;right:0;bottom:0;width:44px;height:44px;font-size:1rem;border-radius:50%}
+.pantry-card-actions{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px;margin-top:4px}
+.pantry-card-actions .ck-ib{width:44px;height:44px;font-size:1rem}
+.pantry-finish{min-width:0;min-height:44px;padding:4px;font-size:.7rem;line-height:1.2;white-space:normal;box-shadow:none}
+.pantry-finish:disabled{opacity:.45;cursor:default}
 .pantry-detail-picture{width:176px;height:176px;margin:0 auto 12px;background:#fff;border-radius:16px;overflow:hidden}
 .pantry-detail-picture img,.pantry-detail-picture .pantry-icon{width:100%;height:100%;object-fit:contain}
 .pantry-detail-picture .pantry-icon{font-size:6rem}
@@ -574,16 +577,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=77"></script>
-<script src="sync.js?v=77"></script>
-<script src="receipts.js?v=77"></script>
-<script src="receipt-image.js?v=77"></script>
-<script src="receipt-layout.js?v=77"></script>
-<script src="receipt-ocr.js?v=77"></script>
-<script src="product-photo.js?v=77"></script>
-<script src="product-photo-ui.js?v=77"></script>
-<script src="cocina.js?v=77"></script>
-<script src="receipt-extras.js?v=77"></script>
+<script src="push.js?v=78"></script>
+<script src="sync.js?v=78"></script>
+<script src="receipts.js?v=78"></script>
+<script src="receipt-image.js?v=78"></script>
+<script src="receipt-layout.js?v=78"></script>
+<script src="receipt-ocr.js?v=78"></script>
+<script src="product-photo.js?v=78"></script>
+<script src="product-photo-ui.js?v=78"></script>
+<script src="cocina.js?v=78"></script>
+<script src="receipt-extras.js?v=78"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -638,7 +641,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=77;
+const APP_VERSION=78;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

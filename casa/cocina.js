@@ -551,7 +551,7 @@ function pantryImage(x,size){
 }
 function panRow(x){
   const empty=pantryLow(x);
-  return`<article class="pantry-card ${empty?'is-empty':''}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160)}</button><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button></article>`;
+  return`<article class="pantry-card ${empty?'is-empty':''}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160)}</button><div class="pantry-card-actions"><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button><button type="button" class="btn pantry-finish" data-act="panFinished" data-id="${esc(x.id)}" aria-label="Se ha acabado ${esc(x.name)}" ${empty?'disabled':''}>Se ha acabado</button></div></article>`;
 }
 function pantryLastPurchase(x){
   const matches=i=>(x.id&&i.inventoryId===x.id)||(x.mid&&i.mid?String(i.mid)===String(x.mid):norm(i.name||'')===norm(x.name));
