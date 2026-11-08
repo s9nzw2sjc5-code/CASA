@@ -517,10 +517,8 @@ function vCkDespensa(){
   const f=ui.panF||'todo',all=S.pantry||[];
   let a=all.slice();
   if(f==='low')a=a.filter(pantryLow);else if(f!=='todo')a=a.filter(x=>(x.loc||'Despensa')===f);
-  const low=all.filter(pantryLow);
   let h=`<button class="btn sec" data-act="pantryFinished" style="width:100%;margin-top:12px">🛒 ¿Qué se ha acabado?</button><div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="aiPhoto">📸 Foto de la nevera o despensa</button></div>
   <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckTab" data-v="productos">+ Añadir productos</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
-  ${low.length?`<button class="btn sec ck-lowbtn" data-act="ckLowShop">🛒 Añadir agotados a Compras</button>`:''}
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','🛒 Agotados'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
   <p class="hint">Toca la foto o el nombre para ver los detalles y la última compra.</p>`;
   if(!all.length)return h+`<div class="empty" style="margin-top:14px">Aún no hay nada. Haz una <b>📸 foto</b> de la nevera o la despensa, pulsa <b>🏠+</b> en <b>Productos</b> o sube un tique.<br><br><button class="btn sec" data-act="ckSeedPan">Empezar con los básicos</button></div>`;
@@ -551,8 +549,8 @@ function pantryImage(x,size,photo=pantryPhoto(x)){
   return`${photo?`<img data-pantry-img data-pantry-path="${esc(photo.path)}" src="${esc(imgUrl(photo.path,size))}" alt="" title="${esc(photo.label)}" loading="eager">`:''}<span class="pantry-icon" ${photo?'hidden':''} aria-hidden="true">${icon}</span>`;
 }
 function panRow(x){
-  const empty=pantryLow(x),candidate=pantryPhoto(x),photo=candidate&&!pantryPhotoFailures.has(candidate.path)?candidate:null;
-  return`<article class="pantry-card ${empty?'is-empty':''} ${photo?'':'is-text'}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160,photo)}<span class="pantry-name" ${photo?'hidden':''}>${esc(x.name)}</span></button><div class="pantry-card-actions"><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button><button type="button" class="pantry-finish" data-act="panFinished" data-id="${esc(x.id)}" aria-label="Se ha acabado ${esc(x.name)}" title="Se ha acabado: añadir a Compras" ${empty?'disabled':''}><span aria-hidden="true">🛒</span></button></div></article>`;
+  const empty=pantryLow(x),inShopping=pantryShoppingItem(x,cartList()),candidate=pantryPhoto(x),photo=candidate&&!pantryPhotoFailures.has(candidate.path)?candidate:null;
+  return`<article class="pantry-card ${empty?'is-empty':''} ${photo?'':'is-text'}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160,photo)}<span class="pantry-name" ${photo?'hidden':''}>${esc(x.name)}</span></button><div class="pantry-card-actions"><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button><button type="button" class="pantry-finish" data-act="panFinished" data-id="${esc(x.id)}" aria-label="Se ha acabado ${esc(x.name)}" title="Se ha acabado: añadir a Compras" ${empty&&inShopping?'disabled':''}><span aria-hidden="true">🛒</span></button></div></article>`;
 }
 function pantryLastPurchase(x){
   const matches=i=>(x.id&&i.inventoryId===x.id)||(x.mid&&i.mid?String(i.mid)===String(x.mid):norm(i.name||'')===norm(x.name));
@@ -1653,9 +1651,6 @@ const CK_ACT={
   ckPan:d=>panSheet(find(S.pantry||[],d.id)),
   panFinished:d=>{try{const result=markPantryFinished(d.id,'');save();toastUndo(result.name+' · agotado'+(result.added?' y añadido a Compras':''))}catch(e){toast(e.message)}},
   panPresent:d=>{const x=find(S.pantry||[],d.id);if(!x)return;setPantryPresent(x);save();toastUndo(x.name+' · en casa')},
-  ckLowShop:()=>{const L=S.lists.find(l=>l.id==='super')||S.lists[0];let n=0;
-    (S.pantry||[]).filter(pantryLow).forEach(x=>{if(pantryShoppingItem(x,L.id))return;const p=x.mid&&MC&&MC.byId.get(x.mid);if(p)cartSet(prod(p),1,L.id);else S.items.push(Object.assign(pantryItem(x,L.id),{auto:false}));n++});
-    save();toast(n?n+' añadido'+(n>1?'s':'')+' a '+L.name:'Ya estaba todo en la lista')},
   ckPeople:d=>ckSet('people',Math.max(1,ck().people+(+d.v))),
   ckAppl:d=>{const a=ck().appl;ckSet('appl',a.includes(d.v)?a.filter(x=>x!==d.v):[...a,d.v])},
   ckApplNew:()=>{sheet('Otro electrodoméstico',`<input class="field" id="f_t" placeholder="Ej.: Panificadora">`,{onSave:ov=>{const v=val(ov,'f_t');if(!v)return false;const c=ck();S.cook=Object.assign({},S.cook,{applX:[...new Set([...(c.applX||[]),v])],appl:[...new Set([...c.appl,v])]});save()}})},

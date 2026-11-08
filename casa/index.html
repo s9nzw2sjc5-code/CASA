@@ -465,7 +465,6 @@ body.nav-top .toast{bottom:90px}
 .ck-cb-t b{font-size:1.15rem}
 .ck-cb-t b.over{color:#FFD23F}
 .ck-cb-go{font-weight:700;font-size:.9rem}
-.ck-lowbtn{width:100%;margin-top:8px;box-shadow:inset 0 0 0 2px var(--danger)!important;color:var(--danger)}
 .product-photo-sheet label.btn{display:flex;align-items:center;justify-content:center;margin:0;color:var(--accent-ink);font-size:.95rem}
 .product-photo-sheet label.btn.sec{color:var(--ink)}
 .product-photo-sheet .actions{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom,0px));background:var(--bg);padding:10px 0;z-index:1}
@@ -584,16 +583,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=83"></script>
-<script src="sync.js?v=83"></script>
-<script src="receipts.js?v=83"></script>
-<script src="receipt-image.js?v=83"></script>
-<script src="receipt-layout.js?v=83"></script>
-<script src="receipt-ocr.js?v=83"></script>
-<script src="product-photo.js?v=83"></script>
-<script src="product-photo-ui.js?v=83"></script>
-<script src="cocina.js?v=83"></script>
-<script src="receipt-extras.js?v=83"></script>
+<script src="push.js?v=84"></script>
+<script src="sync.js?v=84"></script>
+<script src="receipts.js?v=84"></script>
+<script src="receipt-image.js?v=84"></script>
+<script src="receipt-layout.js?v=84"></script>
+<script src="receipt-ocr.js?v=84"></script>
+<script src="product-photo.js?v=84"></script>
+<script src="product-photo-ui.js?v=84"></script>
+<script src="cocina.js?v=84"></script>
+<script src="receipt-extras.js?v=84"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -648,7 +647,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=83;
+const APP_VERSION=84;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
