@@ -269,11 +269,16 @@ node tests/finished-pantry.cjs
 
 ## Inventario visual sin medir lo que queda
 
-Desde la versión 76, «En casa» usa tarjetas con foto o icono, agrupadas por
-categorías y con filtros de ubicación. Solo muestra «En casa» o «Agotado»;
-se han retirado las barras, porcentajes y campos de cantidad de la ficha.
+Desde la versión 77, «En casa» usa iconos pequeños, agrupados por categorías y con
+filtros de ubicación. Cada miniatura solo contiene el icono del producto y la
+papelera. Al tocarla se abre una imagen grande, el nombre, la última compra
+registrada y su comercio, la ubicación y el estado. La fecha se obtiene del
+historial de compras por producto o vínculo al inventario, excluyendo tickets
+anulados; si no hay registro se indica. Editar la ficha no inventa una compra.
+Los campos para cambiar nombre, ubicación o caducidad están plegados.
+Se mantienen los estados «En casa» y «Agotado», sin barras, porcentajes ni cantidades.
 «Se ha acabado» actualiza el inventario y añade el producto a Súper sin duplicarlo.
-«Lo tengo» lo marca como disponible. También se puede seguir escribiendo su nombre
+En la ficha, «En casa» lo marca como disponible. También se puede seguir escribiendo su nombre
 en «¿Qué se ha acabado?».
 
 Al terminar una compra o guardar un ticket, los productos comprados vuelven a
@@ -285,5 +290,6 @@ migración masiva ni cambios en Firebase.
 
 ```sh
 node --test tests/inventory-presence.test.cjs
+node --test tests/pantry-purchase-history.test.cjs
 node tests/inventory-grid.cjs
 ```

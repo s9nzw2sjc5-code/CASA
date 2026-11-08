@@ -522,7 +522,7 @@ function vCkDespensa(){
   <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckTab" data-v="productos">+ Añadir productos</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
   ${low.length?`<button class="btn sec ck-lowbtn" data-act="ckLowShop">🛒 Añadir agotados a Compras</button>`:''}
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','🛒 Agotados'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
-  <p class="hint">Toca la foto para ver el producto. Pulsa «Se ha acabado» cuando lo termines; al registrar la compra volverá a estar en casa.</p>`;
+  <p class="hint">Toca un icono para ver el producto, su última compra o marcar que se ha acabado.</p>`;
   if(!all.length)return h+`<div class="empty" style="margin-top:14px">Aún no hay nada. Haz una <b>📸 foto</b> de la nevera o la despensa, pulsa <b>🏠+</b> en <b>Productos</b> o sube un tique.<br><br><button class="btn sec" data-act="ckSeedPan">Empezar con los básicos</button></div>`;
   if(!a.length)return h+`<div class="empty" style="margin-top:14px">Nada por aquí.</div>`;
   const groups=new Map();
@@ -545,9 +545,18 @@ function pantryPhoto(x){
   const candidate=searchMC(x.name,8).find(p=>p.img&&p.s>0&&allIn(query,words(p.name)));
   return candidate?{path:candidate.img,label:'Imagen orientativa: '+candidate.name}:null;
 }
+function pantryImage(x,size){
+  const photo=pantryPhoto(x),icon=CK_CATEMO[pantryCategory(x)]||'🥫';
+  return`${photo?`<img data-pantry-img src="${esc(imgUrl(photo.path,size))}" alt="" title="${esc(photo.label)}" loading="eager">`:''}<span class="pantry-icon" ${photo?'hidden':''} aria-hidden="true">${icon}</span>`;
+}
 function panRow(x){
-  const empty=pantryLow(x),photo=pantryPhoto(x),inC=pantryShoppingItem(x,cartList()),icon=CK_CATEMO[pantryCategory(x)]||'🥫';
-  return`<article class="pantry-card ${empty?'is-empty':''}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" aria-label="Ver ${esc(x.name)}">${photo?`<img data-pantry-img src="${esc(imgUrl(photo.path,240))}" alt="" title="${esc(photo.label)}" loading="eager">`:''}<span class="pantry-icon" ${photo?'hidden':''} aria-hidden="true">${icon}</span><b>${esc(x.name)}</b></button><span class="pantry-status">${empty?'Agotado':'En casa'}</span><small class="pantry-location">${esc(x.loc||'Despensa')}${inC?' · 🛒 En Compras':''}</small>${x.exp?`<small class="pantry-expiry">${x.exp<today()?'⚠️ Caducado':'Cad. '+relDate(x.exp)}</small>`:''}<div class="pantry-card-actions"><button type="button" class="btn ${empty?'sec':''}" data-act="${empty?'panPresent':'panFinished'}" data-id="${esc(x.id)}">${empty?'Lo tengo':'Se ha acabado'}</button><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button></div></article>`;
+  const empty=pantryLow(x);
+  return`<article class="pantry-card ${empty?'is-empty':''}" data-pantry-card="${esc(x.id)}"><button type="button" class="pantry-picture" data-act="ckPan" data-id="${esc(x.id)}" title="${esc(x.name)}" aria-label="Ver ${esc(x.name)}${empty?' · agotado':''}">${pantryImage(x,160)}</button><button type="button" class="ck-ib" data-act="panRemove" data-id="${esc(x.id)}" aria-label="Eliminar ${esc(x.name)} de la despensa">🗑️</button></article>`;
+}
+function pantryLastPurchase(x){
+  const matches=i=>(x.id&&i.inventoryId===x.id)||(x.mid&&i.mid?String(i.mid)===String(x.mid):norm(i.name||'')===norm(x.name));
+  return(S.buys||[]).filter(b=>!b.voided&&CasaReceipts.validDate(b.date)&&((b.items||[]).some(matches)||(b.pendingInventory||[]).some(p=>p.pantryId===x.id)))
+    .sort((a,b)=>b.date.localeCompare(a.date)||(Number(b.at)||0)-(Number(a.at)||0))[0]||null;
 }
 
 const CK_SRC={instagram:['📸','Instagram'],tiktok:['🎵','TikTok'],youtube:['▶️','YouTube'],web:['🌐','Web'],propia:['🏠','Propia']};
@@ -805,12 +814,13 @@ function productSheetPhoto(path,name){
 function panSheet(x){
   const n=!x;x=x||{name:'',n:1,u:'ud',min:0,loc:'Despensa',auto:false};
   let available=x.n>0;
-  const photo=pantryPhoto(x);
-  const ov=sheet(n?'Añadir a En casa':x.name,`${photo?productSheetPhoto(photo.path,photo.label):''}
-    <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(x.name)}" placeholder="Ej.: Arroz">
+  const last=n?null:pantryLastPurchase(x),lastDate=last?new Date(last.date+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'';
+  const ov=sheet(n?'Añadir a En casa':x.name,`${n?'':`<div class="pantry-detail-picture">${pantryImage(x,480)}</div><dl class="pantry-facts"><div><dt>Última compra</dt><dd data-last-purchase>${last?esc(lastDate):'Sin compra registrada'}</dd></div>${last?.store?`<div><dt>Comercio</dt><dd>${esc(last.store)}</dd></div>`:''}<div><dt>Ubicación</dt><dd>${esc(x.loc||'Despensa')}</dd></div>${x.exp?`<div><dt>Caducidad</dt><dd>${esc(relDate(x.exp))}</dd></div>`:''}</dl>`}
     <label>Estado</label><div class="chips"><button type="button" class="chip ${available?'on':''}" data-home-state="available" aria-pressed="${available}">✅ En casa</button><button type="button" class="chip ${available?'':'on'}" data-home-state="empty" aria-pressed="${!available}">🛒 Se ha acabado</button></div>
+    <details class="product-more" ${n?'open':''}><summary>Editar datos del producto</summary>
+    <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(x.name)}" placeholder="Ej.: Arroz">
     <label for="f_l">Dónde está</label><select class="field" id="f_l">${opt(CK_LOCS.map(l=>[l,l]),x.loc||'Despensa')}</select>
-    <details class="product-more"><summary>Más detalles</summary><label for="f_e">Caduca (opcional)</label><input class="field" id="f_e" type="date" value="${esc(x.exp||'')}">
+    <label for="f_e">Caduca (opcional)</label><input class="field" id="f_e" type="date" value="${esc(x.exp||'')}">
     <button type="button" class="btn sec" data-k="mc">Elegir producto de Mercadona / cambiar foto</button><p class="hint" id="f_mc">${x.mid&&MC?.byId.has(String(x.mid))?esc(MC.byId.get(String(x.mid))[1]):'Opcional: elige el envase para reconocerlo por su foto.'}</p>
     <p class="hint">Al marcar «Se ha acabado», se añadirá a Compras. Al registrar la compra volverá a estar en casa.</p></details>`,
   {autoFocus:false,onSave:ov=>{
@@ -823,6 +833,7 @@ function panSheet(x){
     else if(n||!(target.n>0)||oldMid!==target.mid)setPantryPresent(target);
     save();
   },onDelete:n?null:()=>removePantryItem(x.id)});
+  ov.classList.add('pantry-detail');
   ov.addEventListener('click',ev=>{
     const state=ev.target.closest('[data-home-state]');if(state){available=state.dataset.homeState==='available';ov.querySelectorAll('[data-home-state]').forEach(b=>{const on=(b.dataset.homeState==='available')===available;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});return}
     if(!ev.target.closest('[data-k="mc"]'))return;

@@ -475,21 +475,22 @@ body.nav-top .toast{bottom:90px}
 .product-photo-option img{width:52px;height:60px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
 .product-photo-option span{min-width:0}
 .product-photo-option small{display:block;color:var(--muted);margin-top:4px}
-/* Inventario visual: disponibilidad, sin cantidades ni porcentajes. */
-.pantry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.pantry-card{display:flex;flex-direction:column;align-items:stretch;gap:7px;min-width:0;padding:12px;background:var(--surface);border-radius:20px;box-shadow:var(--shadow);border:2px solid transparent}
-.pantry-card.is-empty{border-color:var(--line)}
-.pantry-picture{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;padding:0;color:var(--ink);min-width:0}
-.pantry-picture img,.pantry-icon{width:100%;height:104px;object-fit:contain;border-radius:12px;background:#fff}
-.pantry-icon{display:grid;place-items:center;font-size:3.4rem}
-.pantry-picture img[hidden],.pantry-icon[hidden]{display:none}
-.pantry-picture b{font-size:.94rem;line-height:1.3;text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.pantry-status{align-self:center;padding:4px 10px;border-radius:99px;font-size:.78rem;font-weight:700;background:color-mix(in srgb,var(--c-compras) 12%,var(--surface));color:var(--c-compras)}
-.pantry-card.is-empty .pantry-status{background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:var(--danger)}
-.pantry-location,.pantry-expiry{font-size:.75rem;color:var(--muted);text-align:center;line-height:1.3}
-.pantry-card-actions{display:grid;grid-template-columns:1fr 36px;gap:5px;margin-top:auto;padding-top:5px}
-.pantry-card-actions .btn{white-space:normal;font-size:.78rem;line-height:1.2;padding:9px 5px;min-height:44px}
-.pantry-card-actions .ck-ib{min-height:44px}
+/* Iconos compactos; los datos del producto se muestran al abrir su ficha. */
+.pantry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px}
+.pantry-card{position:relative;min-width:0;padding:4px 4px 28px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);border:2px solid transparent}
+.pantry-card.is-empty{border-color:var(--line);border-style:dashed}
+.pantry-picture{display:grid;place-items:center;width:100%;height:68px;padding:2px;color:var(--ink);min-width:0;border-radius:10px}
+.pantry-picture img,.pantry-icon{width:100%;height:64px;object-fit:contain;border-radius:10px;background:#fff}
+.pantry-icon{display:grid;place-items:center;font-size:2.2rem}
+.pantry-picture img[hidden],.pantry-icon[hidden],.pantry-detail-picture img[hidden]{display:none}
+.pantry-card>.ck-ib{position:absolute;right:0;bottom:0;width:44px;height:44px;font-size:1rem;border-radius:50%}
+.pantry-detail-picture{width:176px;height:176px;margin:0 auto 12px;background:#fff;border-radius:16px;overflow:hidden}
+.pantry-detail-picture img,.pantry-detail-picture .pantry-icon{width:100%;height:100%;object-fit:contain}
+.pantry-detail-picture .pantry-icon{font-size:6rem}
+.pantry-facts{display:grid;gap:10px;margin:16px 0}
+.pantry-facts>div{display:flex;justify-content:space-between;gap:16px}
+.pantry-facts dt{font-size:.85rem;color:var(--muted)}
+.pantry-facts dd{margin:0;text-align:right;font-size:.9rem;font-weight:600}
 .ck-buy .ck-u{flex:none;width:22px}
 .ck-buy .ck-st{width:32px;height:32px}
 .ck-th{width:40px;height:40px;border-radius:8px;object-fit:contain;background:#fff;flex:none}
@@ -573,16 +574,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=76"></script>
-<script src="sync.js?v=76"></script>
-<script src="receipts.js?v=76"></script>
-<script src="receipt-image.js?v=76"></script>
-<script src="receipt-layout.js?v=76"></script>
-<script src="receipt-ocr.js?v=76"></script>
-<script src="product-photo.js?v=76"></script>
-<script src="product-photo-ui.js?v=76"></script>
-<script src="cocina.js?v=76"></script>
-<script src="receipt-extras.js?v=76"></script>
+<script src="push.js?v=77"></script>
+<script src="sync.js?v=77"></script>
+<script src="receipts.js?v=77"></script>
+<script src="receipt-image.js?v=77"></script>
+<script src="receipt-layout.js?v=77"></script>
+<script src="receipt-ocr.js?v=77"></script>
+<script src="product-photo.js?v=77"></script>
+<script src="product-photo-ui.js?v=77"></script>
+<script src="cocina.js?v=77"></script>
+<script src="receipt-extras.js?v=77"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -637,7 +638,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=76;
+const APP_VERSION=77;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
