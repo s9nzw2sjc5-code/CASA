@@ -816,29 +816,39 @@ function panSheet(x){
   const n=!x;x=x||{name:'',n:1,u:'ud',min:0,loc:'Despensa',auto:false};
   let available=x.n>0;
   const last=n?null:pantryLastPurchase(x),lastDate=last?new Date(last.date+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'';
-  const ov=sheet(n?'Añadir a En casa':x.name,`${n?'':`<div class="pantry-detail-picture">${pantryImage(x,480)}</div><dl class="pantry-facts"><div><dt>Última compra</dt><dd data-last-purchase>${last?esc(lastDate):'Sin compra registrada'}</dd></div>${last?.store?`<div><dt>Comercio</dt><dd>${esc(last.store)}</dd></div>`:''}<div><dt>Ubicación</dt><dd>${esc(x.loc||'Despensa')}</dd></div>${x.exp?`<div><dt>Caducidad</dt><dd>${esc(relDate(x.exp))}</dd></div>`:''}</dl>`}
+  const ov=sheet(n?'Añadir a En casa':x.name,`<div class="pantry-detail-picture" id="pantryPhotoPreview" ${n?'hidden':''}>${n?'':pantryImage(x,480)}</div>${n?'':`<dl class="pantry-facts"><div><dt>Última compra</dt><dd data-last-purchase>${last?esc(lastDate):'Sin compra registrada'}</dd></div>${last?.store?`<div><dt>Comercio</dt><dd>${esc(last.store)}</dd></div>`:''}<div><dt>Categoría</dt><dd data-pantry-category>${esc(pantryCategory(x))}</dd></div><div><dt>Ubicación</dt><dd>${esc(x.loc||'Despensa')}</dd></div>${x.exp?`<div><dt>Caducidad</dt><dd>${esc(relDate(x.exp))}</dd></div>`:''}</dl>`}
+    <button type="button" class="btn sec" data-k="mc" style="width:100%">🖼️ ${x.mid?'Cambiar':'Asociar'} foto y categoría</button><p class="hint" id="f_mc">${x.mid&&MC?.byId.has(String(x.mid))?esc(MC.byId.get(String(x.mid))[1]):'Busca el producto para ponerle su foto y colocarlo en su categoría.'}</p>
     <label>Estado</label><div class="chips"><button type="button" class="chip ${available?'on':''}" data-home-state="available" aria-pressed="${available}">✅ En casa</button><button type="button" class="chip ${available?'':'on'}" data-home-state="empty" aria-pressed="${!available}">🛒 Se ha acabado</button></div>
     <details class="product-more" ${n?'open':''}><summary>Editar datos del producto</summary>
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(x.name)}" placeholder="Ej.: Arroz">
     <label for="f_l">Dónde está</label><select class="field" id="f_l">${opt(CK_LOCS.map(l=>[l,l]),x.loc||'Despensa')}</select>
     <label for="f_e">Caduca (opcional)</label><input class="field" id="f_e" type="date" value="${esc(x.exp||'')}">
-    <button type="button" class="btn sec" data-k="mc">Elegir producto de Mercadona / cambiar foto</button><p class="hint" id="f_mc">${x.mid&&MC?.byId.has(String(x.mid))?esc(MC.byId.get(String(x.mid))[1]):'Opcional: elige el envase para reconocerlo por su foto.'}</p>
     <p class="hint">Al marcar «Se ha acabado», se añadirá a Compras. Al registrar la compra volverá a estar en casa.</p></details>`,
   {autoFocus:false,onSave:ov=>{
     let name=val(ov,'f_t');if(!name){toast('Escribe el producto');return false}name=name[0].toUpperCase()+name.slice(1);
     if(n&&(S.pantry||[]).some(p=>norm(p.name)===norm(name))){toast('Ya está en casa');return false}
     const target=n?{...x,id:uid()}:find(S.pantry,x.id);if(!target){toast('Este artículo ya no está en casa');return false}
-    const oldMid=target.mid;Object.assign(target,{name,loc:val(ov,'f_l'),exp:val(ov,'f_e'),mid:ov.dataset.mid||x.mid||'',at:today()});
+    const mid=ov.dataset.mid||x.mid||'',selected=ov.dataset.mid&&prod(MC?.byId.get(mid));
+    if(ov.dataset.mid&&!selected?.img){toast('Elige un producto con foto');return false}
+    if(ov.dataset.mid&&mid!==x.mid&&(S.pantry||[]).some(p=>p.id!==x.id&&String(p.mid)===mid)){toast('Ese producto ya está en casa. Elige otra referencia para evitar duplicarlo.');return false}
+    Object.assign(target,{name,loc:val(ov,'f_l'),exp:val(ov,'f_e'),mid,at:today()});
+    if(selected){target.section=selected.cat||'Otros';rememberHabit(mid);pantryPhotoFailures.delete(selected.img)}
     if(n)S.pantry=[...(S.pantry||[]),target];
-    if(!available)markPantryFinished(target.id,target.name);
-    else if(n||!(target.n>0)||oldMid!==target.mid)setPantryPresent(target);
+    if(!available){if(n||target.n>0)markPantryFinished(target.id,target.name)}
+    else if(n||!(target.n>0))setPantryPresent(target);
     save();
   },onDelete:n?null:()=>removePantryItem(x.id)});
   ov.classList.add('pantry-detail');
   ov.addEventListener('click',ev=>{
     const state=ev.target.closest('[data-home-state]');if(state){available=state.dataset.homeState==='available';ov.querySelectorAll('[data-home-state]').forEach(b=>{const on=(b.dataset.homeState==='available')===available;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});return}
     if(!ev.target.closest('[data-k="mc"]'))return;
-    productPicker(val(ov,'f_t'),p=>{ov.dataset.mid=p.id;const t=ov.querySelector('#f_t');if(!t.value)t.value=p.name.replace(/ Hacendado.*$/,'');ov.querySelector('#f_mc').textContent=p.name});
+    productPicker(val(ov,'f_t'),p=>{
+      if(!p.img){toast('Ese producto no tiene foto. Elige otra referencia.');return}
+      ov.dataset.mid=p.id;const t=ov.querySelector('#f_t');if(!t.value)t.value=p.name.replace(/ Hacendado.*$/,'');
+      ov.querySelector('#f_mc').textContent=p.name;ov.querySelector('[data-k="mc"]').textContent='🖼️ Cambiar foto y categoría';
+      const preview=ov.querySelector('#pantryPhotoPreview');preview.hidden=false;preview.innerHTML=pantryImage({...x,mid:p.id,name:t.value},480);
+      const category=ov.querySelector('[data-pantry-category]');if(category)category.textContent=p.cat;
+    });
   });
 }
 
