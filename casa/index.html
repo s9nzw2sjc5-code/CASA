@@ -485,7 +485,7 @@ body.nav-top .toast{bottom:90px}
 .pantry-picture img[hidden],.pantry-icon[hidden],.pantry-detail-picture img[hidden]{display:none}
 .pantry-card-actions{display:grid;grid-template-columns:repeat(2,44px);justify-content:center;gap:4px;margin-top:4px}
 .pantry-card-actions .ck-ib{width:44px;height:44px;font-size:1rem}
-.pantry-finish{min-width:0;min-height:44px;padding:4px;font-size:1.15rem;line-height:1.2;box-shadow:none}
+.pantry-finish{display:grid;place-items:center;min-width:0;min-height:44px;padding:4px;font-size:1.15rem;line-height:1.2;background:transparent;border:0;box-shadow:none}
 .pantry-finish:disabled{opacity:.45;cursor:default}
 .pantry-name{font-size:.92rem;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
 .pantry-name[hidden]{display:none}
@@ -584,16 +584,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=81"></script>
-<script src="sync.js?v=81"></script>
-<script src="receipts.js?v=81"></script>
-<script src="receipt-image.js?v=81"></script>
-<script src="receipt-layout.js?v=81"></script>
-<script src="receipt-ocr.js?v=81"></script>
-<script src="product-photo.js?v=81"></script>
-<script src="product-photo-ui.js?v=81"></script>
-<script src="cocina.js?v=81"></script>
-<script src="receipt-extras.js?v=81"></script>
+<script src="push.js?v=82"></script>
+<script src="sync.js?v=82"></script>
+<script src="receipts.js?v=82"></script>
+<script src="receipt-image.js?v=82"></script>
+<script src="receipt-layout.js?v=82"></script>
+<script src="receipt-ocr.js?v=82"></script>
+<script src="product-photo.js?v=82"></script>
+<script src="product-photo-ui.js?v=82"></script>
+<script src="cocina.js?v=82"></script>
+<script src="receipt-extras.js?v=82"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -648,7 +648,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=81;
+const APP_VERSION=82;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
