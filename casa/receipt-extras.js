@@ -41,16 +41,18 @@ function receiptDraftPrefix(){return 'casa-app-v1-ticket-draft:'+(window.CASA_FI
 function receiptDrafts(){
   try{return Object.keys(localStorage).filter(key=>key.startsWith(receiptDraftPrefix())).map(key=>{try{return {...JSON.parse(localStorage.getItem(key)),key}}catch(e){return null}}).filter(d=>d?.id&&d.ticket&&Array.isArray(d.ticket.lines)).sort((a,b)=>b.at-a.at)}catch(e){return []}
 }
-async function receiptKeepDraft(ticket){
+async function receiptKeepDraft(ticket,options={}){
   try{const identity=await CasaReceipts.identify(ticket),key=receiptDraftPrefix()+identity.id;
-    localStorage.setItem(key,JSON.stringify({id:identity.id,at:Date.now(),ticket:{...ticket,ocrLines:[]}}));return key;
+    localStorage.setItem(key,JSON.stringify({id:identity.id,at:Date.now(),ticket:{...ticket,ocrLines:[]},options:{removePurchased:options.removePurchased!==false,matchId:options.matchId||'',confirmNew:!!options.confirmNew}}));return key;
   }catch(e){return ''}
 }
 function receiptDropDraft(key){try{if(key&&key.startsWith(receiptDraftPrefix()))localStorage.removeItem(key)}catch(e){}}
 async function resumeReceiptDraft(id){
   const draft=receiptDrafts().find(d=>d.id===id);if(!draft)return toast('No se encuentra la transcripción pendiente.');
   let file;try{if(draft.ticket.imageHash)file=await receiptDeadline(ReceiptArchive.get(draft.ticket.imageHash),1000,'Foto no disponible')}catch(e){}
-  ticketReview(draft.ticket,draft.ticket.lines.map(l=>l.sourceText||`${l.units} ${l.name} ${eur(l.price)}`).join('\n'),{file,draftKey:draft.key,reasons:['Retoma el guardado. Si esta compra ya llegó a la casa, se reconocerá sin repetir el gasto ni sus productos.']});
+  const ov=ticketReview(draft.ticket,draft.ticket.lines.map(l=>l.sourceText||`${l.units} ${l.name} ${eur(l.price)}`).join('\n'),{file,draftKey:draft.key,reasons:['Retoma el guardado. Si esta compra ya llegó a la casa, se reconocerá sin repetir el gasto ni sus productos.']});
+  ov.querySelector('#f_rm').checked=draft.options?.removePurchased!==false;
+  const choice=draft.options?.confirmNew?'__new':draft.options?.matchId||'';if([...ov.querySelector('#f_as').options].some(o=>o.value===choice))ov.querySelector('#f_as').value=choice;
 }
 function receiptSaveError(e){return (e.message||'No se ha podido guardar. Reintenta este mismo ticket.')+(e.draftSaved?' La transcripción queda pendiente en Compras para retomarla sin repetir la foto.':'')}
 function receiptDeadline(promise,ms,message){
@@ -64,7 +66,7 @@ function receiptSaveStatus(ov,message,error=false){
   status.scrollIntoView({block:'nearest'});
 }
 async function saveReceiptPurchase(ticket,file,options={},progress=()=>{},previousDraft=''){
-  const draftKey=await receiptKeepDraft(ticket);
+  const draftKey=await receiptKeepDraft(ticket,options);
   // El archivo local no bloquea la transacción; conserva también la foto de un
   // envío fallido para poder retomarlo después de cerrar la aplicación.
   const photoTask=file&&ticket.imageHash?receiptDeadline(ReceiptArchive.put(ticket.imageHash,file),2500,'El archivo de la foto no responde.').then(()=>'',()=> 'Compra guardada; no se ha podido conservar la foto en este dispositivo.'):Promise.resolve('');
