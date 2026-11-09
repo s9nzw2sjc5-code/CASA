@@ -261,6 +261,14 @@ rápida de texto. Acepta el nombre o frases como «se ha acabado la leche». Mue
 coincidencias de la despensa, mantiene las variedades y negaciones del nombre y
 pide elegir cuando hay varias coincidencias. Se apunta un producto cada vez.
 
+Desde la versión 86 también sugiere referencias de Mercadona mientras se escribe,
+con foto, tamaño y precio. Al elegir una, el producto llega a Compras con su
+referencia e imagen. Si ya existía una línea manual, se actualiza sin aumentar su
+cantidad ni desmarcar lo comprado. Si se corresponde con algo apuntado en casa,
+ese registro se vincula y queda agotado; cuando hay varios posibles se pide cuál.
+Las existencias no se inventan para productos aún no registrados y los gastos
+anteriores se conservan. La búsqueda no reconstruye el teclado ni pierde el foco.
+
 Al confirmar, el producto seleccionado queda con cantidad cero y se añade una
 unidad a la lista Súper si no estaba allí. También se comprueban los productos ya
 tachados en el carro para no duplicarlos ni aumentar su cantidad. Si no existe en

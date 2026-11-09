@@ -260,47 +260,91 @@ function pantryShoppingItem(x,lid){
 function finishedPantryQuery(text){
   return String(text||'').trim().replace(/^(?:(?:ya\s+)?(?:se\s+(?:(?:ha|han)\s+(?:acabado|terminado)|acab[oó])|no\s+(?:queda|quedan))|(?:he|hemos)\s+(?:acabado|terminado))(?:\s+|$)(?:(?:el|la|los|las)(?:\s+|$))?/i,'').trim();
 }
+function finishedPantryBatch(text){return /[,;\n]/.test(String(text).replace(/(\d),(\d)/g,'$1.$2'))}
+function finishedPantryTerms(text){return norm(text).replace(/(\d)([a-z])/g,'$1 $2').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w&&!['de','del','la','el','los','las','en','y','para','al','a','un','una','o'].includes(w))}
 function finishedPantryMatches(query){
-  const terms=text=>norm(text).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w&&!['de','del','la','el','los','las','en','y','para','al','a','un','una','o'].includes(w));
+  const terms=finishedPantryTerms;
   const q=norm(query),w=terms(query);if(!q)return [];
   return (S.pantry||[]).filter(x=>{const have=terms(x.name);return norm(x.name)===q||(w.length&&w.every(need=>have.some(word=>same(word,need)||(!['sin','con'].includes(need)&&need.length>=3&&word.startsWith(need)))))}).sort((a,b)=>(norm(b.name)===q)-(norm(a.name)===q)||a.name.localeCompare(b.name,'es'));
 }
-function markPantryFinished(id,name){
+function finishedCatalogMatches(query){
+  if(!MC?.p||query.length<2||finishedPantryBatch(query))return [];
+  const measure=query.match(/\b(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|cl|l)\b/i),search=measure?query.replace(measure[0],' '):query,need=finishedPantryTerms(search);
+  return searchProducts(search,40).filter(p=>{
+    if(!p.img)return false;
+    if(measure){const u=measure[2].toLowerCase(),volume=/^(ml|cl|l)$/.test(u),amount=Number(measure[1].replace(',','.'))*(/^(kg|l)$/.test(u)?1000:u==='cl'?10:1);if(volume!==(p.fmt==='l')||Math.abs(amount-p.size)>.5)return false}
+    const have=finishedPantryTerms(p.name);
+    return need.length&&need.every(w=>have.some(t=>same(t,w)||(!['sin','con'].includes(w)&&(t.startsWith(w)||(w.length>=5&&t.length>=5&&Math.abs(w.length-t.length)<=1&&lev(w,t,1)<=1)))));
+  }).slice(0,8);
+}
+function finishedProductTargets(p,query){
+  const all=S.pantry||[],direct=all.filter(x=>String(x.mid||(S.prodMap||{})[norm(x.name)]||'')===p.id);if(direct.length)return direct;
+  const have=finishedPantryTerms(p.name+' '+prodSize(p));
+  const nameQuery=query.replace(/\b\d+(?:[.,]\d+)?\s*(kg|gr|g|ml|cl|l)\b/gi,' ').trim();
+  return finishedPantryMatches(nameQuery).filter(x=>{const need=finishedPantryTerms(x.name);return !x.mid&&need.length&&same(need[0],have[0])&&need.every(w=>have.some(t=>same(t,w)||(!['sin','con'].includes(w)&&w.length>=3&&t.startsWith(w))))});
+}
+function markPantryFinished(id,name,product){
   const x=id?find(S.pantry||[],id):null;
   if(id&&!x)throw Error('Ese producto ya no está en casa. Vuelve a escribir su nombre.');
-  const label=x?x.name:finishedPantryQuery(name);
-  if(!label||/[,;\n]/.test(label))throw Error('Escribe un producto cada vez.');
+  const label=product?product.name:x?x.name:finishedPantryQuery(name);
+  if(!label||(!product&&finishedPantryBatch(label)))throw Error('Escribe un producto cada vez.');
   const lid=cartList();if(!S.lists.some(l=>l.id===lid))throw Error('No se encuentra la lista de la compra.');
-  const existing=pantryShoppingItem(x||{name:label},lid),p=x?.mid&&MC?.byId.get(String(x.mid));
-  if(x){x.full=pantryFull(x);x.n=0;x.at=today()}
+  const raw=x?.mid&&MC?.byId.get(String(x.mid)),p=product||(raw?prod(raw):null);
+  if(product&&(!MC?.byId.has(product.id)||(x?.mid&&String(x.mid)!==product.id)))throw Error('La referencia ha cambiado. Vuelve a elegir el producto.');
+  if(product&&x&&!x.mid&&(S.pantry||[]).some(other=>other.id!==x.id&&String(other.mid||'')===product.id))throw Error('Ya hay otro registro de este producto en casa. Elige ese registro.');
+  const existing=p?(S.items.find(i=>i.listId===lid&&String(i.mid||'')===p.id)||S.items.find(i=>i.listId===lid&&!i.mid&&[label,x?.name,name].filter(Boolean).some(n=>norm(i.name)===norm(n)||finishedPantryTerms(i.name).join(' ')===finishedPantryTerms(n).join(' ')))):pantryShoppingItem(x||{name:label},lid);
+  if(x){x.full=pantryFull(x);x.n=0;x.at=today();if(p){x.mid=p.id;x.section=p.cat||'Otros'}}
+  if(p&&existing&&!existing.mid){Object.assign(existing,{mid:p.id,name:p.name,section:ckSection(p,p.name),store:'Mercadona'});setUnits(existing,existing.units||1)}
   if(!existing){
-    if(p)cartSet(prod(p),1,lid);
+    if(p)cartSet(p,1,lid);
     else S.items.push({id:uid(),listId:lid,name:label,mid:x?.mid?String(x.mid):'',qty:'',units:1,section:ckSection(null,label),by:'',done:false,added:Date.now()});
   }
+  if(p)rememberHabit(p.id);
   return {name:label,added:!existing,matched:!!x};
 }
 function finishedPantrySheet(){
-  let selected='';
-  const ov=sheet('¿Qué se ha acabado?',`<p class="hint">Escribe un producto. Lo marcaremos como agotado y lo añadiremos a «${esc((S.lists.find(l=>l.id===cartList())||{}).name||'Compras')}» si aún no está en la lista.</p><label for="finishedPantryName">Producto que se ha acabado</label><input id="finishedPantryName" class="field" type="search" autocomplete="off" enterkeyhint="done" placeholder="Ej.: leche"><p class="hint" id="finishedPantryHint"></p><div id="finishedPantryMatches"></div><p class="hint" id="finishedPantryStatus" role="status" aria-live="polite"></p>`,{saveLabel:'Se ha acabado',onSave:()=>{submit();return false}});
-  const input=ov.querySelector('#finishedPantryName'),box=ov.querySelector('#finishedPantryMatches'),hint=ov.querySelector('#finishedPantryHint'),status=ov.querySelector('#finishedPantryStatus'),button=ov.querySelector('[data-s="ok"]');
-  const draw=()=>{
-    const q=finishedPantryQuery(input.value),matches=finishedPantryMatches(q),exact=matches.filter(x=>norm(x.name)===norm(q));
-    selected=exact.length===1?exact[0].id:matches.length===1?matches[0].id:!matches.length?'new':'';
-    status.textContent='';button.disabled=!q||/[,;\n]/.test(q)||!selected;
-    hint.textContent=!q?'':/[,;\n]/.test(q)?'Escribe un producto cada vez.':!matches.length?'No está apuntado en casa. Lo añadiremos a la compra con este nombre: '+q:matches.length>8?'Hay varias coincidencias. Escribe un nombre más concreto o elige un producto.':matches.length>1?'Elige el producto que se ha acabado.':'Encontrado en casa:';
-    box.innerHTML=q?matches.slice(0,8).map(x=>`<label class="finished-pantry-option"><input type="radio" name="finishedPantryChoice" value="${esc(x.id)}" ${selected===x.id?'checked':''}><span><b>${esc(x.name)}</b><small>${esc(x.loc||'Despensa')} · ${x.n>0?'En casa':'Agotado'}</small></span></label>`).join(''):'';
+  let selected='',target='',loading=!MC,timer;
+  const ov=sheet('¿Qué se ha acabado?',`<p class="hint">Escribe el nombre y elige el producto de Mercadona para añadirlo con foto a «${esc((S.lists.find(l=>l.id===cartList())||{}).name||'Compras')}». Si está apuntado en casa, lo marcaremos como agotado.</p><label for="finishedPantryName">Producto que se ha acabado</label><input id="finishedPantryName" class="field" type="search" autocomplete="off" enterkeyhint="done" placeholder="Ej.: leche semidesnatada"><p class="hint" id="finishedPantryHint"></p><div id="finishedPantryMatches"></div><div id="finishedPantryTargets"></div><p class="hint" id="finishedPantryStatus" role="status" aria-live="polite"></p>`,{saveLabel:'Se ha acabado',onSave:()=>{submit();return false}});
+  ov.classList.add('finished-pantry-sheet');
+  const input=ov.querySelector('#finishedPantryName'),box=ov.querySelector('#finishedPantryMatches'),destinations=ov.querySelector('#finishedPantryTargets'),hint=ov.querySelector('#finishedPantryHint'),status=ov.querySelector('#finishedPantryStatus'),button=ov.querySelector('[data-s="ok"]');
+  const choose=()=>{
+    destinations.innerHTML='';target='';button.disabled=!selected;
+    if(!selected.startsWith('mc:'))return;
+    const raw=MC?.byId.get(selected.slice(3));if(!raw){button.disabled=true;return}
+    const targets=finishedProductTargets(prod(raw),finishedPantryQuery(input.value));
+    if(targets.length===1)target=targets[0].id;
+    if(targets.length>1){button.disabled=true;destinations.innerHTML='<p class="hint">¿Cuál de estos artículos se ha acabado en casa?</p>'+targets.map(x=>`<label class="finished-pantry-option"><input type="radio" name="finishedPantryTarget" value="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>${esc(x.loc||'Despensa')}</small></span></label>`).join('')}
+  };
+  const draw=(keep=false)=>{
+    const q=finishedPantryQuery(input.value),invalid=finishedPantryBatch(q),matches=finishedPantryMatches(q),catalog=invalid?[]:finishedCatalogMatches(q),exact=matches.filter(x=>norm(x.name)===norm(q)),home=exact.length===1?exact[0]:matches.length===1?matches[0]:null;
+    const choices=new Set([...matches.map(x=>x.id),...catalog.map(p=>'mc:'+p.id),...(!matches.length?['new']:[])]);
+    selected=keep&&choices.has(selected)?selected:home&&(home.mid||!catalog.length)?home.id:!matches.length&&!catalog.length&&!loading?'new':'';
+    status.textContent='';button.disabled=!q||invalid||!selected;
+    hint.textContent=!q?'':invalid?'Escribe un producto cada vez.':loading?'Cargando el catálogo de Mercadona…':catalog.length?'Elige la referencia para añadirla con su foto.':matches.length?'Elige lo que se ha acabado en casa.':'No encuentro coincidencias. Puedes añadirlo por su nombre, sin foto: '+q;
+    const photo=(path,label)=>path?`<img class="finished-pantry-photo" src="${esc(imgUrl(path,96))}" alt="" title="${esc(label)}" loading="eager">`:'';
+    box.innerHTML=!q||invalid?'':(matches.length?'<h4>En casa</h4>'+matches.slice(0,8).map(x=>{const img=pantryPhoto(x);return `<label class="finished-pantry-option"><input type="radio" name="finishedPantryChoice" value="${esc(x.id)}" ${selected===x.id?'checked':''}>${photo(img?.path,x.name)}<span><b>${esc(x.name)}</b><small>${esc(x.loc||'Despensa')} · ${x.n>0?'En casa':'Agotado'}${x.mid?'':' · Sin referencia de Mercadona'}</small></span></label>`}).join(''):'')+(catalog.length?'<h4>Mercadona · con foto</h4>'+catalog.map(p=>`<label class="finished-pantry-option"><input type="radio" name="finishedPantryChoice" value="mc:${esc(p.id)}" ${selected==='mc:'+p.id?'checked':''}>${photo(p.img,p.name)}<span><b>${esc(p.name)}</b><small>${esc([p.pack,prodSize(p)].filter(Boolean).join(' · '))} · ${eur(p.price)}</small></span></label>`).join(''):'')+(!matches.length?`<label class="finished-pantry-option"><input type="radio" name="finishedPantryChoice" value="new" ${selected==='new'?'checked':''}><span>Añadir solo el nombre: <b>${esc(q)}</b><small>Sin foto de Mercadona</small></span></label>`:'');
+    box.setAttribute('aria-busy','false');
+    if(q&&!invalid&&selected)choose();
   };
   const submit=()=>{
-    const q=finishedPantryQuery(input.value),matches=finishedPantryMatches(q);
+    clearTimeout(timer);const q=finishedPantryQuery(input.value),matches=finishedPantryMatches(q);
     if(!q||!selected){status.textContent='Escribe o elige el producto que se ha acabado.';return}
-    if(selected==='new'&&matches.length){draw();return}
-    if(selected!=='new'&&!matches.some(x=>x.id===selected)){draw();status.textContent='La información ha cambiado. Elige de nuevo el producto.';return}
-    try{const result=markPantryFinished(selected==='new'?'':selected,q);save();input.value='';draw();status.textContent=(result.matched?result.name+': marcado como agotado. ':result.name+': ')+(result.added?'Añadido a Compras.':'Ya estaba en la lista de la compra.');input.focus();toastUndo(result.name+' · '+(result.added?'añadido a Compras':'ya estaba en Compras'))}
+    if(finishedPantryBatch(q)){status.textContent='Escribe un producto cada vez.';return}
+    let product;
+    if(selected.startsWith('mc:')){
+      product=finishedCatalogMatches(q).find(p=>'mc:'+p.id===selected);if(!product){draw();status.textContent='La referencia ha cambiado. Vuelve a elegirla.';return}
+      const targets=finishedProductTargets(product,q);if((targets.length>1&&!targets.some(x=>x.id===target))||(target&&!targets.some(x=>x.id===target))){choose();status.textContent='Elige qué artículo se ha acabado en casa.';return}
+    }else if((selected==='new'&&matches.length)||(selected!=='new'&&!matches.some(x=>x.id===selected))){draw();status.textContent='La información ha cambiado. Elige de nuevo el producto.';return}
+    try{const result=markPantryFinished(product?target:selected==='new'?'':selected,q,product);save();input.value='';draw();status.textContent=(result.matched?result.name+': marcado como agotado. ':result.name+': ')+(result.added?'Añadido a Compras.':'Ya estaba en la lista de la compra.');input.focus();toastUndo(result.name+' · '+(result.added?'añadido a Compras':'ya estaba en Compras'))}
     catch(e){status.textContent=e.message||'No se ha podido apuntar el producto.'}
   };
-  input.addEventListener('input',e=>{if(!e.isComposing)draw()});input.addEventListener('compositionend',draw);
-  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();submit()}});
-  box.addEventListener('change',e=>{if(e.target.name!=='finishedPantryChoice')return;selected=e.target.value;button.disabled=false});
+  const edit=()=>{clearTimeout(timer);selected='';target='';button.disabled=true;destinations.innerHTML='';box.setAttribute('aria-busy','true');timer=setTimeout(()=>{timer=null;draw()},150)};
+  input.addEventListener('input',e=>{if(!e.isComposing)edit()});input.addEventListener('compositionstart',()=>{clearTimeout(timer);timer=null;selected='';button.disabled=true});input.addEventListener('compositionend',edit);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();if(timer){clearTimeout(timer);timer=null;draw()}submit()}});
+  box.addEventListener('change',e=>{if(e.target.name!=='finishedPantryChoice')return;selected=e.target.value;choose()});
+  destinations.addEventListener('change',e=>{if(e.target.name==='finishedPantryTarget'){target=e.target.value;button.disabled=false}});
+  box.addEventListener('error',e=>{if(e.target.matches?.('.finished-pantry-photo'))e.target.hidden=true},true);
+  if(!MC)loadMC().then(()=>{loading=false;if(ov.isConnected)draw(true)});
   draw();return ov;
 }
 function pantryItem(x,lid){
