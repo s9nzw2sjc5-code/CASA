@@ -53,13 +53,17 @@ async function saveReceiptPurchase(ticket,file,options={}){
   }
   return result;
 }
+// Prepara la confirmación conjunta para comprobarla; solo se guarda después de
+// pulsar Confirmar lectura y guardar. No rellena cantidades ni importes ausentes.
+function receiptConfirmReading(t){
+  return {...t,lines:t.lines.map(a=>({...a,...(a.reviewRequired||a.readConfidence<.9?{lineValidated:true}:{})}))};
+}
 function receiptQuickPlan(t){
-  const pending=(S.buys||[]).find(b=>b.id===t.pendingBuyId&&b.receiptPending),reasons=[...CasaReceipts.validate(t).reasons];
-  if(t.ocrConfidence<85)reasons.push('La lectura necesita confirmación');
+  const pending=(S.buys||[]).find(b=>b.id===t.pendingBuyId&&b.receiptPending),reasons=[...CasaReceipts.validate(receiptConfirmReading(t)).reasons];
+  const confirmationRequired=t.ocrConfidence<85||t.lines.some(a=>!a.lineValidated&&(a.reviewRequired||a.readConfidence<.9));
   const ticket={...t,lines:t.lines.map(a=>{
     const defaults=receiptLineDefaults(a,t,pending),{plan,matches,credits,prior}=defaults;
     if(a.quantityObserved===false)reasons.push('Confirma las cantidades sin leer');
-    if(a.readConfidence<.9)reasons.push('Confirma los productos con lectura dudosa');
     if(plan.ambiguous||matches.length>1)reasons.push('Hay coincidencias que necesitan confirmación');
     if(pending&&!prior&&credits.some(p=>(plan.mid&&p.mid===plan.mid)||receiptNameMatches(p.name,a.name)))reasons.push('Confirma lo ya registrado en casa');
     const existing=(S.pantry||[]).find(p=>p.id===plan.inventory);
@@ -68,7 +72,7 @@ function receiptQuickPlan(t){
     return {...a,plan};
   })};
   if(pending&&(pending.items||[]).some(i=>!ticket.lines.some(l=>(i.mid&&l.plan.mid===i.mid)||receiptNameMatches(i.name,l.name))))reasons.push('Hay productos del carro que no se han detectado');
-  return {ok:reasons.length===0,reasons:[...new Set(reasons)],ticket};
+  return {ok:reasons.length===0,confirmationRequired,reasons:[...new Set(reasons)],ticket};
 }
 function receiptSaving(ov,saving){
   ov.dataset.receiptSaving=String(saving);const cancel=ov.querySelector('[data-s="cancel"]');if(cancel)cancel.disabled=saving;
@@ -86,23 +90,18 @@ function receiptFocusIssue(ov,issue){
   field.focus({preventScroll:true});field.scrollIntoView({block:'center'});
 }
 function receiptReviewIssues(ov,t,source){
-  const check=CasaReceipts.validate(t),active=[...ov.querySelectorAll('[data-on]')].filter(el=>el.checked).map(el=>Number(el.dataset.on));
+  const check=CasaReceipts.validate(receiptConfirmReading(t)),active=[...ov.querySelectorAll('[data-on]')].filter(el=>el.checked).map(el=>Number(el.dataset.on));
   check.issues=check.issues.map(issue=>({...issue,...(issue.index===undefined?{}:{row:active[issue.index]})}));
   const issues=check.issues.slice();
-  for(const row of active){const original=source.lines[row],element=ov.querySelector(`[data-receipt-row="${row}"]`);if(original?.readConfidence<.9&&element.dataset.readConfirmed!=='true')issues.push({row,field:'name',warning:true,message:'Lectura dudosa: comprueba el nombre y el importe con la foto'})}
-  const pending=(S.buys||[]).find(b=>b.id===source.pendingBuyId&&b.receiptPending);
   for(const row of active){
-    const defaults=receiptLineDefaults(source.lines[row],source,pending);
-    if(defaults.plan.ambiguous&&!ov.querySelector(`[data-pn="${row}"]`).value)issues.push({row,field:'inventory',warning:true,message:'Hay varios productos en casa: elige a cuál corresponde'});
-    if(defaults.matches.length>1&&!ov.querySelector(`[data-shopping="${row}"]`).value)issues.push({row,field:'shopping',warning:true,message:'Hay varias coincidencias en Compras: elige cuál has comprado'});
+    for(const [attribute,field,message] of [['pn','inventory','Hay varios productos en casa: elige el destino o No va a la despensa'],['shopping','shopping','Hay varias coincidencias en Compras: elige el producto o No quitar ninguno']]){
+      if(ov.querySelector(`[data-${attribute}="${row}"]`).value==='__choose'){const issue={row,index:active.indexOf(row),field,message};check.issues.push(issue);issues.push(issue);check.reasons.push(message);check.ok=false}
+    }
   }
   for(const row of active){
     const element=ov.querySelector(`[data-receipt-row="${row}"]`),price=receiptFieldNumber(ov.querySelector(`[data-pr="${row}"]`));
     if(Number.isFinite(price)&&Math.abs(price*100-Math.round(price*100))>1e-6){const issue={row,index:active.indexOf(row),field:'price',message:'Escribe el precio con un máximo de dos decimales'};check.issues.push(issue);issues.push(issue);check.ok=false}
     if(issues.some(x=>x.row===row&&x.field!=='confirmation'))element.dataset.validationRequired='true';
-    if(element.dataset.validationRequired==='true'&&element.dataset.lineValidated!=='true'&&!issues.some(x=>x.row===row&&x.field==='confirmation')){
-      const issue={row,index:active.indexOf(row),field:'confirmation',message:'Pulsa Validar artículo para confirmar esta línea'};check.issues.push(issue);issues.push(issue);check.ok=false;
-    }
   }
   check.issues.sort((a,b)=>(a.field==='confirmation')-(b.field==='confirmation'));
   issues.sort((a,b)=>(a.field==='confirmation')-(b.field==='confirmation'));
@@ -113,13 +112,17 @@ function receiptReviewIssues(ov,t,source){
     if(problems.length&&signature!==row.dataset.issueSignature)row.open=true;
     row.dataset.issueSignature=signature;note.textContent=signature;note.hidden=!problems.length;
     const labels={confirmation:'Pendiente de validar',units:'Falta confirmar cantidad',price:'Revisar importe',stock:'Revisar cantidad en casa',inventory:'Elegir producto en casa',shopping:'Elegir producto de Compras',name:problems[0]?.warning?'Lectura dudosa':'Revisar nombre'};
-    label.textContent=problems.length?' · '+labels[problems[0].field]:row.dataset.lineValidated==='true'?' · ✓ Validado':'';
+    const needsConfirmation=row.dataset.validationRequired==='true'&&row.dataset.lineValidated!=='true';
+    label.textContent=problems.length?' · '+labels[problems[0].field]:row.dataset.lineValidated==='true'?' · ✓ Validado':needsConfirmation?' · Lectura por confirmar':'';
     const quantityLabel=ov.querySelector(`[data-quantity-label="${index}"]`);if(quantityLabel)quantityLabel.textContent=receiptFieldNumber(ov.querySelector(`[data-units="${index}"]`))>0?'Cantidad':'Cantidad sin leer: confirmar';
     const validated=row.dataset.lineValidated==='true',button=ov.querySelector(`[data-validate-line="${index}"]`),status=ov.querySelector(`[data-line-validation="${index}"]`);
-    button.disabled=validated||!active.includes(index);button.setAttribute('aria-label',(validated?'Artículo validado: ':'Validar artículo '+(index+1)+': ')+ov.querySelector(`[data-nm="${index}"]`).value);button.textContent=validated?'✓ Artículo validado':'Validar artículo';status.textContent=validated?(problems.length?'Precio confirmado; revisa los otros datos señalados.':'✓ Artículo validado'):row.dataset.validationRequired==='true'?'Escribe el precio de la línea y pulsa Validar artículo.':'';status.style.color=validated?'var(--accent)':'var(--muted)';
+    button.hidden=!needsConfirmation&&!validated;button.disabled=validated||!active.includes(index);button.setAttribute('aria-label',(validated?'Artículo validado: ':'Validar artículo '+(index+1)+': ')+ov.querySelector(`[data-nm="${index}"]`).value);button.textContent=validated?'✓ Artículo validado':'Validar artículo';status.textContent=validated?'✓ Artículo validado':needsConfirmation?'También puedes confirmarlo junto con el resto al guardar.':'';status.style.color=validated?'var(--accent)':'var(--muted)';
     ov.querySelector(`[data-row-price="${index}"]`).textContent=Number.isFinite(receiptFieldNumber(ov.querySelector(`[data-pr="${index}"]`)))?eur(receiptFieldNumber(ov.querySelector(`[data-pr="${index}"]`))):'Sin leer';
     ov.querySelector(`[data-row-name="${index}"]`).textContent=ov.querySelector(`[data-nm="${index}"]`).value||'Artículo '+(index+1);
   }
+  const confirmationCount=active.filter(index=>{const row=ov.querySelector(`[data-receipt-row="${index}"]`);return row.dataset.validationRequired==='true'&&row.dataset.lineValidated!=='true'}).length;
+  const confirmation=ov.querySelector('#tkConfirmation');confirmation.hidden=!confirmationCount&&!(source.ocrConfidence<85);confirmation.textContent='Comprueba los nombres y los importes con el ticket. Al pulsar «Confirmar lectura y guardar» confirmas todos los artículos a la vez; no necesitas validarlos uno por uno.';
+  ov.querySelector('[data-s="ok"]').textContent=confirmation.hidden?'Guardar y verificar':'Confirmar lectura y guardar';
   const panel=ov.querySelector('#tkIssues');panel.replaceChildren();
   if(issues.length){const title=document.createElement('strong');title.textContent='Revisa estos datos:';panel.append(title)}
   const groups=[];

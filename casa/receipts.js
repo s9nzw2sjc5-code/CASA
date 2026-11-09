@@ -14,7 +14,7 @@
     if(!(cents(t.total)>0)){reasons.push('Falta el total pagado');issue('total','Introduce el total del ticket')}
     if(!Array.isArray(t.lines)||!t.lines.length)reasons.push('No se han leído artículos');
     (t.lines||[]).forEach((l,index)=>{
-      if(l.reviewRequired&&!l.lineValidated){reasons.push('Hay artículos pendientes de validar');issue('confirmation','Pulsa Validar artículo para confirmar esta línea',index)}
+      if(l.reviewRequired&&!l.lineValidated){reasons.push('Hay artículos pendientes de confirmar');issue('confirmation','Confirma la lectura al guardar la compra',index)}
       if(t.ocrEngine&&l.quantityObserved===false){reasons.push('Confirma las cantidades que no se han podido leer');issue('units','Cantidad sin leer: confirma cuánto compraste',index)}
       if(Number.isFinite(cents(l.price)))sum+=cents(l.price);
       if(!norm(l.name)){reasons.push('Hay una línea incompleta');issue('name','Nombre sin leer: escribe el producto',index)}

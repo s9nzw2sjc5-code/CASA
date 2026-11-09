@@ -149,9 +149,9 @@ test('field diagnostics distinguish missing prices, names and quantities',()=>{
  const t={store:'Prueba',date:'2026-11-06',total:5,lines:[{name:'Sin precio',units:1,price:NaN},{name:'',units:1,unit:5,price:5}]};
  const check=R.validate(t);assert(check.issues.some(i=>i.index===0&&i.field==='price'));assert(check.issues.some(i=>i.index===1&&i.field==='name'));assert.equal(check.sumCents,500);
 });
-test('balanced totals do not bypass individual validation of a doubtful article',async()=>{
+test('balanced totals alone do not bypass confirmation of a doubtful article',async()=>{
  const s=state(),t=receipt();t.lines[0].reviewRequired=true;
  assert(!R.validate(t).ok);assert(R.validate(t).issues.some(i=>i.index===0&&i.field==='confirmation'));
- assert.throws(()=>R.patch(s,t,{}),/validar/);t.lines[0].lineValidated=true;assert(R.validate(t).ok);
+ assert.throws(()=>R.patch(s,t,{}),/confirmar/);t.lines[0].lineValidated=true;assert(R.validate(t).ok);
  const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.buys[0].items[0].validated,true);
 });
