@@ -77,12 +77,24 @@ ese resumen. «Corregir lectura» permite editar la transcripción. En los demá
 casos se abre la revisión para completar los datos; cuadrar la suma por sí solo
 no demuestra que todos los campos sean correctos.
 
-El progreso y los errores aparecen junto al botón, incluso ante un fallo al
-recoger un campo del formulario. La confirmación espera la transacción y su
-relectura, con un límite de espera y reintento idempotente. La foto se archiva
-**después** de verificar la compra; un bloqueo o error de IndexedDB no impide
-registrar el gasto. Si el archivo local tarda más de 2,5 segundos se informa de
-que la compra se guardó sin poder confirmar el archivo de la foto.
+El progreso y los errores aparecen junto al botón, en una barra visible durante
+el desplazamiento. Se distinguen conexión, sincronización, escritura y
+verificación, y cada espera de red tiene un límite. Una lectura de servidor
+correcta permite recuperarse de un aviso antiguo de desconexión, sin evitar las
+reglas de acceso a Firestore.
+
+Al confirmar el guardado, se conserva una transcripción pendiente en el navegador
+antes de enviar la compra. Si la red falla o no se puede verificar, aparece en
+Compras con «Retomar», incluso al recargar. El reintento conserva la huella y las
+selecciones de la compra; comprueba primero los datos remotos. No crea un gasto
+provisional adicional. El borrador solo se retira después de verificar el guardado.
+Los borradores están separados por proyecto y se borran al cerrar sesión, como
+los demás datos locales de la cuenta. No sustituyen al historial compartido.
+
+La foto se archiva en paralelo en IndexedDB al confirmar el envío para conservarla
+también si este falla; no bloquea la escritura en Firestore. Al retomar se recupera
+si está disponible en ese dispositivo. Un error o una espera de más de 2,5 segundos
+al archivar no impide registrar el gasto y se indica cuando no pudo conservarse.
 
 La revisión enumera cada producto y el campo pendiente (cantidad, nombre,
 importe o cantidad para casa). Los avisos abren el producto y enfocan ese campo;
@@ -94,11 +106,14 @@ inventar qué producto se omitió.
 Cada artículo dudoso conserva el texto original leído y, si hay coordenadas,
 un recorte de su línea en la foto. El precio de la línea admite coma decimal.
 «Validar artículo» confirma esa línea por separado; no guarda aún la compra.
-Los artículos pendientes impiden el guardado final aunque la suma ya cuadre.
-Cambiar después un precio, cantidad o destino invalida esa confirmación.
+«Confirmar lectura y guardar» permite confirmar todas las líneas juntas; solo
+los campos ausentes, los descuadres y las asociaciones ambiguas bloquean el
+guardado. Una suma correcta no confirma por sí sola una cantidad o un nombre.
+Cambiar después un precio, cantidad o destino invalida su confirmación anterior.
 Al añadir otra línea se conservan las correcciones y confirmaciones existentes.
 
-La revisión despliega los productos dudosos y permite abrir los demás. Cuando hay
+La revisión despliega los productos con datos concretos pendientes; una duda
+de confianza por sí sola no obliga a abrir cada producto. Cuando hay
 coordenadas del OCR muestra un recorte de la foto junto al producto. Las
 correcciones de nombre confirmadas se recuerdan por comercio en
 `cook.receiptAliases`; nunca cambian automáticamente un importe.

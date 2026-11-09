@@ -27,3 +27,10 @@ test('follows a slanted quantity column and retains per-line confidence',()=>{
 test('an empty recognition returns zero confidence and no fabricated text',()=>{
  assert.deepEqual(compose([]),{text:'',confidence:0,lines:[]});
 });
+test('separates quantity from a numeric product name only when character spacing supports it',()=>{
+ const anchors=[box('1 ARROZ',.1,.1),price(.1),box('2 LECHE',.1,.15),price(.15)];
+ const tokens=gap=>[{char:'1',step:1},{char:'6',step:1+gap},{char:' ',step:4+gap},{char:'H',step:7+gap},{char:'U',step:10+gap}];
+ assert(compose([...anchors,box('16 HUEVOS',.1,.2,.3,.02,.98,tokens(5)),price(.2)]).text.includes('1 6 HUEVOS'));
+ assert(compose([...anchors,box('16 HUEVOS',.1,.2,.3,.02,.98,tokens(3)),price(.2)]).text.includes('16 HUEVOS'));
+ assert.equal(compose([box('16 HUEVOS',.1,.2,.3,.02,.98,tokens(5)),price(.2)]).text,'16 HUEVOS 1,50');
+});

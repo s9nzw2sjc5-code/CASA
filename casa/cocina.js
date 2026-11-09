@@ -1397,7 +1397,7 @@ async function ocrText(file,prog,options={}){
 }
 
 const tNum=s=>parseFloat(String(s).replace(/\s/g,'').replace(',','.'));
-const T_SKIP=/^(total|subtotal|iva|base|cuota|tarjeta|entrega|efectivo|cambio|importe|descuento|ahorro|cupon|nif|cif|factura|fecha|hora|op[:.]|tienda|telefono|tel[.:]|c\/|avda|calle|mercadona|lidl|carrefour|aldi|dia\b|gracias|devolucion|n[ºo°]|caja|cajer|ticket|tique|art[ií]culos|descripci|p\.? ?unit|aut|visa|mastercard|contactless|forma de pago|venta|copia|www|http|s\.a\.|s\.l\.|%)/;
+const T_SKIP=/^(total|subtotal|iva|base|cuota|tarjeta|entrega|efectivo|cambio|importe|descuento|ahorro|cupon|nif|cif|factura|fecha|hora|op[:.]|tienda|telefono|tel[.:]|c\/|avda|calle|mercadona|lidl|carrefour|aldi|dia\b|gracias|devolucion|n[ºo°](?=[\s.:#\d]|$)|caja|cajer|ticket|tique|art[ií]culos|descripci|p\.? ?unit|aut|visa|mastercard|contactless|forma de pago|venta|copia|www|http|s\.a\.|s\.l\.|%)/;
 // Saca de un tique: supermercado, fecha, total y cada línea (nombre, unidades, precio unidad, importe, kilos)
 function parseTicket(txt){
   const L=String(txt||'').split('\n').map(l=>l.replace(/[€|]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);
@@ -1463,9 +1463,9 @@ function ticketLinePlan(a,store,inventory){
   const sameName=(S.pantry||[]).filter(x=>(p&&x.mid===p.id)||norm(x.name)===norm(a.name));
   const possible=sameName.length?sameName:(S.pantry||[]).filter(x=>receiptNameMatches(x.name,a.name)||(p&&receiptNameMatches(x.name,p.name)));
   const existing=possible.length===1?possible[0]:null;
-  const q=parseQty(a.name.match(/\d+[.,]?\d*\s*(kg|g|gr|l|ml|cl|ud)\b/i)?.[0]||'');
+  const q=parseQty(a.name.match(/(?:^|[\s(])(\d+(?:[.,]\d+)?\s*(?:kg|gr|g|ml|cl|l|ud))\b/i)?.[1]||'');
   const amount=a.kg?a.kg*1000:p?p.size*a.units:q?q.n*a.units:a.units;
-  const unit=a.kg?'g':p?p.d==='ud'?'ud':p.fmt==='l'?'ml':'g':q?q.d==='ud'?'ud':'g':'ud';
+  const unit=a.kg?'g':p?p.d==='ud'?'ud':p.fmt==='l'?'ml':'g':q?q.d==='ud'?'ud':/^(l|ml|cl)$/.test(q.raw)?'ml':'g':'ud';
   const nonFood=/\b(bolsa(s)? plastico|bolsa(s)? papel|descuento|cupon)\b/.test(norm(a.name))||a.price<=0;
   return {mid:p?p.id:'',amount,unit,packSize:p?p.size:1,packLabel:p?prodSize(p):'1 ud',loc:p?defLoc(p):'Despensa',weight:existing?unitW(existing.name)||0:0,inventory:nonFood?'':inventory===undefined?existing?existing.id:possible.length>1?'':'new':inventory,confident:nonFood||(!!p&&sameName.length<=1&&(!existing||sameName.length===1)),ambiguous:possible.length>1,label:p?p.name:'Producto sin envase identificado: confirmar cantidad'};
 }
@@ -1476,22 +1476,29 @@ async function receiptRemoteState(){
   const state=snap.data();if(!['buys','pantry','items'].every(k=>Array.isArray(state[k])))throw new Error('El documento no tiene la estructura esperada de CASA. No se ha modificado.');
   return state;
 }
-async function commitTicket(t,options={}){
+async function commitTicket(t,options={},progress=()=>{}){
   if(CasaReceipts.version!==52)throw new Error('Casa tiene una versión antigua abierta. Cierra esta revisión y pulsa Actualizar Casa.');
   const check=CasaReceipts.validate(t);if(!check.ok)throw new Error(check.reasons.join('. '));
   if(t.date>today())throw new Error('La fecha del tique no puede ser futura.');
-  await receiptRemoteState(); // Una lectura de servidor es obligatoria; no se acepta la caché.
+  progress('Conectando con la casa…');
+  await receiptDeadline(receiptRemoteState(),10000,'La casa no ha respondido a tiempo. Comprueba la conexión y reintenta el guardado.');
+  // Una lectura de servidor correcta permite recuperarse de un aviso antiguo
+  // de desconexión. Las reglas de Firestore siguen comprobando la escritura.
+  if(syncState==='err'){syncState='ok';updSync()}
   // No reemplazar el hogar para vaciar la cola: esperar a su sincronización normal.
-  if(dirty()&&!pushing){clearTimeout(saveTimer);await pushCloud()}
+  progress('Preparando la compra y los cambios pendientes…');
+  if(dirty()&&!pushing){clearTimeout(saveTimer);await receiptDeadline(pushCloud(),12000,'La sincronización no ha respondido a tiempo. Conservamos el ticket para reintentar.')}
   const deadline=Date.now()+15000;
   while((pushing||dirty())&&syncState!=='err'&&Date.now()<deadline)await new Promise(r=>setTimeout(r,100));
   if(pushing||dirty()||syncState==='err')throw new Error('Espera a que la casa termine de sincronizar e inténtalo otra vez. El tique no se ha enviado.');
   clearTimeout(saveTimer);
   const identity=await CasaReceipts.identify(t);
-  const saved=await dbRef.transactPatch('hogar/estado',data=>CasaReceipts.patch(data,t,identity,{...options,by:meName(),defaultStores:CK_STORES}));
+  progress('Guardando compra, despensa y lista de la compra…');
+  const saved=await receiptDeadline(dbRef.transactPatch('hogar/estado',data=>CasaReceipts.patch(data,t,identity,{...options,by:meName(),defaultStores:CK_STORES})),20000,'El guardado no ha respondido a tiempo. Reintenta este ticket: se comprobará si llegó a guardarse para no duplicarlo.');
   // No afirmar que se guardó hasta releer desde Firestore, incluso si el cliente perdió la respuesta.
   let verified;
-  try{verified=await docRef.getServer()}catch(e){throw new Error('Firestore recibió la operación, pero falta verificarla. Reintenta este mismo tique: su huella evita duplicarlo.')}
+  progress('Comprobando que la compra ha quedado guardada…');
+  try{verified=await receiptDeadline(docRef.getServer(),10000,'Verificación sin respuesta')}catch(e){throw new Error('La operación se ha enviado, pero falta confirmar el guardado. Reintenta este mismo ticket: su huella evita duplicarlo.')}
   const record=verified.exists&&(verified.data().buys||[]).find(b=>b.id===saved.result.id);
   if(!record||record.date!==t.date||norm(record.store)!==norm(t.store)||CasaReceipts.cents(record.total)!==CasaReceipts.cents(t.total)||(!saved.result.duplicate&&record.receiptKey!==identity.key))throw new Error('No se ha podido verificar la compra. Reintenta el mismo tique antes de crear otro gasto.');
   applyRemote(verified);mcCache.clear();
@@ -1509,7 +1516,7 @@ function receiptReadOptions(ov){
 }
 function ticketTranscription(text,meta={}){
   const originalParsed=parseTicket(text);
-  const ov=sheet('Transcripción del tique',`<p class="hint" id="tkIntro">Todavía no se ha guardado ninguna compra.</p>${meta.file&&(/image/.test(meta.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(meta.file.name||''))?'<details><summary>Ver foto original</summary><img id="tkOriginalImage" style="display:block;width:100%;height:auto" alt="Foto original del ticket para comprobar la transcripción"></details>':''}<div class="tk-read-total" id="tkReadTotal" role="status" aria-live="polite" aria-atomic="true"><span>Total del ticket leído</span><strong id="tkReadAmount"></strong><small id="tkReadTotalHint"></small></div><button type="button" class="link" id="tkEditReading">Corregir lectura</button><div id="tkTextEditor"><label for="tkTranscript">Texto del ticket</label><textarea class="field" id="tkTranscript" rows="14" spellcheck="false">${esc(text)}</textarea></div><p id="tkTranscriptStatus" class="hint" role="status"></p>${meta.file&&(/image/.test(meta.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(meta.file.name||''))?'<button type="button" class="btn sec" id="tkTranscriptCrop">✂️ Recortar y volver a leer</button>':''}`,{autoFocus:false,saveLabel:'Guardar compra',onSave:()=>{proceed();return false}});
+  const ov=sheet('Transcripción del tique',`<p class="hint" id="tkIntro">Todavía no se ha guardado ninguna compra.</p>${meta.file&&(/image/.test(meta.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(meta.file.name||''))?'<details><summary>Ver foto original</summary><img id="tkOriginalImage" style="display:block;width:100%;height:auto" alt="Foto original del ticket para comprobar la transcripción"></details>':''}<div class="tk-read-total" id="tkReadTotal" role="status" aria-live="polite" aria-atomic="true"><span>Total del ticket leído</span><strong id="tkReadAmount"></strong><small id="tkReadTotalHint"></small></div><button type="button" class="link" id="tkEditReading">Corregir lectura</button><div id="tkTextEditor"><label for="tkTranscript">Texto del ticket</label><textarea class="field" id="tkTranscript" rows="14" spellcheck="false">${esc(text)}</textarea></div><p id="tkTranscriptStatus" class="hint" role="status"></p>${meta.file&&(/image/.test(meta.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(meta.file.name||''))?'<button type="button" class="btn sec" id="tkTranscriptCrop">✂️ Recortar y volver a leer</button>':''}`,{autoFocus:false,saveLabel:'Guardar compra',onSave:()=>{proceed();return false}});ov.classList.add('receipt-save-sheet');
   const original=ov.querySelector('#tkOriginalImage');
   if(original){const url=URL.createObjectURL(meta.file);original.src=url;const observer=new MutationObserver(()=>{if(!ov.isConnected){URL.revokeObjectURL(url);observer.disconnect()}});observer.observe(document.body,{childList:true,subtree:true})}
   let busy=false;
@@ -1525,12 +1532,12 @@ function ticketTranscription(text,meta={}){
       const edited=field.value.trim();if(!edited)throw Error('No se ha leído texto. Recorta el papel o vuelve a hacer la foto.');
       const t=receiptFromText(edited,meta);if(t.lines.length===originalParsed.lines.length)t.lines.forEach((l,i)=>{if(CasaReceipts.cents(l.price)===CasaReceipts.cents(originalParsed.lines[i].price))l.originalName=originalParsed.lines[i].name});
       const prepared=receiptQuickPlan(t);
-      if(!prepared.ok){ov.remove();ticketReview(t,edited,{file:meta.file,reasons:prepared.reasons});return}
-      receiptSaving(ov,true);receiptSaveStatus(ov,'Guardando compra…');const result=await saveReceiptPurchase(receiptConfirmReading(prepared.ticket),meta.file,{removePurchased:true});
+      if(!prepared.ok){ov.remove();ticketReview(t,edited,{file:meta.file,draftKey:meta.draftKey,reasons:prepared.reasons});return}
+      receiptSaving(ov,true);receiptSaveStatus(ov,'Guardando compra…');const result=await saveReceiptPurchase(receiptConfirmReading(prepared.ticket),meta.file,{removePurchased:true},message=>receiptSaveStatus(ov,message),meta.draftKey);
       ov.remove();toast(receiptMessage(result)+(result.photoWarning?' · '+result.photoWarning:''));
     }catch(e){
-      if(e.code==='receipt_review'){const t=receiptFromText(field.value,meta);ov.remove();ticketReview(t,field.value,{file:meta.file,reasons:[e.message]});return}
-      receiptSaveStatus(ov,e.message||'No se ha podido guardar. Reintenta este mismo ticket.',true);
+      if(e.code==='receipt_review'){const t=receiptFromText(field.value,meta);ov.remove();ticketReview(t,field.value,{file:meta.file,draftKey:meta.draftKey,reasons:[e.message]});return}
+      receiptSaveStatus(ov,receiptSaveError(e),true);
     }finally{receiptSaving(ov,false);busy=false;button.disabled=false}
   }
   ov.querySelector('#tkTranscriptCrop')?.addEventListener('click',async()=>{
@@ -1572,7 +1579,7 @@ function ticketReview(t,text,opts={}){
   const missing=pending?(pending.items||[]).filter(i=>!t.lines.some(l=>covered(i,l))):[],extra=pending?t.lines.filter(l=>!(pending.items||[]).some(i=>covered(i,l))):[];
   const candidates=(opts.candidates||S.buys||[]).filter(b=>b.date===t.date&&CasaReceipts.cents(b.total)===CasaReceipts.cents(t.total)&&(!t.store||!b.store||norm(b.store)===norm(t.store)));
   const rows=t.lines.map((a,i)=>{const {plan,credits,prior,matches,selected,unknown}=receiptLineDefaults(a,t,pending);return `<details class="ck-tl" data-receipt-row="${i}" data-validation-required="${!!(a.reviewRequired||unknown||a.readConfidence<.9)}" data-line-validated="${!!a.lineValidated}" data-read-confirmed="${!!a.lineValidated}" ${unknown||plan.ambiguous?'open':''}><summary><span data-row-name="${i}">${esc(a.nice||a.name)}</span> · <span data-row-price="${i}">${Number.isFinite(a.price)?eur(a.price):'Sin leer'}</span><span data-review-label="${i}"></span></summary><p class="receipt-line-issue" id="tkLineIssue${i}" data-line-issue="${i}" hidden></p><p class="hint">Línea del ticket · artículo ${i+1}</p><blockquote class="receipt-source-line" data-read-line="${i}">${esc(a.sourceText||'Texto original no disponible; comprueba la foto.')}</blockquote>${a.readBox?`<canvas data-doubt-preview="${i}" style="width:100%;height:auto" aria-label="Recorte del producto en el ticket"></canvas>`:''}<div class="ck-tl-h"><input type="checkbox" data-on="${i}" aria-label="Incluir artículo ${i+1}" checked><input class="field" data-nm="${i}" aria-label="Nombre del artículo ${i+1}" value="${esc(a.nice||a.name)}"></div><label for="tkLinePrice${i}">Precio que ves al final de esta línea (€)</label><input class="field" id="tkLinePrice${i}" data-pr="${i}" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${Number.isFinite(a.price)?String(a.price).replace('.',','):''}"><div class="grid2"><div><label data-quantity-label="${i}">${unknown?'Cantidad sin leer: confirmar':'Cantidad'}</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" placeholder="Confirmar" value="${unknown?'':a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><button type="button" class="btn sec" data-validate-line="${i}">Validar artículo</button><p data-line-validation="${i}" role="status"></p><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p>${pending?`<label>¿Ya se añadió al terminar la compra?</label><select class="field" data-credit="${i}">${opt([['','Producto adicional / aún no añadido'],...credits.map(p=>[p.id,p.name+' · '+fmtAmt(p.amount,p.unit)])],prior?.id||'')}</select><p class="hint">Se comparará la cantidad total del ticket con lo ya registrado, sin sumarlo dos veces.</p>`:''}<label>Destino en casa</label><select class="field" data-pn="${i}">${opt([...(plan.ambiguous&&!plan.inventory?[['__choose','Selecciona el destino…']]:[]),['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.ambiguous&&!plan.inventory?'__choose':plan.inventory)}</select><details><summary>Cuánto añadir a casa</summary><input class="field" data-stockqty="${i}" data-per-unit="${plan.amount/(a.kg||a.units||1)}" type="number" min="0.001" step="any" value="${plan.amount}"><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></details><label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([...(matches.length>1?[['__choose','Selecciona qué quitar…']]:[]),['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],matches.length>1?'__choose':selected)}</select><div ${a.kg?'':'hidden'}><label>Unidades compradas para descontar de Compras</label><input class="field" data-purchased="${i}" type="number" min="0" step="any" value="${a.kg?0:a.units}"><p class="hint">Si compraste menos de lo apuntado, quedará el resto pendiente. En productos por peso, confirma las unidades de la lista.</p></div>${matches.length>1?'<p class="hint">Hay varias coincidencias: elige cuál has comprado.</p>':''}</details>`});
-  const ov=sheet('Revisar tique',`<p class="hint">${pending?'Completa la compra pendiente de '+esc(pending.store)+' del '+esc(pending.date)+'. El gasto se actualizará con el total del ticket. ':''}${esc((opts.reasons||[]).filter(r=>!/^(Confirma|La lectura necesita|Falta|Hay una línea|La suma de artículos)/.test(r)).join('. '))} ${pending?'Extras detectados: '+esc(extra.map(l=>l.name).join(', ')||'ninguno')+'. No detectados del carro: '+esc(missing.map(l=>l.name).join(', ')||'ninguno')+'. Revisa las coincidencias antes de guardar.':''} Pulsa un aviso para ir al campo concreto. Los demás productos están plegados.</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><div id="tkIssues" class="receipt-issues" aria-live="polite"></div><p id="tkConfirmation" class="hint" hidden></p><button type="button" class="link" id="tkBackToText">Corregir transcripción</button><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Si ya está guardado, no se repiten gasto ni existencias. Al completar un gasto previo tampoco se vuelven a sumar sus productos.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});
+  const ov=sheet('Revisar tique',`<p class="hint">${pending?'Completa la compra pendiente de '+esc(pending.store)+' del '+esc(pending.date)+'. El gasto se actualizará con el total del ticket. ':''}${esc((opts.reasons||[]).filter(r=>!/^(Confirma|La lectura necesita|Falta|Hay una línea|La suma de artículos)/.test(r)).join('. '))} ${pending?'Extras detectados: '+esc(extra.map(l=>l.name).join(', ')||'ninguno')+'. No detectados del carro: '+esc(missing.map(l=>l.name).join(', ')||'ninguno')+'. Revisa las coincidencias antes de guardar.':''} Pulsa un aviso para ir al campo concreto. Los demás productos están plegados.</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><div id="tkIssues" class="receipt-issues" aria-live="polite"></div><p id="tkConfirmation" class="hint" hidden></p><button type="button" class="link" id="tkBackToText">Corregir transcripción</button><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Si ya está guardado, no se repiten gasto ni existencias. Al completar un gasto previo tampoco se vuelven a sumar sus productos.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});ov.classList.add('receipt-save-sheet');
   receiptDoubtPreviews(t,opts.file,ov);
   let busy=false;
   function collect(){
@@ -1595,7 +1602,7 @@ function ticketReview(t,text,opts={}){
     }catch(e){if(ov.isConnected)ov.querySelector('#tkStatus').textContent=e.message||'No se ha podido volver a leer la foto.'}
     finally{readOptions.dispose();busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
   });
-  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines,pendingId:t.pendingBuyId})});
+  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines,pendingId:t.pendingBuyId,draftKey:opts.draftKey})});
   ov.querySelector('#tkAddLine').addEventListener('click',()=>{
     const current=collect();current.lines.push({name:'',nice:'',units:1,unit:0,price:0});
     ov.remove();ticketReview(current,text,opts);
@@ -1620,9 +1627,9 @@ function ticketReview(t,text,opts={}){
       const check=sum();if(!check.ok){receiptSaveStatus(ov,'Corrige los datos señalados; no hace falta validar cada artículo. '+check.reasons.filter(reason=>reason!=='Hay una línea incompleta').join('. '),true);receiptFocusIssue(ov,check.issues[0]);return}
       const receipt=receiptConfirmReading(collect());
       const choice=val(ov,'f_as');
-      const result=await saveReceiptPurchase(receipt,opts.file,{removePurchased:ov.querySelector('#f_rm').checked,matchId:choice&&choice!=='__new'?choice:'',confirmNew:choice==='__new'});
+      const result=await saveReceiptPurchase(receipt,opts.file,{removePurchased:ov.querySelector('#f_rm').checked,matchId:choice&&choice!=='__new'?choice:'',confirmNew:choice==='__new'},message=>receiptSaveStatus(ov,message),opts.draftKey);
       ov.remove();toast(receiptMessage(result)+(result.photoWarning?' · '+result.photoWarning:''));
-    }catch(e){receiptSaveStatus(ov,e.message||'No se ha podido guardar. Reintenta este mismo ticket.',true)}
+    }catch(e){receiptSaveStatus(ov,receiptSaveError(e),true)}
     finally{receiptSaving(ov,false);busy=false;button.disabled=false}
   }
 
@@ -1709,6 +1716,7 @@ const CK_ACT={
   },
   ckBuys:()=>buysSheet(),
   ckPendingReceipt:d=>ticketFlow({pendingId:d.id}),
+  ckReceiptDraft:d=>resumeReceiptDraft(d.id),
   ckSpend:()=>spendSheet(),
   ckMarket:()=>marketSheet(),
   toggleItem:d=>{const i=find(S.items,d.id);if(!i)return;

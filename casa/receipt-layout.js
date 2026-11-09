@@ -20,6 +20,9 @@
       const tokens=first.tokens||[],gaps=tokens.slice(2).map((t,i)=>t.step-tokens[i+1].step),gap=tokens.length>1?tokens[1].step-tokens[0].step:0;
       const spaced=!tokens.length||gap>=median(gaps)*1.4;
       if(anchors.length>=2&&Math.abs(first.x-column(first.y))<tolerance&&spaced&&/^\d{1,2}[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(first.text))text=text.replace(/^(\d{1,2})(?=[A-Za-zÁÉÍÓÚÑáéíóúñ])/,'$1 ');
+      // «1 6 HUEVOS» puede reconocerse como «16 HUEVOS». Solo se separa
+      // con columna de cantidades y un hueco real entre ambos dígitos.
+      if(anchors.length>=2&&Math.abs(first.x-column(first.y))<tolerance&&tokens.length>2&&spaced&&/^\d\d\s+[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(first.text))text=text.replace(/^(\d)(?=\d)/,'$1 ');
       return {text,rawText,confidence:Math.min(...row.words.map(w=>w.confidence)),box:[Math.min(...row.words.map(w=>w.x)),Math.min(...row.words.flatMap(w=>w.box.map(p=>p[1]))),Math.max(...row.words.flatMap(w=>w.box.map(p=>p[0]))),Math.max(...row.words.flatMap(w=>w.box.map(p=>p[1])))],words:row.words};
     });
     const confidence=words.length?100*words.reduce((n,w)=>n+w.confidence,0)/words.length:0;
