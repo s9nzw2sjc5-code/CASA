@@ -1,6 +1,6 @@
 # Foto de producto a la lista de la compra
 
-Versión 68. Publicación autorizada con propuestas, búsqueda manual y
+Versión 85. Publicación autorizada con propuestas, búsqueda manual y
 asociaciones confirmadas por el usuario. La confirmación es obligatoria incluso
 cuando existe una asociación anterior.
 
@@ -85,6 +85,57 @@ reutilización del estado compartido en un segundo navegador simulado. Esto no
 sustituye una comprobación de sincronización en dos teléfonos reales conectados
 a Firestore.
 
+## Probar sin añadir a Compras (versión 85)
+
+La casilla «Probar sin añadir a Compras» utiliza el mismo lector y buscador que la
+compra normal. Oculta la cantidad y cambia la confirmación a «Validar y recordar».
+Se requiere una foto y una selección explícita. Validar guarda únicamente la
+asociación confirmada en `prodMap`; no añade artículos, no incrementa existencias
+ni registra gastos. Cancelar no enseña ninguna asociación. La próxima apertura
+vuelve al modo normal de añadir a la compra.
+
+También se han corregido propuestas que contradecían «con»/«sin» en la etiqueta,
+como leche con lactosa frente a leche sin lactosa. Una mención «sin gluten» no
+descarta por sí sola alimentos naturalmente libres de gluten cuyo nombre del
+catálogo no incluya esa frase.
+
+### Pruebas del 8 de noviembre de 2026
+
+Se han ejecutado **120 combinaciones con OCR local real**, sin sustituir la
+lectura por respuestas simuladas. Las fotos y los textos privados de las pruebas
+permanecen fuera del repositorio.
+
+| Muestra | Casos | Producto esperado entre las propuestas |
+| --- | ---: | ---: |
+| Recorte público de un envase con etiqueta legible | 9 | 8 |
+| Miniaturas de envases de capturas, de muy baja resolución | 54 | 5 |
+| Cuatro recortes de dos fotografías reales, con etiquetas parciales u oblicuas | 36 | 5 |
+| Experimentos de recorte, inversión y contraste de un logotipo curvo | 3 | 0 |
+| Controles sin etiqueta o sin referencia identificable en el catálogo | 18 | 18 rechazos esperados |
+
+Las condiciones incluyen brillo 1,4 y 0,4, giros ±25° y 90°, perspectiva, reflejo
+y desenfoque, aplicados por software. No representan capturas nuevas tomadas
+físicamente con distintas luces. Los casos no son una muestra representativa de
+todos los productos, y la tabla no es un porcentaje de precisión universal.
+Los formatos que el texto visible no distingue pueden presentar varias opciones.
+
+Los fallos muestran límites concretos: miniaturas demasiado pequeñas, textos
+parciales como «Light», letras curvas y desenfoque fuerte. En esas lecturas no se
+obtuvo el artículo esperado; no se ha cambiado el clasificador para inventar una
+identificación a partir del color o de la forma. Se mantiene el recorte y la
+búsqueda manual. Una fotografía de una nevera completa no equivale a una etiqueta
+frontal legible de un solo producto.
+
+El flujo de cámara/galería se probó en Chromium móvil con OCR real, incluida la
+validación sin alterar la lista, despensa o gastos; cancelación sin aprendizaje;
+imposibilidad de validar una prueba sin foto; y vuelta al modo normal. No se ha
+verificado una cámara de iPhone físico ni su decodificación nativa de HEIC. Los
+recortes de HEIC se convirtieron localmente a JPEG para estas pruebas de lectura.
+
+Los informes completos quedan fuera de Git. El benchmark permite `conditions`
+por imagen y registra la posición del producto esperado y si ocupa el primer
+puesto, para distinguir proponer una opción de acertar una referencia exacta.
+
 ## Repetir las pruebas
 
 ```sh
@@ -96,7 +147,7 @@ node tests/product-photo-quality.cjs /tmp/manifest.json /tmp/informe.json
 Formato del manifest, con archivos y salidas fuera del repositorio:
 
 ```json
-{"photos":[{"file":"/tmp/producto.jpg","expectedIds":["5044"],"source":"URL o descripción de origen"}]}
+{"photos":[{"file":"/tmp/producto.jpg","expectedIds":["5044"],"source":"URL o descripción de origen","conditions":["original","menos-luz","giro-25"]}]}
 ```
 
 Para un control que no debe proponer nada, usar `expectedIds: []` y

@@ -15,7 +15,7 @@ for(const file of [manifest,report,...fixtures.map(f=>f.file)]){const rel=path.r
   const results=[];
   for(const photo of fixtures){
    await p.locator('#benchmark').setInputFiles(photo.file);
-   for(const condition of ['original','mas-luz','menos-luz','giro-25','giro-menos-25','giro-90','perspectiva','reflejo','desenfoque']){
+   for(const condition of photo.conditions||['original','mas-luz','menos-luz','giro-25','giro-menos-25','giro-90','perspectiva','reflejo','desenfoque']){
     const result=await p.evaluate(async condition=>{
      const file=document.querySelector('#benchmark').files[0],image=await createImageBitmap(file),c=document.createElement('canvas'),angle=condition==='giro-25'?25:condition==='giro-menos-25'?-25:condition==='giro-90'?90:0;
      const max=Math.max(image.width,image.height),pad=angle?Math.round(max*.5):0;c.width=image.width+pad;c.height=image.height+pad;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
@@ -26,7 +26,7 @@ for(const file of [manifest,report,...fixtures.map(f=>f.file)]){const rel=path.r
      try{const ocr=await CasaReceiptOCR.read(blob,()=>{},{kind:'product'}),match=CasaProductPhoto.rank(ocr,MC.p);return {condition,elapsedMs:Math.round(performance.now()-start),text:ocr.text,lines:ocr.lines,candidates:match.candidates.map(a=>({id:a.id,name:MC.byId.get(a.id)[1],score:a.score})),requiresConfirmation:match.needsConfirmation}}
      catch(e){return {condition,error:e.message,candidates:[]}}
     },condition);
-    result.source=photo.source;result.file=photo.file;result.expectedIds=photo.expectedIds;result.expectNoCandidates=!!photo.expectNoCandidates;result.foundExpected=photo.expectNoCandidates?!result.error&&result.candidates.length===0:photo.expectedIds.some(id=>result.candidates.some(c=>c.id===id));results.push(result);
+    result.source=photo.source;result.file=photo.file;result.expectedIds=photo.expectedIds;result.expectNoCandidates=!!photo.expectNoCandidates;result.expectedRank=photo.expectNoCandidates?null:result.candidates.findIndex(c=>photo.expectedIds.includes(c.id))+1||null;result.firstChoiceCorrect=result.expectedRank===1;result.foundExpected=photo.expectNoCandidates?!result.error&&result.candidates.length===0:result.expectedRank!==null;results.push(result);
     fs.writeFileSync(report,JSON.stringify({syntheticConditions:true,autoAdds:false,photos:fixtures.length,results},null,2));console.log(path.basename(photo.file),condition,result.foundExpected?(photo.expectNoCandidates?'REJECTED AS EXPECTED':'EXPECTED SUGGESTION FOUND'):'MISS',result.candidates.slice(0,3).map(c=>c.name).join(' | '));
    }
   }

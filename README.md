@@ -191,6 +191,12 @@ la foto al producto. Tolera etiquetas parciales y pequeñas erratas. Exige confi
 confirmadas en el estado compartido del hogar, sin subir las fotos. Consultar
 [validación, límites y pruebas](docs/foto-productos.md).
 
+Desde la versión 85, «Añadir producto con foto» incluye «Probar sin añadir a
+Compras». Permite elegir una foto, comprobar las propuestas y usar «Validar y
+recordar» para guardar la asociación correcta sin añadir artículos, cambiar la
+despensa ni registrar gastos. Cancelar no enseña la asociación. La casilla vuelve
+al modo normal al abrir la siguiente foto.
+
 
 ## Productos de tickets anteriores
 

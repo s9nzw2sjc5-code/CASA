@@ -36,3 +36,10 @@ test('label wording can match a product without its catalogue prefix',()=>{
  for(const text of ['ELIMINA OLORES','ELININA\nOLORES','ELIMINA\nOL0RES','ELIMINAOLORES']){const r=P.rank({text},catalogue);assert(r.candidates.some(p=>p.id==='24076'),text);assert.equal(r.candidates[0].id,'24076');assert(r.needsConfirmation)}
 });
 test('one secondary word cannot infer an unrelated product',()=>{for(const text of ['OLORES','PERU','CHOURICO PERU','ELININA'])assert.equal(P.rank({text},catalogue).candidates.length,0,text)});
+test('explicit con/sin variants cannot propose the opposite product',()=>{
+ const milk=[['regular','Leche entera Hacendado','1L',1,1,'l'],['free','Leche entera sin lactosa Hacendado','1L',1,1,'l']];
+ assert.deepEqual(P.rank({text:'LECHE ENTERA CON LACTOSA'},milk).candidates.map(x=>x.id),['regular']);assert.deepEqual(P.rank({text:'LECHE ENTERA SIN LACTOSA'},milk).candidates.map(x=>x.id),['free']);
+ const butter=[['salt','Mantequilla con sal Hacendado','250g',2,.25,'kg'],['plain','Mantequilla sin sal Hacendado','250g',2,.25,'kg']];assert(!P.rank({text:'MANTEQUILLA CON SAL'},butter).candidates.some(x=>x.id==='plain'));assert(!P.rank({text:'MANTEQUILLA SIN SAL'},butter).candidates.some(x=>x.id==='salt'));
+ // Naturally gluten-free foods need not spell the claim in their catalogue name.
+ assert(P.rank({text:'ARROZ REDONDO SIN GLUTEN'},catalogue).candidates.some(x=>x.id==='5044'));
+});

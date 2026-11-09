@@ -51,8 +51,13 @@
     const weight=w=>Math.max(1.5,Math.log(1+rows.length/(freq.get(w)||1)));
     // Variantes que no se deben intercambiar si la etiqueta las distingue.
     const variants=[['entera','semidesnatada','desnatada'],['natural','descafeinado'],['integral','blanco'],['normal','light']];
+    const label=norm(text),attributes=['lactosa','gluten','azucar(?:es)?','sal','alcohol','cafeina'];
+    const states=attributes.map(attribute=>({negative:new RegExp('\\bsin\\s+'+attribute+'\\b'),positive:new RegExp('\\bcon\\s+'+attribute+'\\b')}));
     const out=[];
     for(const {p,words}of rows){
+      const name=norm(p[1]);
+      if(states.some(({negative,positive})=>(negative.test(label)&&positive.test(name))||(positive.test(label)&&negative.test(name))))continue;
+      if(/\bsin\s+lactosa\b/.test(label)&&/\bleche\b/.test(name)&&!/\bsin\s+lactosa\b/.test(name))continue;
       const hits=words.filter(w=>seen.includes(w));if(!hits.length)continue;
       const found=hits.reduce((s,w)=>s+weight(w),0),total=words.reduce((s,w)=>s+weight(w),0),coverage=found/Math.max(total,1);
       if(found<3||coverage<.3||(hits.length<2&&coverage<.7))continue;
