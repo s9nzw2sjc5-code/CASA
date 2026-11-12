@@ -1397,40 +1397,41 @@ async function ocrText(file,prog,options={}){
 }
 
 const tNum=s=>parseFloat(String(s).replace(/\s/g,'').replace(',','.'));
-const T_SKIP=/^(total|subtotal|iva|base|cuota|tarjeta|entrega|efectivo|cambio|importe|descuento|ahorro|cupon|nif|cif|factura|fecha|hora|op[:.]|tienda|telefono|tel[.:]|c\/|avda|calle|mercadona|lidl|carrefour|aldi|dia\b|gracias|devolucion|n[ºo°](?=[\s.:#\d]|$)|caja|cajer|ticket|tique|art[ií]culos|descripci|p\.? ?unit|aut|visa|mastercard|contactless|forma de pago|venta|copia|www|http|s\.a\.|s\.l\.|%)/;
+const T_SKIP=/^(total|subtotal|iva\b|base(?=\s+(?:imponible\b|\d)|\s*[:.]|$)|cuota|tarjeta|entrega|efectivo|cambio|importe|descuento|ahorro|cupon|nif|cif|factura|fecha|hora|op[:.]|tienda|telefono|tel[.:]|c\/|avda|calle|mercadona|lidl|carrefour|aldi|dia\b|gracias|devolucion|n[ºo°](?=[\s.:#\d]|$)|caja|cajer|ticket|tique|art[ií]culos|descripci|p\.? ?unit|aut|visa|mastercard|contactless|forma de pago|venta|copia|www|http|s\.a\.|s\.l\.|%)/;
 // Saca de un tique: supermercado, fecha, total y cada línea (nombre, unidades, precio unidad, importe, kilos)
 function parseTicket(txt){
-  const L=String(txt||'').split('\n').map(l=>l.replace(/[€|]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);
-  const all=norm(L.join(' '));
-  const mentions=label=>all.split(/[^a-z0-9]+/).includes(norm(label).split(/[ /]/)[0]);
+  const L=String(txt||'').split('\n').map(l=>l.replace(/[€|]/g,' ').replace(/(\d)\s*([.,])\s*(\d{2})(?!\d)/g,'$1$2$3').replace(/\s+/g,' ').trim()).filter(Boolean);
+  const all=norm(L.join(' ')),mentions=label=>all.split(/[^a-z0-9]+/).includes(norm(label).split(/[ /]/)[0]);
   const st=ck().stores.find(mentions)||(mentions('coviran')?'Covirán':mentions('eroski')?'Eroski':mentions('alcampo')?'Alcampo':'');
   const dm=all.match(/(\d{2})[\/\-.](\d{2})[\/\-.](\d{2,4})/);
-  let date='';if(dm){const y=dm[3].length===2?'20'+dm[3]:dm[3];const d=`${y}-${dm[2]}-${dm[1]}`;if(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d)&&d<=today())date=d}
-  let total=0;const tm=L.map(l=>l.match(/^total\b[^0-9]{0,12}(\d+[.,]\d{2})/i)).find(Boolean);if(tm)total=tNum(tm[1]);
-  const lines=[];let pend=null;
-  L.forEach(l=>{
+  let date='';if(dm){const y=dm[3].length===2?'20'+dm[3]:dm[3],d=`${y}-${dm[2]}-${dm[1]}`;if(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d)&&d<=today())date=d}
+  const tm=L.map(l=>l.match(/^total\b[^0-9]{0,12}(\d+[.,]\d{2})/i)).find(Boolean),total=tm?tNum(tm[1]):0;
+  const lines=[];let pend=null,inItems=false,ended=false;
+  const flush=()=>{if(pend){if(inItems)lines.push({...pend,price:NaN,unit:NaN,reviewRequired:true});pend=null}};
+  for(const l of L){
     const n=norm(l);
-    // Línea de peso: «0,856 kg 2,30 €/kg 1,97»
+    if(/^total\b/.test(n)){flush();ended=true;continue}
+    if(ended)continue;
+    if(/^descripci/.test(n)){pend=null;inItems=true;continue}
     const w=n.match(/(\d+[.,]\d{1,3})\s*kg\s*[x×]?\s*(\d+[.,]\d{2})\s*(?:\/\s*kg|eur\/kg|e\/kg)?\s+(\d+[.,]\d{2})(?:\s+[a-e])?$/);
-    if(w&&pend){lines.push({name:pend,units:1,kg:tNum(w[1]),unit:tNum(w[2]),price:tNum(w[3]),quantityObserved:true,sourceText:l});pend=null;return}
-    // «2 x 0,89» debajo del nombre (Lidl, Carrefour…)
+    if(w&&pend){lines.push({...pend,units:1,kg:tNum(w[1]),unit:tNum(w[2]),unitObserved:true,price:tNum(w[3]),quantityObserved:true,sourceText:pend.sourceText+'\n'+l});pend=null;inItems=true;continue}
     const x=n.match(/^(\d+)\s*[x×*]\s*(\d+[.,]\d{2})(?:\s+(\d+[.,]\d{2}))?/);
-    if(x&&lines.length&&!pend){const a=lines[lines.length-1];a.units=+x[1];a.unit=tNum(x[2]);a.quantityObserved=true;if(x[3])a.price=tNum(x[3]);return}
+    if(x&&lines.length&&!pend){const line=lines.at(-1);line.units=+x[1];line.unit=tNum(x[2]);line.unitObserved=true;line.quantityObserved=true;if(x[3])line.price=tNum(x[3]);line.sourceText+='\n'+l;continue}
     const discount=l.match(/^((?:DESCUENTO|CUPON|DTO)[^\d]*?)\s+(-\d+[.,]\d{2})$/i);
-    if(discount){lines.push({name:discount[1].trim(),units:1,unit:tNum(discount[2]),price:tNum(discount[2]),quantityObserved:true,sourceText:l});pend=null;return}
-    if(T_SKIP.test(n)||/^\d+[.,]\d+\s*kg\b/.test(n)){pend=null;return}
-    // «3 HUEVOS GRANDES L 3,05 9,15» o «1 LECHE ENTERA 0,89»
+    if(discount){flush();lines.push({name:discount[1].trim(),units:1,unit:tNum(discount[2]),unitObserved:false,price:tNum(discount[2]),quantityObserved:true,sourceText:l});inItems=true;continue}
+    if(T_SKIP.test(n)||/^\d+[.,]\d+\s*kg\b/.test(n)){if(!inItems)pend=null;continue;}
     let m=l.match(/^(\d{1,2})\s+(.*?[A-Za-zÁÉÍÓÚÑáéíóúñ].*?)\s+(-?\d+[.,]\d{2})(?:\s+(-?\d+[.,]\d{2}))?(?:\s+[A-E])?$/);
-    if(m){const u=+m[1],a=tNum(m[3]),b=m[4]?tNum(m[4]):null;lines.push({name:m[2],units:u,unit:b!=null?a:a/u,price:b!=null?b:a,quantityObserved:true,sourceText:l});pend=null;return}
-    // «LECHE ENTERA 0,89 A» (sin unidades delante)
+    if(m){flush();const u=+m[1],price=tNum(m[4]||m[3]);lines.push({name:m[2],units:u,unit:m[4]?tNum(m[3]):price/u,unitObserved:!!m[4],price,quantityObserved:true,sourceText:l});inItems=true;continue}
     m=l.match(/^(.*?[A-Za-zÁÉÍÓÚÑáéíóúñ]{2}.*?)\s+(-?\d+[.,]\d{2})(?:\s+[A-E])?$/);
-    if(m){const pr=tNum(m[2]);lines.push({name:m[1],units:1,unit:pr,price:pr,quantityObserved:false,sourceText:l});pend=null;return}
-    // Nombre solo (lo de peso viene en la línea siguiente)
-    m=l.match(/^(?:\d{1,2}\s+)?([A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ0-9 .,%/'-]{2,})$/);
-    pend=m?m[1]:null;
-  });
-  lines.forEach(a=>{a.name=a.name.replace(/\s+/g,' ').trim();a.nice=a.name.toLowerCase().replace(/^./,c=>c.toUpperCase())});
-  return{store:st,date,total,storeObserved:!!st,dateObserved:!!date,totalObserved:!!tm,lines:lines.filter(a=>a.price!==0&&a.name.length>1)};
+    if(m){const price=tNum(m[2]),continuation=pend?.quantityObserved;
+      if(pend&&!continuation)flush();
+      lines.push({name:continuation?pend.name+' '+m[1]:m[1],units:continuation?pend.units:1,unit:price/(continuation?pend.units:1),unitObserved:false,price,quantityObserved:!!continuation,sourceText:continuation?pend.sourceText+'\n'+l:l});pend=null;inItems=true;continue}
+    m=l.match(/^(?:(\d{1,2})\s+)?([A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ0-9 .,%/'-]{2,})$/);
+    if(m){flush();pend={name:m[2],units:m[1]?+m[1]:1,quantityObserved:!!m[1],sourceText:l}}
+  }
+  flush();
+  for(const line of lines){line.name=line.name.replace(/\s+/g,' ').trim();line.nice=line.name.toLowerCase().replace(/^./,c=>c.toUpperCase())}
+  return {store:st,date,total,storeObserved:!!st,dateObserved:!!date,totalObserved:!!tm,lines:lines.filter(a=>a.name.length>1)};
 }
 // Producto de Mercadona de una línea del tique: el que cuesta exactamente lo mismo
 function ticketProduct(a,name){
@@ -1506,8 +1507,20 @@ async function commitTicket(t,options={},progress=()=>{}){
 }
 function receiptMessage(result){return result.duplicate?'Este tique ya estaba guardado. No se han duplicado el gasto ni los productos.':`Tique guardado y verificado${result.enriched?' · completa el gasto anterior':''} · ${result.added||0} productos actualizados en casa · ${result.removed||0} quitados de Compras. Gastado esta semana: ${eur(result.weekly)}`}
 function receiptFromText(text,meta={}){
-  const t=parseTicket(text),clean=s=>String(s).replace(/[€|]/g,' ').replace(/\s+/g,' ').trim();
-  for(const line of t.lines){const source=(meta.lines||[]).find(row=>clean(row.text)===line.sourceText);if(source){line.readConfidence=source.confidence;line.readBox=source.box}}
+  const t=parseTicket(text),clean=s=>String(s).replace(/[€|]/g,' ').replace(/(\d)\s*([.,])\s*(\d{2})(?!\d)/g,'$1$2$3').replace(/\s+/g,' ').trim();
+  for(const line of t.lines){
+    const parts=String(line.sourceText||'').split('\n').map(clean),sources=(meta.lines||[]).filter(row=>parts.includes(clean(row.text)));
+    if(sources.some(s=>s.moneyNormalized)){line.reviewRequired=true;line.readCorrection='decimal';line.ocrRawText=sources.map(s=>s.rawText||s.text).join('\n')}
+    if(sources.length){const confidence=sources.map(s=>s.confidence).filter(Number.isFinite);if(confidence.length)line.readConfidence=Math.min(...confidence);const boxes=sources.map(s=>s.box).filter(b=>Array.isArray(b)&&b.length===4);if(boxes.length)line.readBox=[Math.min(...boxes.map(b=>b[0])),Math.min(...boxes.map(b=>b[1])),Math.max(...boxes.map(b=>b[2])),Math.max(...boxes.map(b=>b[3]))]}
+  }
+  // Si varias filas demuestran dónde están P.Unit e Importe, una cifra leída
+  // solo en P.Unit no se convierte silenciosamente en el importe de la línea.
+  const moneyWords=row=>(row?.words||[]).filter(w=>/^-?\d+[.,]\d{2}$/.test(clean(w.text))&&Array.isArray(w.box)&&w.box.length===4),center=w=>w.box.reduce((n,p)=>n+p[0],0)/4;
+  const columns=t.lines.filter(l=>l.unitObserved&&!l.kg).map(l=>moneyWords((meta.lines||[]).find(row=>clean(row.text)===clean(l.sourceText)))).filter(words=>words.length===2).map(words=>words.sort((a,b)=>center(a)-center(b)));
+  if(columns.length>=2){const median=values=>values.slice().sort((a,b)=>a-b)[Math.floor(values.length/2)],unitColumn=median(columns.map(w=>center(w[0]))),amountColumn=median(columns.map(w=>center(w[1]))),gap=amountColumn-unitColumn;
+    const ys=columns.flatMap(pair=>pair.map(w=>w.box.reduce((n,p)=>n+p[1],0)/4)),stable=columns.every(pair=>Math.abs(center(pair[0])-unitColumn)<gap*.3&&Math.abs(center(pair[1])-amountColumn)<gap*.3);
+    if(gap>.04&&stable)for(const line of t.lines){if(line.unitObserved||!Number.isFinite(line.price))continue;const words=moneyWords((meta.lines||[]).find(row=>clean(row.text)===clean(line.sourceText))),y=words.length===1?words[0].box.reduce((n,p)=>n+p[1],0)/4:NaN;if(words.length===1&&y>=Math.min(...ys)-.05&&y<=Math.max(...ys)+.05&&Math.abs(center(words[0])-unitColumn)<gap*.3){line.unit=tNum(clean(words[0].text));line.unitObserved=true;line.price=NaN;line.reviewRequired=true}}
+  }
   return prepareTicket({...t,imageHash:meta.imageHash||'',ocrConfidence:meta.confidence||0,ocrEngine:meta.engine||'',ocrLines:meta.lines||[],pendingBuyId:meta.pendingId||''});
 }
 function receiptReadOptions(ov){
@@ -1561,78 +1574,127 @@ async function ticketFlow(context={}){
     if(!ov.isConnected)return;
     if(!MC)await loadMC();
     if(!ov.isConnected)return;
-    readOptions.dispose();ov.remove();ticketTranscription(text,{file,imageHash,confidence,engine:reading.engine,lines:reading.lines,pendingId:context.pendingId});
+    readOptions.dispose();ov.remove();const meta={file,imageHash,confidence,engine:reading.engine,lines:reading.lines,pendingId:context.pendingId},draft=receiptDrafts().find(d=>d.ticket.imageHash===imageHash);
+    if(draft){const ov=ticketReview(receiptMergeCorrections(draft.ticket,receiptFromText(text,meta)),text,{file,draftKey:draft.key,filter:draft.options?.filter||'all'});ov.querySelector('#f_rm').checked=draft.options?.removePurchased!==false;const choice=draft.options?.confirmNew?'__new':draft.options?.matchId||'';if([...ov.querySelector('#f_as').options].some(o=>o.value===choice))ov.querySelector('#f_as').value=choice}
+    else ticketTranscription(text,meta);
   }catch(e){if(!ov.isConnected||e.name==='AbortError')return;ov.remove();sheet('No se ha podido completar el tique',`<p>${esc(e.message||'Revisa la conexión o prueba con una foto más nítida.')}</p><p class="hint">No se creará un gasto distinto al reintentar el mismo archivo.</p>`,{})}
   finally{readOptions.dispose()}
 }
 function receiptLineDefaults(a,t,pending){
-  const plan={...(a.plan||ticketLinePlan(a,t.store))},credits=pending?.pendingInventory||[],candidates=credits.filter(p=>(plan.mid&&p.mid===plan.mid)||receiptNameMatches(p.name,a.name)),prior=candidates.length===1?candidates[0]:null;if(prior){plan.inventory=prior.pantryId;if(!plan.mid){const originalUnits=(pending.items||[]).filter(i=>(prior.mid&&i.mid===prior.mid)||norm(i.name)===norm(prior.name)).reduce((n,i)=>n+(i.units||1),0);plan.amount=prior.amount/(originalUnits||1)*a.units;plan.unit=prior.unit}}const matches=ticketShoppingMatches(a,plan),selected=Array.isArray(a.plan?.shoppingIds)?a.plan.shoppingIds.find(id=>(S.items||[]).some(i=>i.id===id))||'':matches.length===1?matches[0].id:'',unknown=!!t.ocrEngine&&a.quantityObserved===false;
+  const plan={...(a.plan||ticketLinePlan(a,t.store))},credits=pending?.pendingInventory||[],candidates=credits.filter(p=>(plan.mid&&p.mid===plan.mid)||receiptNameMatches(p.name,a.name)),prior=candidates.length===1?candidates[0]:null;if(prior&&!a.reviewForm){plan.inventory=prior.pantryId;if(!plan.mid){const originalUnits=(pending.items||[]).filter(i=>(prior.mid&&i.mid===prior.mid)||norm(i.name)===norm(prior.name)).reduce((n,i)=>n+(i.units||1),0);plan.amount=prior.amount/(originalUnits||1)*a.units;plan.unit=prior.unit}}const matches=ticketShoppingMatches(a,plan),selected=Array.isArray(a.plan?.shoppingIds)?a.plan.shoppingIds.find(id=>(S.items||[]).some(i=>i.id===id))||'':matches.length===1?matches[0].id:'',unknown=(a.quantityObserved===false&&(!!t.ocrEngine||a.editedFields?.includes('units')))||!Number.isFinite(a.units)||(a.kg!==undefined&&!Number.isFinite(a.kg));
   plan.shoppingIds=selected?[selected]:[];plan.shoppingAmount=a.kg?0:a.units;
   const item=matches.find(x=>x.id===selected);plan.shoppingNames=item?{[item.id]:item.name}:{};
-  if(pending)plan.creditedId=prior?.id||'';
+  if(pending&&!Object.hasOwn(plan,'creditedId'))plan.creditedId=prior?.id||'';
   return {plan,credits,prior,matches,selected,unknown};
 }
 function ticketReview(t,text,opts={}){
   const stores=[...new Set([...ck().stores,...(t.store?[t.store]:[])])],pans=S.pantry||[];
   const pending=(S.buys||[]).find(b=>b.id===t.pendingBuyId&&b.receiptPending);
-  const covered=(i,l)=>(i.mid&&l.plan?.mid===i.mid)||receiptNameMatches(i.name,l.name);
-  const missing=pending?(pending.items||[]).filter(i=>!t.lines.some(l=>covered(i,l))):[],extra=pending?t.lines.filter(l=>!(pending.items||[]).some(i=>covered(i,l))):[];
   const candidates=(opts.candidates||S.buys||[]).filter(b=>b.date===t.date&&CasaReceipts.cents(b.total)===CasaReceipts.cents(t.total)&&(!t.store||!b.store||norm(b.store)===norm(t.store)));
-  const rows=t.lines.map((a,i)=>{const {plan,credits,prior,matches,selected,unknown}=receiptLineDefaults(a,t,pending);return `<details class="ck-tl" data-receipt-row="${i}" data-validation-required="${!!(a.reviewRequired||unknown||a.readConfidence<.9)}" data-line-validated="${!!a.lineValidated}" data-read-confirmed="${!!a.lineValidated}" ${unknown||plan.ambiguous?'open':''}><summary><span data-row-name="${i}">${esc(a.nice||a.name)}</span> · <span data-row-price="${i}">${Number.isFinite(a.price)?eur(a.price):'Sin leer'}</span><span data-review-label="${i}"></span></summary><p class="receipt-line-issue" id="tkLineIssue${i}" data-line-issue="${i}" hidden></p><p class="hint">Línea del ticket · artículo ${i+1}</p><blockquote class="receipt-source-line" data-read-line="${i}">${esc(a.sourceText||'Texto original no disponible; comprueba la foto.')}</blockquote>${a.readBox?`<canvas data-doubt-preview="${i}" style="width:100%;height:auto" aria-label="Recorte del producto en el ticket"></canvas>`:''}<div class="ck-tl-h"><input type="checkbox" data-on="${i}" aria-label="Incluir artículo ${i+1}" checked><input class="field" data-nm="${i}" aria-label="Nombre del artículo ${i+1}" value="${esc(a.nice||a.name)}"></div><label for="tkLinePrice${i}">Precio que ves al final de esta línea (€)</label><input class="field" id="tkLinePrice${i}" data-pr="${i}" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${Number.isFinite(a.price)?String(a.price).replace('.',','):''}"><div class="grid2"><div><label data-quantity-label="${i}">${unknown?'Cantidad sin leer: confirmar':'Cantidad'}</label><input class="field" data-units="${i}" type="number" min="0.001" step="any" placeholder="Confirmar" value="${unknown?'':a.kg||a.units}"></div><div><label>Medida</label><select class="field" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],a.kg?'kg':'ud')}</select></div></div><button type="button" class="btn sec" data-validate-line="${i}">Validar artículo</button><p data-line-validation="${i}" role="status"></p><p class="hint">${esc(plan.label)} · ${fmtAmt(plan.amount,plan.unit)}</p>${pending?`<label>¿Ya se añadió al terminar la compra?</label><select class="field" data-credit="${i}">${opt([['','Producto adicional / aún no añadido'],...credits.map(p=>[p.id,p.name+' · '+fmtAmt(p.amount,p.unit)])],prior?.id||'')}</select><p class="hint">Se comparará la cantidad total del ticket con lo ya registrado, sin sumarlo dos veces.</p>`:''}<label>Destino en casa</label><select class="field" data-pn="${i}">${opt([...(plan.ambiguous&&!plan.inventory?[['__choose','Selecciona el destino…']]:[]),['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.ambiguous&&!plan.inventory?'__choose':plan.inventory)}</select><details><summary>Cuánto añadir a casa</summary><input class="field" data-stockqty="${i}" data-per-unit="${plan.amount/(a.kg||a.units||1)}" type="number" min="0.001" step="any" value="${plan.amount}"><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></details><label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([...(matches.length>1&&!Array.isArray(a.plan?.shoppingIds)?[['__choose','Selecciona qué quitar…']]:[]),['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],matches.length>1&&!Array.isArray(a.plan?.shoppingIds)?'__choose':selected)}</select><div ${a.kg?'':'hidden'}><label>Unidades compradas para descontar de Compras</label><input class="field" data-purchased="${i}" type="number" min="0" step="any" value="${a.kg?0:a.units}"><p class="hint">Si compraste menos de lo apuntado, quedará el resto pendiente. En productos por peso, confirma las unidades de la lista.</p></div>${matches.length>1?'<p class="hint">Hay varias coincidencias: elige cuál has comprado.</p>':''}</details>`});
-  const ov=sheet('Revisar tique',`<p class="hint">${pending?'Completa la compra pendiente de '+esc(pending.store)+' del '+esc(pending.date)+'. El gasto se actualizará con el total del ticket. ':''}${esc((opts.reasons||[]).filter(r=>!/^(Confirma|La lectura necesita|Falta|Hay una línea|La suma de artículos)/.test(r)).join('. '))} ${pending?'Extras detectados: '+esc(extra.map(l=>l.name).join(', ')||'ninguno')+'. No detectados del carro: '+esc(missing.map(l=>l.name).join(', ')||'ninguno')+'. Revisa las coincidencias antes de guardar.':''} Pulsa un aviso para ir al campo concreto. Los demás productos están plegados.</p>${opts.file&&(/image/.test(opts.file.type)||/\.(heic|jpe?g|png|webp)$/i.test(opts.file.name||''))?'<button type="button" class="btn sec" id="tkCrop">✂️ Recortar foto y volver a leer</button>':''}<div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha de compra</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total pagado (€)</label><input class="field" id="f_tot" type="number" step="0.01" value="${t.total||''}"><p id="f_sum" class="hint"></p><div id="tkIssues" class="receipt-issues" aria-live="polite"></div><p id="tkConfirmation" class="hint" hidden></p><button type="button" class="link" id="tkBackToText">Corregir transcripción</button><div>${rows.join('')}</div><button type="button" class="btn sec" id="tkAddLine">+ Añadir artículo que falta</button><label class="toggle-line"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Es un gasto que ya habíais apuntado?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Confirmo que es una compra distinta</option></select><p class="hint">Si ya está guardado, no se repiten gasto ni existencias. Al completar un gasto previo tampoco se vuelven a sumar sus productos.</p><p id="tkStatus" role="status" class="hint"></p><details><summary>Texto leído</summary><pre class="ck-pre">${esc(text)}</pre></details>`,{autoFocus:false,saveLabel:'Guardar y verificar',onSave:()=>{run();return false}});ov.classList.add('receipt-save-sheet');
+  const rows=t.lines.map((a,i)=>{
+    const {plan,credits,prior,matches,selected,unknown}=receiptLineDefaults(a,t,pending),chooseShopping=matches.length>1&&!Array.isArray(a.plan?.shoppingIds),hasKg=a.reviewForm?.measure?a.reviewForm.measure==='kg':a.kg!==undefined,unitObserved=a.unitObserved===undefined?hasKg:a.unitObserved===true,stockScale=a.reviewForm?.perUnit??plan.amount/((hasKg?a.kg:a.units)||1);
+    return `<details class="ck-tl receipt-product" data-receipt-row="${i}" data-validation-required="${!!(a.reviewRequired||unknown||a.readConfidence<.9)}" data-line-validated="${!!a.lineValidated}" data-read-confirmed="${!!a.lineValidated}" data-edited-fields="${esc(JSON.stringify(a.editedFields||[]))}" data-unit-observed="${unitObserved}" data-unmatched-correction="${!!a.unmatchedCorrection}" data-confirmed-key="${esc(a.confirmedKey||'')}" data-default-measure="${a.reviewForm?.defaultMeasure||(hasKg?'kg':'ud')}" data-default-stock-scale="${a.reviewForm?.defaultStockScale??stockScale}" data-default-stock-unit="${a.reviewForm?.defaultStockUnit||plan.unit}">
+      <summary><span class="receipt-row-index">${i+1}</span><span class="receipt-row-copy"><span data-row-name="${i}">${esc(a.nice||a.name||'Artículo sin nombre')}</span><small data-review-label="${i}"></small></span><span class="receipt-row-amount"><span class="receipt-quick-price"><input class="field" data-pr="${i}" id="tkLinePrice${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Importe de la línea ${i+1}" placeholder="Sin leer" value="${Number.isFinite(a.price)?String(a.price).replace('.',','):''}"><span>€</span></span><strong data-row-price="${i}" hidden></strong><small data-row-quantity="${i}"></small></span><span class="receipt-row-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="receipt-product-editor"><p class="receipt-line-issue" id="tkLineIssue${i}" data-line-issue="${i}" hidden></p>
+      <label for="tkName${i}">Producto</label><input class="field" id="tkName${i}" data-nm="${i}" value="${esc(a.nice||a.name)}" autocomplete="off">
+      <div class="receipt-line-fields"><div><label for="tkQuantity${i}" data-quantity-label="${i}">${unknown?'Cantidad sin leer':'Cantidad'}</label><input class="field" id="tkQuantity${i}" data-units="${i}" type="number" inputmode="decimal" min="0.001" step="any" placeholder="Ej.: 1" value="${unknown?'':hasKg?a.kg??'':a.units??''}"></div><div><label for="tkMeasure${i}">Medida</label><select class="field" id="tkMeasure${i}" data-measure="${i}">${opt([['ud','unidades'],['kg','kg']],hasKg?'kg':'ud')}</select></div></div>
+      <div class="receipt-unit-price" ${unitObserved?'':'hidden'}><label for="tkUnitPrice${i}">${hasKg?'Precio por kg':'Precio por unidad'}</label><input class="field" id="tkUnitPrice${i}" data-unitpr="${i}" type="text" inputmode="decimal" value="${Number.isFinite(a.unit)?String(a.unit).replace('.',','):''}"><p class="hint" data-line-math="${i}"></p><button type="button" class="receipt-inline-action" data-use-calculated="${i}" hidden></button></div>
+      <details class="receipt-line-source"><summary>Ver esta línea del ticket</summary><blockquote class="receipt-source-line" data-read-line="${i}">${esc(a.ocrRawText||a.sourceText||'Texto original no disponible. Comprueba la foto.')}</blockquote>${a.readBox?`<canvas data-doubt-preview="${i}" aria-label="Línea ${i+1} del ticket"></canvas>`:''}</details>
+      <details class="receipt-line-options"><summary>Inventario y lista de la compra</summary><label class="receipt-include"><input type="checkbox" data-on="${i}" aria-label="Incluir artículo ${i+1}" ${a.excluded?'':'checked'}> Incluir este artículo</label>
+        ${pending?`<label>Ya añadido al terminar la compra</label><select class="field" data-credit="${i}">${opt([['','Todavía no se añadió'],...credits.map(p=>[p.id,p.name+' · '+fmtAmt(p.amount,p.unit)])],plan.creditedId||'')}</select>`:''}
+        <label>Destino en casa</label><select class="field" data-pn="${i}">${opt([...(plan.ambiguous&&!plan.inventory?[['__choose','Selecciona el destino…']]:[]),['','No va a la despensa'],['new','Nuevo / buscar coincidencia en casa'],...pans.map(x=>[x.id,x.name])],plan.ambiguous&&!plan.inventory?'__choose':plan.inventory)}</select>
+        <div class="grid2"><div><label>Cantidad para casa</label><input class="field" data-stockqty="${i}" data-per-unit="${stockScale}" type="number" min="0.001" step="any" value="${plan.amount}"></div><div><label>Unidad en casa</label><select class="field" data-stockunit="${i}">${opt([['ud','unidades'],['g','g'],['ml','ml']],plan.unit)}</select></div></div>
+        <label>Producto que quitar de Compras</label><select class="field" data-shopping="${i}">${opt([...(chooseShopping?[['__choose','Selecciona qué quitar…']]:[]),['','No quitar ninguno'],...(S.items||[]).map(x=>[x.id,x.name])],chooseShopping?'__choose':selected)}</select>
+        <div ${hasKg?'':'hidden'}><label>Unidades para descontar de Compras</label><input class="field" data-purchased="${i}" type="number" min="0" step="any" value="${a.plan?.shoppingAmount??(hasKg?0:a.units)}"></div>
+      </details>
+      <div class="receipt-row-done"><span data-line-validation="${i}" role="status"></span><button type="button" class="btn sec" data-validate-line="${i}">Listo</button></div></div>
+    </details>`;
+  }).join('');
+  const ov=sheet('Revisar compra',`
+    <div class="receipt-editor-intro"><span>🧾 Tu ticket</span><p>Corrige solo lo que falte. Tus cambios se conservan.</p></div>
+    <section class="receipt-balance" id="tkBalance" aria-live="polite"><div class="receipt-balance-title"><span>Total del ticket</span><span id="tkBalanceState" class="receipt-balance-state"></span></div><strong id="tkTotalDisplay" class="receipt-total-display"></strong><div class="receipt-balance-breakdown"><div><span>Artículos leídos</span><b id="tkSumDisplay"></b></div><div><span id="tkDeltaLabel">Diferencia</span><b id="tkDeltaDisplay"></b></div></div><p id="f_sum" class="hint"></p></section>
+    <details class="receipt-meta"><summary><span id="tkStoreLabel">${esc(t.store||'Añade el comercio')}</span><span id="tkDateLabel"></span><small>Editar</small></summary><div class="grid2"><div><label for="f_sto">Comercio</label><select class="field" id="f_sto"><option value="">Seleccionar…</option>${opt(stores.map(x=>[x,x]),t.store)}</select></div><div><label for="f_dt">Fecha</label><input class="field" id="f_dt" type="date" max="${today()}" value="${t.date}"></div></div><label for="f_tot">Total que aparece en la foto (€)</label><input class="field" id="f_tot" type="text" inputmode="decimal" value="${t.total?String(t.total).replace('.',','):''}"></details>
+    ${opts.file?'<div class="receipt-photo-actions"><button type="button" class="btn sec" id="tkPhoto">Ver foto del ticket</button><button type="button" class="receipt-inline-action" id="tkCrop">Recortar y releer</button></div>':''}
+    <div id="tkIssues" class="receipt-issues" aria-live="polite"></div>
+    <div class="receipt-difference-help" id="tkDifferenceHelp" hidden><strong>Hay una diferencia en los importes</strong><p>Comprueba la foto: puede faltar un artículo o tener otro precio. Marcarlo como revisado no cambia la suma.</p><div><button type="button" class="receipt-inline-action" data-receipt-add>Añadir artículo</button><button type="button" class="receipt-inline-action" id="tkCheckTotal">Editar total</button></div></div>
+    <div class="receipt-product-heading"><h4>Artículos <span id="tkLineCount"></span></h4><button type="button" class="receipt-inline-action" id="tkAddLine">+ Añadir</button></div>
+    <div class="receipt-filters"><button type="button" class="on" data-receipt-filter="all" aria-pressed="true">Todos <span id="tkAllCount"></span></button><button type="button" data-receipt-filter="issues" aria-pressed="false">Por revisar <span id="tkIssueCount"></span></button></div><p id="tkFilterEmpty" class="hint" hidden>Los campos están completos. Comprueba los importes con la foto para resolver la diferencia.</p>
+    <div class="receipt-products">${rows}</div>
+    <details class="receipt-final-options"><summary>Opciones de la compra</summary><label class="receipt-include"><input type="checkbox" id="f_rm" checked> Quitar de Compras los productos identificados</label><label for="f_as">¿Ya habíais apuntado este gasto?</label><select class="field" id="f_as"><option value="">Comprobar automáticamente</option>${candidates.map(b=>`<option value="${esc(b.id)}">${b.ticket?'Ya guardado:':'Completar'} ${esc(b.store||'compra')} · ${esc(b.date)} · ${eur(b.total)}</option>`).join('')}<option value="__new">Es una compra distinta</option></select><p class="hint">Se comprueba si el ticket ya existe para evitar duplicar el gasto y los productos.</p></details>
+    <details class="receipt-final-options"><summary>Texto leído y otras herramientas</summary><button type="button" class="receipt-inline-action" id="tkBackToText">Editar transcripción</button><pre class="ck-pre">${esc(text)}</pre></details><p id="tkStatus" role="status" class="hint" hidden></p>`,{autoFocus:false,saveLabel:'Guardar compra',onSave:()=>{run();return false}});
+  ov.classList.add('receipt-save-sheet','receipt-review-sheet');
+  const sheetBody=ov.querySelector('.sheet'),actions=ov.querySelector('.actions'),content=document.createElement('div');content.className='receipt-review-body';
+  for(const child of [...sheetBody.children])if(child.tagName!=='H3'&&child!==actions)content.append(child);sheetBody.insertBefore(content,actions);
+  const actionHint=document.createElement('p');actionHint.id='tkActionHint';actionHint.className='receipt-action-hint';actions.prepend(actionHint);actions.style.flexWrap='wrap';ov.querySelector('[data-s="cancel"]').textContent='Después';
   receiptDoubtPreviews(t,opts.file,ov);
-  let busy=false;
-  function collect(){
+  let busy=false,draftTimer;
+  function collect(includeExcluded=false){
     const lines=[];
-    ov.querySelectorAll('[data-on]').forEach(cb=>{if(!cb.checked)return;const i=+cb.dataset.on,name=ov.querySelector(`[data-nm="${i}"]`).value.trim(),price=receiptFieldNumber(ov.querySelector(`[data-pr="${i}"]`)),amount=receiptFieldNumber(ov.querySelector(`[data-units="${i}"]`)),kg=ov.querySelector(`[data-measure="${i}"]`).value==='kg';
-      const row=ov.querySelector(`[data-receipt-row="${i}"]`);const line={...t.lines[i],name,reviewRequired:row.dataset.validationRequired==='true',lineValidated:row.dataset.lineValidated==='true',quantityObserved:Number.isFinite(amount)&&amount>0,originalName:t.lines[i]?.originalName||t.lines[i]?.name||name,price,units:kg?1:amount,unit:price/amount,...(kg?{kg:amount}:{})};if(!kg)delete line.kg;line.plan=ticketLinePlan(line,val(ov,'f_sto'),ov.querySelector(`[data-pn="${i}"]`).value.replace(/^__choose$/,''));if(pending)line.plan.creditedId=ov.querySelector(`[data-credit="${i}"]`).value;line.plan.amount=Number(ov.querySelector(`[data-stockqty="${i}"]`).value);line.plan.unit=ov.querySelector(`[data-stockunit="${i}"]`).value;
-      const shopping=ov.querySelector(`[data-shopping="${i}"]`).value,matched=(S.items||[]).find(x=>x.id===shopping);line.plan.shoppingIds=matched?[matched.id]:[];line.plan.shoppingAmount=Number(ov.querySelector(`[data-purchased="${i}"]`).value);line.plan.shoppingNames=matched?{[matched.id]:matched.name}:{};lines.push(line)});
-    return {...t,date:val(ov,'f_dt'),store:val(ov,'f_sto'),total:Number(val(ov,'f_tot')),lines};
+    for(const cb of ov.querySelectorAll('[data-on]')){
+      if(!cb.checked&&!includeExcluded)continue;
+      const i=Number(cb.dataset.on),row=ov.querySelector(`[data-receipt-row="${i}"]`),name=ov.querySelector(`[data-nm="${i}"]`).value.trim(),price=receiptFieldNumber(ov.querySelector(`[data-pr="${i}"]`)),amount=receiptFieldNumber(ov.querySelector(`[data-units="${i}"]`)),kg=ov.querySelector(`[data-measure="${i}"]`).value==='kg',unitObserved=row.dataset.unitObserved==='true';
+      const line={...t.lines[i],name,nice:name,reviewRequired:row.dataset.validationRequired==='true',lineValidated:row.dataset.lineValidated==='true',quantityObserved:Number.isFinite(amount)&&amount>0,originalName:t.lines[i]?.originalName||t.lines[i]?.name||name,price,units:kg?1:amount,unit:unitObserved?receiptFieldNumber(ov.querySelector(`[data-unitpr="${i}"]`)):price/amount,unitObserved,editedFields:JSON.parse(row.dataset.editedFields),confirmedKey:row.dataset.confirmedKey||'',unmatchedCorrection:row.dataset.unmatchedCorrection==='true',excluded:!cb.checked,...(kg?{kg:amount}:{})};
+      if(!kg)delete line.kg;
+      line.plan=ticketLinePlan(line,val(ov,'f_sto'),ov.querySelector(`[data-pn="${i}"]`).value.replace(/^__choose$/,''));
+      if(pending)line.plan.creditedId=ov.querySelector(`[data-credit="${i}"]`).value;
+      line.plan.amount=receiptFieldNumber(ov.querySelector(`[data-stockqty="${i}"]`));line.plan.unit=ov.querySelector(`[data-stockunit="${i}"]`).value;
+      const shopping=ov.querySelector(`[data-shopping="${i}"]`).value,matched=(S.items||[]).find(x=>x.id===shopping);line.plan.shoppingIds=matched?[matched.id]:[];line.plan.shoppingAmount=receiptFieldNumber(ov.querySelector(`[data-purchased="${i}"]`));line.plan.shoppingNames=matched?{[matched.id]:matched.name}:{};
+      line.reviewForm={measure:kg?'kg':'ud',perUnit:ov.querySelector(`[data-stockqty="${i}"]`).dataset.perUnit,defaultMeasure:row.dataset.defaultMeasure,defaultStockScale:row.dataset.defaultStockScale,defaultStockUnit:row.dataset.defaultStockUnit};lines.push(line);
+    }
+    return {...t,date:val(ov,'f_dt'),store:val(ov,'f_sto'),total:receiptFieldNumber(ov.querySelector('#f_tot')),editedHeaderFields:[...new Set([...(t.editedHeaderFields||[]),...['store','date','total'].filter((key,i)=>String([val(ov,'f_sto'),val(ov,'f_dt'),receiptFieldNumber(ov.querySelector('#f_tot'))][i])!==String(t[key]))])],lines};
   }
+  function persistReview(){if(ov.dataset.receiptComplete==='true')return;try{const result=receiptKeepReviewDraft(collect(true),text,{...opts,removePurchased:ov.querySelector('#f_rm').checked,matchId:val(ov,'f_as'),filter:ov.dataset.receiptFilter||'all'});if(result)opts.draftKey=result}catch(e){/* Los campos siguen abiertos para corregirlos. */}}
+  function scheduleDraft(){clearTimeout(draftTimer);draftTimer=setTimeout(persistReview,180)}
   function sum(){return receiptReviewIssues(ov,collect(),t)}
-  ov.querySelector('#tkCrop')?.addEventListener('click',async()=>{
-    if(busy)return;busy=true;const readOptions=receiptReadOptions(ov);
-    try{
-      const current=collect(),cropped=await cropTicketImage(opts.file);if(!cropped||!ov.isConnected)return;
-      const status=ov.querySelector('#tkStatus');status.textContent='Leyendo la zona recortada…';ov.querySelector('[data-s="ok"]').disabled=true;
-      const result=await ocrText(cropped,n=>{if(ov.isConnected)status.textContent='Leyendo la zona recortada… '+n+' %'},readOptions);
-      if(!ov.isConnected)return;
-      const parsed=receiptFromText(result.text,{...result,imageHash:t.imageHash,pendingId:t.pendingBuyId}),updated={...parsed,store:parsed.store||current.store,date:parsed.date||current.date,total:parsed.total||current.total};
-      ov.remove();ticketReview(updated,result.text,{...opts,reasons:['Revisa la nueva lectura del recorte antes de guardar.']});
-    }catch(e){if(ov.isConnected)ov.querySelector('#tkStatus').textContent=e.message||'No se ha podido volver a leer la foto.'}
-    finally{readOptions.dispose();busy=false;if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
-  });
-  ov.querySelector('#tkBackToText').addEventListener('click',()=>{ov.remove();ticketTranscription(text,{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines,pendingId:t.pendingBuyId,draftKey:opts.draftKey})});
-  ov.querySelector('#tkAddLine').addEventListener('click',()=>{
-    const current=collect();current.lines.push({name:'',nice:'',units:1,unit:0,price:0});
-    ov.remove();ticketReview(current,text,opts);
-  });
-  ov.addEventListener('input',e=>{
-    const row=e.target.closest('[data-receipt-row]');if(row){row.dataset.lineValidated='false';row.dataset.readConfirmed='false';row.dataset.validationRequired='true'}
-    if(e.target.dataset.units!==undefined){const i=e.target.dataset.units;if(ov.querySelector(`[data-measure="${i}"]`).value==='ud')ov.querySelector(`[data-purchased="${i}"]`).value=e.target.value;const stock=ov.querySelector(`[data-stockqty="${i}"]`);stock.value=Math.round(Number(e.target.value)*Number(stock.dataset.perUnit)*1000)/1000}
-    if(e.target.dataset.stockqty!==undefined){const i=e.target.dataset.stockqty,units=Number(ov.querySelector(`[data-units="${i}"]`).value);if(units>0)e.target.dataset.perUnit=String(Number(e.target.value)/units)}
-    sum();
-  });
-  ov.addEventListener('change',e=>{
-    const row=e.target.closest('[data-receipt-row]');if(row&&e.target.dataset.on===undefined){row.dataset.lineValidated='false';row.dataset.readConfirmed='false';row.dataset.validationRequired='true'}
-    if(e.target.dataset.credit!==undefined){const i=e.target.dataset.credit,prior=pending?.pendingInventory.find(p=>p.id===e.target.value);if(prior)ov.querySelector(`[data-pn="${i}"]`).value=prior.pantryId}
-    if(e.target.dataset.measure!==undefined){const i=e.target.dataset.measure,stock=ov.querySelector(`[data-stockqty="${i}"]`),unit=ov.querySelector(`[data-stockunit="${i}"]`),qty=Number(ov.querySelector(`[data-units="${i}"]`).value);stock.dataset.perUnit=e.target.value==='kg'?'1000':'1';stock.value=qty*Number(stock.dataset.perUnit);unit.value=e.target.value==='kg'?'g':'ud'}
-    sum();
-  });
-  ov.addEventListener('click',e=>{const button=e.target.closest('[data-validate-line]');if(!button)return;const i=Number(button.dataset.validateLine),row=ov.querySelector(`[data-receipt-row="${i}"]`),check=sum(),errors=check.issues.filter(x=>x.row===i&&x.field!=='confirmation');if(errors.length){receiptFocusIssue(ov,errors[0]);return}row.dataset.lineValidated='true';row.dataset.readConfirmed='true';sum()});sum();
-  async function run(){
-    if(busy)return;const button=ov.querySelector('[data-s="ok"]');busy=true;button.disabled=true;
-    try{
-      receiptSaving(ov,true);receiptSaveStatus(ov,'Comprobando y guardando la compra…');
-      const check=sum();if(!check.ok){receiptSaveStatus(ov,'Corrige los datos señalados; no hace falta validar cada artículo. '+check.reasons.filter(reason=>reason!=='Hay una línea incompleta').join('. '),true);receiptFocusIssue(ov,check.issues[0]);return}
-      const receipt=receiptConfirmReading(collect());
-      const choice=val(ov,'f_as');
-      const result=await saveReceiptPurchase(receipt,opts.file,{removePurchased:ov.querySelector('#f_rm').checked,matchId:choice&&choice!=='__new'?choice:'',confirmNew:choice==='__new'},message=>receiptSaveStatus(ov,message),opts.draftKey);
-      ov.remove();toast(receiptMessage(result)+(result.photoWarning?' · '+result.photoWarning:''));
-    }catch(e){receiptSaveStatus(ov,receiptSaveError(e),true)}
-    finally{receiptSaving(ov,false);busy=false;button.disabled=false}
+  ov.dataset.receiptFilter=opts.filter||'all';
+  for(const row of ov.querySelectorAll('[data-receipt-row]'))if(row.dataset.lineValidated==='true')row.dataset.confirmedKey=receiptRowFingerprint(ov,row);
+  function changed(e){
+    const row=e.target.closest('[data-receipt-row]');
+    if(row){
+      const fields=JSON.parse(row.dataset.editedFields),field=Object.keys(e.target.dataset).find(k=>['nm','pr','units','measure','unitpr','pn','stockqty','stockunit','shopping','purchased','credit','on'].includes(k));if(field&&!fields.includes(field))fields.push(field);row.dataset.editedFields=JSON.stringify(fields);
+      row.dataset.validationRequired='true';
+    }
+    if(e.target.dataset.units!==undefined){const i=e.target.dataset.units;if(ov.querySelector(`[data-measure="${i}"]`).value==='ud')ov.querySelector(`[data-purchased="${i}"]`).value=e.target.value;const stock=ov.querySelector(`[data-stockqty="${i}"]`);stock.value=Number(e.target.value)*Number(stock.dataset.perUnit)}
+    if(e.target.dataset.stockqty!==undefined){const i=e.target.dataset.stockqty,units=receiptFieldNumber(ov.querySelector(`[data-units="${i}"]`));if(units>0&&receiptFieldNumber(e.target)>0)e.target.dataset.perUnit=String(receiptFieldNumber(e.target)/units)}
+    if(e.target.dataset.measure!==undefined){const i=e.target.dataset.measure,stock=ov.querySelector(`[data-stockqty="${i}"]`),qty=receiptFieldNumber(ov.querySelector(`[data-units="${i}"]`));stock.dataset.perUnit=e.target.value===row.dataset.defaultMeasure?row.dataset.defaultStockScale:e.target.value==='kg'?'1000':'1';stock.value=qty*Number(stock.dataset.perUnit);ov.querySelector(`[data-stockunit="${i}"]`).value=e.target.value===row.dataset.defaultMeasure?row.dataset.defaultStockUnit:e.target.value==='kg'?'g':'ud'}
+    if(e.target.dataset.credit!==undefined){const prior=pending?.pendingInventory.find(p=>p.id===e.target.value);if(prior)ov.querySelector(`[data-pn="${e.target.dataset.credit}"]`).value=prior.pantryId}
+    if(row){
+      const i=row.dataset.receiptRow;if(ov.querySelector(`[data-measure="${i}"]`).value===row.dataset.defaultMeasure){if(e.target.dataset.stockqty!==undefined)row.dataset.defaultStockScale=ov.querySelector(`[data-stockqty="${i}"]`).dataset.perUnit;if(e.target.dataset.stockunit!==undefined)row.dataset.defaultStockUnit=e.target.value}
+      row.dataset.lineValidated=String(row.dataset.confirmedKey===receiptRowFingerprint(ov,row));
+    }
+    sum();scheduleDraft();
   }
-
+  ov.addEventListener('input',changed);ov.addEventListener('change',changed);
+  ov.addEventListener('click',e=>{
+    const filter=e.target.closest('button[data-receipt-filter]');if(filter){ov.dataset.receiptFilter=filter.dataset.receiptFilter;sum();scheduleDraft();return}
+    const calculated=e.target.closest('[data-use-calculated]');if(calculated){const i=calculated.dataset.useCalculated,qty=receiptFieldNumber(ov.querySelector(`[data-units="${i}"]`)),unit=receiptFieldNumber(ov.querySelector(`[data-unitpr="${i}"]`)),field=ov.querySelector(`[data-pr="${i}"]`);field.value=(Math.round(qty*unit*100)/100).toFixed(2).replace('.',',');field.dispatchEvent(new Event('input',{bubbles:true}));return}
+    const button=e.target.closest('[data-validate-line]');if(!button)return;const i=Number(button.dataset.validateLine),row=ov.querySelector(`[data-receipt-row="${i}"]`),check=sum(),errors=check.issues.filter(x=>x.row===i&&!x.message.startsWith('Esta corrección anterior'));if(row.dataset.unmatchedCorrection==='true'&&!errors.length){row.dataset.unmatchedCorrection='false';}if(errors.length){receiptFocusIssue(ov,errors[0]);return}row.dataset.lineValidated='true';row.dataset.confirmedKey=receiptRowFingerprint(ov,row);row.open=false;sum();persistReview();
+  });
+  ov.querySelector('#tkPhoto')?.addEventListener('click',()=>receiptShowPhoto(opts.file));
+  ov.querySelector('#tkCheckTotal').onclick=()=>receiptFocusIssue(ov,{field:'total'});
+  function addLine(){const current=collect(true);current.lines.push({name:'',nice:'',units:1,unit:NaN,price:NaN,quantityObserved:true,editedFields:['nm','pr']});persistReview();ov.remove();ticketReview(current,text,{...opts,focusLast:true})}
+  ov.querySelector('#tkAddLine').onclick=addLine;ov.querySelector('[data-receipt-add]').onclick=addLine;
+  ov.querySelector('#tkBackToText').onclick=()=>{persistReview();ov.remove();ticketTranscription(receiptTextForEdit(collect(true)),{file:opts.file,imageHash:t.imageHash,confidence:t.ocrConfidence,engine:t.ocrEngine,lines:t.ocrLines,pendingId:t.pendingBuyId,draftKey:opts.draftKey})};
+  ov.querySelector('#tkCrop')?.addEventListener('click',async()=>{
+    if(busy)return;persistReview();const current=collect(true),cropped=await cropTicketImage(opts.file);if(!cropped||!ov.isConnected)return;busy=true;receiptSaving(ov,true);ov.querySelector('[data-s="ok"]').disabled=true;const readOptions=receiptReadOptions(ov);
+    try{receiptSaveStatus(ov,'Volviendo a leer la foto…');const result=await ocrText(cropped,n=>{if(ov.isConnected)receiptSaveStatus(ov,'Volviendo a leer la foto… '+n+' %')},readOptions);if(!ov.isConnected)return;const parsed=receiptFromText(result.text,{...result,imageHash:t.imageHash,pendingId:t.pendingBuyId}),updated=receiptMergeCorrections(current,parsed);ov.remove();ticketReview(updated,result.text,{...opts,file:cropped})}
+    catch(e){if(ov.isConnected)receiptSaveStatus(ov,e.message||'No se pudo releer. Tus cambios se conservan.',true)}finally{readOptions.dispose();busy=false;receiptSaving(ov,false);if(ov.isConnected)ov.querySelector('[data-s="ok"]').disabled=false}
+  });
+  ov.addEventListener('click',e=>{if(!busy&&(e.target===ov||e.target.closest('[data-s="cancel"]')))persistReview()},true);
+  const visibility=()=>{if(document.hidden&&!busy)persistReview()};document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',persistReview);
+  const observer=new MutationObserver(()=>{if(!ov.isConnected){clearTimeout(draftTimer);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',persistReview);observer.disconnect();if(ov.dataset.receiptComplete!=='true')render()}});observer.observe(document.body,{childList:true,subtree:true});
+  ov.addEventListener('keydown',e=>{if(e.key==='Escape'&&!busy)persistReview()},true);
+  if(opts.file&&t.imageHash)receiptDeadline(ReceiptArchive.put(t.imageHash,opts.file),2500,'Archivo local no disponible').catch(()=>{});
+  sum();persistReview();
+  if(opts.focusLast)receiptFocusIssue(ov,{row:t.lines.length-1,field:'name'});
+  async function run(){
+    if(busy)return;
+    try{const check=sum();if(!check.ok){if(check.issues.length)receiptFocusIssue(ov,check.issues[0]);else{ov.dataset.receiptFilter='all';sum();if(opts.file)receiptShowPhoto(opts.file);else{const price=ov.querySelector('[data-pr]');if(price){price.focus({preventScroll:true});price.scrollIntoView({block:'center'})}else ov.querySelector('#tkBalance').scrollIntoView({block:'start'})}}return}}
+    catch(e){receiptSaveStatus(ov,e.message||'No se pueden leer los datos. Tus cambios se conservan.',true);return}
+    const button=ov.querySelector('[data-s="ok"]');busy=true;button.disabled=true;
+    try{clearTimeout(draftTimer);persistReview();receiptSaving(ov,true);const receipt=receiptConfirmReading(collect()),choice=val(ov,'f_as');const result=await saveReceiptPurchase(receipt,opts.file,{removePurchased:ov.querySelector('#f_rm').checked,matchId:choice&&choice!=='__new'?choice:'',confirmNew:choice==='__new'},message=>receiptSaveStatus(ov,message),opts.draftKey);ov.dataset.receiptComplete='true';clearTimeout(draftTimer);ov.remove();toast(receiptMessage(result)+(result.photoWarning?' · '+result.photoWarning:''))}
+    catch(e){receiptSaveStatus(ov,receiptSaveError(e),true)}finally{receiptSaving(ov,false);busy=false;button.disabled=false}
+  }
   return ov;
 }
 

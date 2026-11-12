@@ -409,6 +409,60 @@ body.nav-top .toast{bottom:90px}
 .sheet [aria-invalid="true"]{border:2px solid var(--danger)}
 .receipt-save-sheet .actions{position:sticky;bottom:0;z-index:1;background:var(--bg);padding:12px 0;border-top:1px solid var(--line)}
 
+/* Revisión del ticket: resumen, campos pendientes y acciones fuera del scroll. */
+.receipt-review-sheet{position:fixed;--accent:var(--c-compras,#009B80);--accent-soft:color-mix(in srgb,var(--accent) 10%,var(--surface));--receipt-amber:#B97524;--receipt-amber-soft:color-mix(in srgb,#E6AC48 11%,var(--surface))}
+.receipt-review-sheet .sheet{display:flex;flex-direction:column;height:92dvh;max-height:92dvh;overflow:hidden;padding:0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 50px #0002}
+.receipt-review-sheet .sheet>h3{flex:none;margin:0;padding:20px 20px 6px;font-size:1.35rem;letter-spacing:-.02em}
+.receipt-review-body{min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 18px 20px;scroll-padding:12px}
+.receipt-review-body input,.receipt-review-body select{min-width:0;max-width:100%;font-size:16px;box-sizing:border-box}
+.receipt-review-body input[type=date]{width:100%;min-width:0;appearance:none;-webkit-appearance:none}
+.receipt-review-body .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.receipt-review-body .field{border-radius:12px;min-height:46px;background:var(--surface)}
+.receipt-editor-intro{margin-bottom:14px}.receipt-editor-intro>span{display:none}.receipt-editor-intro p{margin:0;color:var(--muted);font-size:.85rem}
+.receipt-balance{border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-radius:20px;padding:16px;background:var(--accent-soft)}
+.receipt-balance.needs-review{background:var(--receipt-amber-soft);border-color:color-mix(in srgb,#E6AC48 35%,var(--line))}
+.receipt-balance-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.8rem;color:var(--muted)}
+.receipt-balance-state{font-size:.68rem;font-weight:700;border:1px solid var(--line);border-radius:20px;padding:4px 8px;background:var(--surface);color:var(--accent);white-space:nowrap}
+.receipt-balance.needs-review .receipt-balance-state{color:var(--receipt-amber)}
+.receipt-total-display{display:block;font-size:2.35rem;letter-spacing:-.04em;line-height:1.2;margin:5px 0 14px;font-variant-numeric:tabular-nums}
+.receipt-balance-breakdown{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;border-top:1px solid var(--line);padding-top:12px}
+.receipt-balance-breakdown>div{display:grid;gap:3px}.receipt-balance-breakdown span{font-size:.76rem;color:var(--muted)}.receipt-balance-breakdown b{font-size:1.1rem;font-variant-numeric:tabular-nums}
+.receipt-balance .hint{font-size:.76rem;margin:10px 0 0}
+.receipt-meta{margin:12px 0;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--surface)}
+.receipt-meta>summary{display:flex;align-items:center;gap:8px;font-size:.83rem;list-style:none;cursor:pointer}.receipt-meta>summary small{margin-left:auto;color:var(--accent);font-weight:600}.receipt-meta>summary #tkDateLabel{color:var(--muted)}
+.receipt-photo-actions{display:flex;align-items:center;gap:14px;margin:12px 0}.receipt-photo-actions .btn{font-size:.8rem;padding:10px 12px;box-shadow:none;border:1px solid var(--line)}
+.receipt-inline-action{font-size:.82rem;font-weight:650;color:var(--accent);padding:7px 0;line-height:1.3;text-align:left;min-height:34px}
+.receipt-review-sheet .receipt-issues:not(:empty){border:0;border-left:3px solid #D8A345;background:var(--receipt-amber-soft);padding:10px 12px;border-radius:10px;margin:12px 0;font-size:.85rem}
+.receipt-issue-link{display:block;text-align:left;font-size:.8rem;line-height:1.45;color:var(--ink);padding:6px 0;white-space:normal}
+.receipt-difference-help{padding:12px 0;font-size:.84rem}.receipt-difference-help>strong{font-size:.85rem}.receipt-difference-help p{margin:4px 0;color:var(--muted);line-height:1.5}.receipt-difference-help>div{display:flex;gap:20px}
+.receipt-product-heading{display:flex;align-items:center;justify-content:space-between;margin-top:14px}.receipt-product-heading h4{margin:0;font-size:1rem}.receipt-product-heading h4 span{color:var(--muted);font-size:.85rem;font-weight:500}
+.receipt-filters{display:flex;gap:6px;margin:10px 0 14px}.receipt-filters button{border:1px solid var(--line);border-radius:24px;padding:8px 12px;font-size:.8rem;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:7px}.receipt-filters button.on{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 32%,var(--line));color:var(--accent)}.receipt-filters span{font-size:.72rem;min-width:18px;text-align:center}
+.receipt-review-sheet .receipt-products{display:grid;gap:8px}.receipt-review-sheet .receipt-product{margin:0;border:1px solid var(--line);border-radius:15px;padding:0;background:var(--surface);min-width:0;overflow:hidden}
+.receipt-review-sheet .receipt-product.receipt-row-error{border-color:color-mix(in srgb,#D8A345 65%,var(--line));background:var(--surface)}
+.receipt-product>summary{display:flex;align-items:center;gap:10px;list-style:none;padding:13px 12px;cursor:pointer}.receipt-product>summary::-webkit-details-marker{display:none}
+.receipt-row-index{flex:none;color:var(--muted);font-size:.7rem;font-variant-numeric:tabular-nums;width:17px;text-align:center}
+.receipt-row-copy{min-width:0;flex:1;display:grid;gap:4px;font-size:.86rem;font-weight:550;line-height:1.35}.receipt-row-copy small{font-size:.68rem;font-weight:500;color:var(--muted)}.receipt-row-copy small:empty{display:none}.receipt-row-error .receipt-row-copy small{color:var(--receipt-amber)}
+.receipt-row-amount{flex:none;display:grid;gap:4px;text-align:right}.receipt-row-amount strong{font-size:.87rem;font-variant-numeric:tabular-nums}.receipt-row-amount small{font-size:.65rem;color:var(--muted)}
+.receipt-quick-price{position:relative;display:block;width:90px}.receipt-quick-price .field{width:100%;min-height:36px!important;padding:8px 23px 8px 7px!important;border-radius:9px!important;text-align:right;font-size:16px!important;font-weight:650;background:var(--bg)!important;border:1px solid var(--line);font-variant-numeric:tabular-nums}.receipt-quick-price>span{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:var(--muted);pointer-events:none}
+.receipt-row-chevron{color:var(--muted);font-size:1rem;flex:none}.receipt-product[open] .receipt-quick-price{position:relative;display:block;width:90px}.receipt-quick-price .field{width:100%;min-height:36px!important;padding:8px 23px 8px 7px!important;border-radius:9px!important;text-align:right;font-size:16px!important;font-weight:650;background:var(--bg)!important;border:1px solid var(--line);font-variant-numeric:tabular-nums}.receipt-quick-price>span{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:var(--muted);pointer-events:none}
+.receipt-row-chevron{transform:rotate(180deg)}
+.receipt-excluded>summary{opacity:.55}.receipt-product-editor{border-top:1px solid var(--line);padding:10px 12px 14px}.receipt-product-editor label{font-size:.76rem;margin:8px 0 5px}
+.receipt-line-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}.receipt-line-fields label{font-size:.68rem;min-height:1.4em}.receipt-line-fields .field{padding:10px 8px}
+.receipt-currency{position:relative}.receipt-currency input{padding-right:22px!important}.receipt-currency>span{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:.8rem;color:var(--muted);pointer-events:none}
+.receipt-unit-price{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--bg)}.receipt-unit-price .field{max-width:160px}.receipt-unit-price p{font-size:.76rem;margin:6px 0 0}
+.receipt-line-source,.receipt-line-options{margin-top:12px;font-size:.78rem;color:var(--muted)}.receipt-line-source>summary,.receipt-line-options>summary{cursor:pointer;padding:6px 0}.receipt-line-source canvas{display:block;width:100%;height:auto;border-radius:8px}
+.receipt-product .receipt-source-line{margin:8px 0;padding:10px;font-family:ui-monospace,monospace;font-size:.75rem;color:var(--ink);border-radius:8px;white-space:pre-wrap}
+.receipt-product .receipt-line-issue{margin:0 0 6px;font-size:.78rem;color:var(--receipt-amber);font-weight:550;line-height:1.4}
+.receipt-review-sheet [aria-invalid=true]{border:1px solid #C58B39;box-shadow:0 0 0 1px color-mix(in srgb,#D8A345 30%,transparent)}
+.receipt-include{display:flex!important;gap:8px;align-items:center;font-weight:500!important;line-height:1.4}.receipt-include input{flex:none;accent-color:var(--accent)}
+.receipt-row-done{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.receipt-row-done>span{font-size:.7rem;color:var(--muted)}.receipt-row-done>.btn{padding:8px 16px;box-shadow:none;font-size:.8rem;min-height:38px;border:1px solid var(--line)}
+.receipt-final-options{font-size:.8rem;border-top:1px solid var(--line);margin-top:16px;padding-top:12px}.receipt-final-options>summary{cursor:pointer;color:var(--muted);padding:4px 0}
+.receipt-review-sheet .sheet>.actions{position:static;flex:none;margin:0;padding:12px 18px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);gap:8px;box-shadow:0 -6px 20px #00000005}
+.receipt-action-hint{flex-basis:100%;font-size:.72rem;color:var(--muted);line-height:1.4;margin:0 0 3px}.receipt-review-sheet .actions [data-s=cancel]{flex:.6}.receipt-review-sheet .actions [data-s=ok]{flex:1.4;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.receipt-review-sheet .actions>.btn{border-radius:13px;min-height:47px;font-size:.88rem;padding:10px}.receipt-review-sheet .actions [data-receipt-save-status]{font-size:.78rem!important;font-weight:500!important;line-height:1.45}
+.receipt-full-photo{display:block;width:100%;height:auto;border-radius:12px}.receipt-photo-sheet .sheet{padding:18px;max-height:94dvh}.receipt-photo-sheet .actions{position:sticky;bottom:-18px;background:var(--bg);padding:12px 0}
+@media (max-width:350px){.receipt-review-body{padding-left:12px;padding-right:12px}.receipt-row-index{display:none}.receipt-balance-state{font-size:.6rem}.receipt-review-sheet .sheet>.actions{padding-left:12px;padding-right:12px}}
+
 .tk-read-total{display:grid;gap:4px;padding:16px;margin:14px 0;background:var(--accent-soft);border:2px solid var(--accent);border-radius:16px}
 .tk-read-total strong{font-size:2rem;line-height:1.2;color:var(--accent);font-variant-numeric:tabular-nums}
 .tk-read-total small{font-size:.85rem}
@@ -588,16 +642,16 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=89"></script>
-<script src="sync.js?v=89"></script>
-<script src="receipts.js?v=89"></script>
-<script src="receipt-image.js?v=89"></script>
-<script src="receipt-layout.js?v=89"></script>
-<script src="receipt-ocr.js?v=89"></script>
-<script src="product-photo.js?v=89"></script>
-<script src="product-photo-ui.js?v=89"></script>
-<script src="cocina.js?v=89"></script>
-<script src="receipt-extras.js?v=89"></script>
+<script src="push.js?v=90"></script>
+<script src="sync.js?v=90"></script>
+<script src="receipts.js?v=90"></script>
+<script src="receipt-image.js?v=90"></script>
+<script src="receipt-layout.js?v=90"></script>
+<script src="receipt-ocr.js?v=90"></script>
+<script src="product-photo.js?v=90"></script>
+<script src="product-photo-ui.js?v=90"></script>
+<script src="cocina.js?v=90"></script>
+<script src="receipt-extras.js?v=90"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -652,7 +706,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=89;
+const APP_VERSION=90;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

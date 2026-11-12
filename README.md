@@ -91,32 +91,51 @@ provisional adicional. El borrador solo se retira después de verificar el guard
 Los borradores están separados por proyecto y se borran al cerrar sesión, como
 los demás datos locales de la cuenta. No sustituyen al historial compartido.
 
-La foto se archiva en paralelo en IndexedDB al confirmar el envío para conservarla
+La foto se archiva localmente en IndexedDB desde la revisión y en paralelo al envío para conservarla
 también si este falla; no bloquea la escritura en Firestore. Al retomar se recupera
 si está disponible en ese dispositivo. Un error o una espera de más de 2,5 segundos
 al archivar no impide registrar el gasto y se indica cuando no pudo conservarse.
 
-La revisión enumera cada producto y el campo pendiente (cantidad, nombre,
-importe o cantidad para casa). Los avisos abren el producto y enfocan ese campo;
-los campos inválidos tienen una marca visible y `aria-invalid`. Al corregirlos
-se retira su aviso. La suma siempre incluye los importes válidos ya leídos,
-aunque falte una cantidad. Un descuadre real indica cuánto falta o sobra sin
-inventar qué producto se omitió.
+La revisión muestra en una tarjeta el total del ticket, la suma de artículos y
+la diferencia. Los importes se pueden editar directamente en cada fila; abrir
+el producto permite cambiar cantidad, medida y precio unitario. «Listo» cierra
+la edición de esa fila; no inventa un importe ni resuelve por sí solo un descuadre.
+Los filtros «Todos» y «Por revisar» conservan los campos escritos. Las
+opciones de inventario y lista permanecen disponibles en un desplegable.
+La barra de acciones está fuera del área desplazable y no tapa los productos.
+Se ha probado el editor en temas claro y oscuro y anchos de 320 a 430 píxeles.
 
-Cada artículo dudoso conserva el texto original leído y, si hay coordenadas,
-un recorte de su línea en la foto. El precio de la línea admite coma decimal.
-«Validar artículo» confirma esa línea por separado; no guarda aún la compra.
-«Confirmar lectura y guardar» permite confirmar todas las líneas juntas; solo
-los campos ausentes, los descuadres y las asociaciones ambiguas bloquean el
-guardado. Una suma correcta no confirma por sí sola una cantidad o un nombre.
-Cambiar después un precio, cantidad o destino invalida su confirmación anterior.
-Al añadir otra línea se conservan las correcciones y confirmaciones existentes.
+Cuando el ticket trae precio por unidad, se conserva al editar en vez de
+recalcularlo dividiendo el importe. Una inconsistencia muestra la cuenta concreta
+(cantidad × precio por unidad) y permite aplicar ese importe explícitamente.
+Nunca se utiliza la diferencia global para inventar el precio de un producto.
+Si solo hay un descuadre sin un campo identificado, se puede consultar la foto,
+editar los importes o añadir la línea que falta; no se señala un producto al azar.
 
-La revisión despliega los productos con datos concretos pendientes; una duda
-de confianza por sí sola no obliga a abrir cada producto. Cuando hay
-coordenadas del OCR muestra un recorte de la foto junto al producto. Las
-correcciones de nombre confirmadas se recuerdan por comercio en
-`cook.receiptAliases`; nunca cambian automáticamente un importe.
+Las correcciones se conservan localmente desde la revisión, antes de intentar
+el guardado, incluso al salir o recargar. Cambiar solo el formato de un número
+no borra su confirmación. Releer un recorte o la misma foto conserva los datos
+corregidos cuando existe una coincidencia inequívoca; una corrección sin
+coincidencia queda visible para decidir, sin descartarla ni sumarla en silencio.
+Solo el guardado verificado en Firestore completa la compra. Las revisiones
+locales no cuentan como gastos y no sustituyen al historial compartido.
+
+El intérprete conserva las líneas de artículos cuyo precio no se haya leído,
+con su texto original y el importe en blanco. Admite nombres partidos en varias
+líneas y espacios en los separadores decimales sin perder confianza ni coordenadas.
+Si al menos dos filas demuestran las columnas de precio unitario e importe,
+una cifra aislada en P.Unit no se trata como el importe de la línea.
+Las filas se alinean compensando la inclinación y, cuando se distinguen las
+cabeceras y el total, la curvatura entre ambas columnas. Así se evita asociar
+un precio al producto de arriba o de abajo. Un separador «:» leído en la columna
+de importes de un artículo se puede normalizar a coma con contexto suficiente;
+se conserva el texto original y se marca la lectura como ajustada para confirmar.
+Las horas de la cabecera no se cambian. También se conservan los números que
+forman parte del nombre del producto al separar la cantidad comprada.
+
+Las cantidades que no se leen y los importes ausentes siguen necesitando un dato
+real. El OCR continúa siendo local; estas mejoras no garantizan leer cualquier
+foto ni identifican una omisión a partir del descuadre por sí solo.
 
 Las compras parciales restan unidades de la lista y conservan el resto. Para
 productos por peso se confirma cuántas unidades de la lista se han comprado.
@@ -163,6 +182,7 @@ Pruebas sin credenciales ni datos personales:
 ```sh
 node --test tests/receipts.test.cjs tests/receipt-layout.test.cjs
 node tests/receipt-flow.cjs
+node tests/receipt-review-flow.cjs
 ```
 
 La segunda usa Playwright y Chromium (`/usr/bin/chromium`, configurable mediante
