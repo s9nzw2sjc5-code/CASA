@@ -1070,33 +1070,70 @@ function laterMove(id){
   S.shopLater=(S.shopLater||[]).filter(i=>i.id!==id);save();toastUndo(exists?'Ya estaba en la compra; quitado de Para tener en cuenta':'Pasado a la compra');
 }
 
-// Recordatorios calculados a partir de compras reales, sin alterar gastos ni existencias.
-function shoppingSuggestions(){
-  const groups=new Map(),now=today();
-  for(const b of S.buys||[]){
-    if(b.voided||!b.date||b.date>now)continue;
-    for(const i of buyItems(b)){
-      const key=norm(i.name);if(!key)continue;
-      if(!groups.has(key))groups.set(key,{name:i.name,dates:new Set()});
-      groups.get(key).dates.add(b.date);
-    }
-  }
-  const feedback=ck().shoppingFeedback||{};
-  return [...groups.entries()].flatMap(([key,g])=>{
-    const dates=[...g.dates].sort();if(dates.length<3)return [];
-    const gaps=dates.slice(1).map((d,i)=>diff(dates[i],d)).filter(d=>d>0).sort((a,b)=>a-b);
-    if(!gaps.length)return [];
-    const interval=gaps[Math.floor(gaps.length/2)],last=dates[dates.length-1],elapsed=diff(last,now),f=feedback[key];
-    if(elapsed<Math.max(1,interval-2)||(f&&f.until>=now))return [];
-    if(S.items.some(i=>norm(i.name)===key))return [];
-    if((S.pantry||[]).some(i=>norm(i.name)===key&&!pantryLow(i)))return [];
-    return [{key,name:g.name,interval,elapsed,score:elapsed/interval}];
-  }).sort((a,b)=>b.score-a.score).slice(0,4);
+// El historial se calcula al abrir Compras; las preferencias se guardan por
+// producto en cook para conservar lo que ajuste cada móvil.
+function shoppingModel(){return CasaShoppingRecommendations.build(S,{today:today(),listId:cartList()})}
+function shoppingSuggestions(){return shoppingModel().suggestions}
+function shoppingSuggestionInfo(x){
+  const p=x.mid&&MC?.byId.get(String(x.mid)),stored=!p&&x.mid?habitInfo(x.mid):null;
+  return {name:p?.[1]||(stored?.known?stored.name:'')||x.name,img:p?.[9]||stored?.img||'',p:p?prod(p):null};
 }
+function shoppingSuggestionPhoto(info){return `<span class="shopping-suggestion-photo">${info.img?`<img data-habit-img src="${imgUrl(info.img,96)}" alt="" loading="eager">`:''}<span ${info.img?'hidden':''} aria-hidden="true">🛍️</span></span>`}
 function shoppingReminderCard(){
-  const suggestions=shoppingSuggestions();
-  if(!suggestions.length)return '';
-  return `<section class="card" style="margin-top:12px"><h2>¿Seguro que no se te olvida…?</h2><p class="hint">Según tus compras anteriores. La duración es una estimación.</p>${suggestions.map((x,i)=>`<div style="margin-top:12px"><strong>${esc(x.name)}</strong><p>Sueles comprarlo cada ${x.interval} días; hace ${x.elapsed} días de la última compra.</p><div class="ck-actions"><button class="btn" data-act="ckSuggest" data-v="add" data-id="${i}">Añadir</button><button class="btn sec" data-act="ckSuggest" data-v="have" data-id="${i}">Todavía tengo</button><button class="btn sec" data-act="ckSuggest" data-v="skip" data-id="${i}">Hoy no</button></div></div>`).join('')}</section>`;
+  if(curList().id!==cartList())return '';
+  const model=shoppingModel(),{suggestions,stats}=model;
+  const title=`<div class="shopping-suggestion-heading"><h2>¿No se te olvida…?</h2><button type="button" class="link" data-act="ckSuggestLearn">Afinar</button></div>`;
+  if(!suggestions.length){const upcoming=model.upcoming[0],learning=model.profiles.some(x=>x.status==='learning');return `<section class="card shopping-suggestions" data-shopping-suggestions>${title}<p class="hint">${stats.products?upcoming?'Por ahora no hay nuevas sugerencias. '+esc(shoppingSuggestionInfo(upcoming).name)+' podría tocar en '+upcoming.daysUntil+' día'+(upcoming.daysUntil===1?'':'s')+'.':learning?'Ya hay '+stats.products+' productos en el historial. Puedes indicar cuánto suelen duraros mientras se aprende la frecuencia.':'Las sugerencias se actualizarán con las próximas compras y con tus respuestas.':'Se irá aprendiendo de los tickets que guardes. No hace falta volver a subir los anteriores.'}</p><button type="button" class="shopping-learning-link" data-act="ckSuggestLearn">Ver lo que está aprendiendo${stats.products?' · '+stats.products+' productos':''}</button></section>`}
+  return `<section class="card shopping-suggestions" data-shopping-suggestions>${title}<p class="hint">Según tus tickets y las compras guardadas. Comprueba si te queda.</p><div class="shopping-suggestion-list">${suggestions.map(x=>{
+    const info=shoppingSuggestionInfo(x);return `<article class="shopping-suggestion" data-suggestion-card="${esc(x.key)}"><button type="button" class="shopping-suggestion-main" data-act="ckSuggest" data-v="settings" data-key="${esc(x.key)}" data-lid="${esc(cartList())}" aria-label="Ajustar recomendación de ${esc(info.name)}">${shoppingSuggestionPhoto(info)}<span><strong>${esc(info.name)}</strong><small>${x.custom?'Recordatorio cada':'Lo compras aproximadamente cada'} ${x.interval} días · última compra hace ${x.elapsed} días</small><em>${x.inInventory?'Figura en casa: comprueba si queda':x.confidence==='initial'?'Primer patrón: aún hay pocas compras':x.count+' compras en días distintos'}</em></span></button><div class="shopping-suggestion-actions"><button type="button" class="btn" data-act="ckSuggest" data-v="add" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">+ Añadir${x.suggestedUnits>1?' '+x.suggestedUnits:''}</button><button type="button" class="btn sec" data-act="ckSuggest" data-v="have" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">Todavía tengo</button><button type="button" class="link" data-act="ckSuggest" data-v="skip" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">Hoy no</button></div></article>`
+  }).join('')}</div><button type="button" class="shopping-learning-link" data-act="ckSuggestLearn">Aprendiendo de ${stats.purchases} compras · ver y ajustar</button></section>`;
+}
+function shoppingSuggestionPreference(x,patch){
+  ckSet(CasaShoppingRecommendations.prefKey(x.key),{...x.preference,...patch,updatedAt:Date.now()});
+}
+function shoppingSuggest(d){
+  if(d.lid!==cartList()||curList().id!==cartList())return;
+  const x=shoppingModel().profiles.find(p=>p.key===d.key);if(!x)return toast('La sugerencia se ha actualizado.');
+  if(d.v==='settings'){shoppingSuggestionDetails(x.key);return}
+  if(d.v==='add'){
+    if(x.status==='listed')return toast('Ya está en la lista de Súper.');
+    if(x.status!=='due')return toast('La sugerencia se ha actualizado.');
+    const info=shoppingSuggestionInfo(x),item=info.p?{mid:info.p.id,name:info.p.name,units:x.suggestedUnits}:{name:info.name,mid:x.mid||'',units:x.suggestedUnits,...(x.lastUnitPrice>0?{uprice:x.lastUnitPrice,price:Math.round(x.lastUnitPrice*x.suggestedUnits*100)/100}:{}),store:x.store||'',section:ckSection(null,info.name)};
+    // Revalidar por nombre también: un artículo manual ya apuntado no debe
+    // duplicarse al quedar identificado con una referencia del catálogo.
+    if(S.items.some(i=>i.listId===cartList()&&((x.mid&&String(i.mid||'')===x.mid)||x.names.some(n=>CasaShoppingRecommendations.nameKey(n)===CasaShoppingRecommendations.nameKey(i.name)))))return toast('Ya está en la lista de Súper.');
+    if(addToList(item,cartList())){shoppingSuggestionPreference(x,{answer:'add',until:today(),basedOn:x.last});toast('Añadido a Súper'+(x.suggestedUnits>1?' · '+x.suggestedUnits+' envases':''))}return;
+  }
+  if(!['have','skip'].includes(d.v))return;
+  const days=d.v==='have'?Math.max(2,Math.round(x.interval/2)):1;
+  shoppingSuggestionPreference(x,{answer:d.v,until:addDays(today(),days-1),basedOn:x.last});
+  toast(d.v==='have'?'Lo revisaré dentro de '+days+' días.':'No volverá a aparecer hoy.');
+}
+function shoppingCoachLayout(ov){
+  ov.classList.add('shopping-coach-sheet');const container=ov.querySelector('.sheet'),actions=ov.querySelector('.actions'),body=document.createElement('div');body.className='shopping-coach-body';for(const child of [...container.children])if(child.tagName!=='H3'&&child!==actions)body.append(child);container.insertBefore(body,actions);return ov;
+}
+function shoppingSuggestionDetails(key,onChange=()=>{}){
+  const x=shoppingModel().profiles.find(p=>p.key===key);if(!x)return toast('Este producto ya no está en el historial.');
+  const info=shoppingSuggestionInfo(x),ov=sheet('Afinar recomendación',`<div class="shopping-coach-product">${shoppingSuggestionPhoto(info)}<strong>${esc(info.name)}</strong></div><p class="hint">${x.count} compra${x.count===1?'':'s'} en días distintos. Última: ${esc(x.last.split('-').reverse().join('/'))}.${x.automaticInterval?' El patrón estimado es de unos '+x.automaticInterval+' días.':' Todavía no hay suficientes compras para calcular la frecuencia.'}</p><label for="suggestionDays">¿Cada cuántos días quieres recordarlo?</label><input class="field" id="suggestionDays" type="number" inputmode="numeric" min="1" max="365" step="1" placeholder="${x.automaticInterval?'Automático: '+x.automaticInterval+' días':'Dejar que aprenda de los tickets'}" value="${x.custom?x.interval:''}"><p class="hint">Déjalo vacío para aprender de las próximas compras. Las sugerencias no añaden nada por sí solas.</p><p id="suggestionPreferenceStatus" role="status" class="hint"></p><button type="button" class="shopping-learning-link" data-suggestion-mute>${x.preference.muted?'Volver a recomendar este producto':'No recomendar este producto'}</button>`,{autoFocus:false,saveLabel:'Guardar preferencia',onSave:()=>{
+    const value=val(ov,'suggestionDays'),days=value?Number(value):null;if(value&&(!Number.isInteger(days)||days<1||days>365)){ov.querySelector('#suggestionPreferenceStatus').textContent='Escribe entre 1 y 365 días o deja el campo vacío.';ov.querySelector('#suggestionDays').setAttribute('aria-invalid','true');return false}
+    const current=shoppingModel().profiles.find(p=>p.key===key);if(!current){toast('El historial ha cambiado. Vuelve a abrir el producto.');return}
+    shoppingSuggestionPreference(current,{days,until:'',answer:'configure'});onChange();toast(days?'Recordatorio ajustado a '+days+' días.':'Volverá a aprender de los tickets.');
+  }});shoppingCoachLayout(ov);
+  ov.querySelector('[data-suggestion-mute]').onclick=()=>{const current=shoppingModel().profiles.find(p=>p.key===key);if(!current)return;shoppingSuggestionPreference(current,{muted:!current.preference.muted,until:'',answer:'configure'});ov.remove();onChange();toast(current.preference.muted?'Volverá a recomendarse.':'No se volverá a recomendar. Puedes cambiarlo desde Afinar.')};
+  return ov;
+}
+function shoppingLearningSheet(){
+  let filter='all';
+  const ov=sheet('Aprender de tus compras',`<p class="hint">Los tickets guardados ya cuentan. Aquí puedes ajustar cuánto suele duraros cada producto o recuperar una sugerencia oculta.</p><label for="shoppingLearningSearch">Buscar en tu historial</label><input class="field" id="shoppingLearningSearch" type="search" autocomplete="off" placeholder="Ej.: café"><div class="chips shopping-learning-filters"><button type="button" class="chip on" data-learning-filter="all">Todos</button><button type="button" class="chip" data-learning-filter="muted">Ocultos</button></div><p class="hint" id="shoppingLearningStats"></p><div id="shoppingLearningRows"></div>`,{autoFocus:false});shoppingCoachLayout(ov);
+  const labels={due:'Puede tocar reponer',upcoming:'Próximamente',listed:'Ya está en Súper',snoozed:'Lo tienes: recordatorio aplazado',muted:'No se recomienda',learning:'Aprendiendo la frecuencia',dormant:'Hace tiempo que no se compra'};
+  function draw(){
+    const model=shoppingModel(),q=CasaShoppingRecommendations.nameKey(val(ov,'shoppingLearningSearch')),all=model.profiles.filter(x=>(filter!=='muted'||x.preference.muted)&&(!q||[...x.names,shoppingSuggestionInfo(x).name].some(name=>CasaShoppingRecommendations.nameKey(name).includes(q))));all.sort((a,b)=>b.last.localeCompare(a.last)||a.name.localeCompare(b.name));
+    ov.querySelector('#shoppingLearningStats').textContent=model.stats.purchases+' compras guardadas · '+model.stats.products+' productos'+(all.length>40?' · se muestran 40: afina la búsqueda':'');
+    ov.querySelector('#shoppingLearningRows').innerHTML=all.slice(0,40).map(x=>{const info=shoppingSuggestionInfo(x);return `<button type="button" class="shopping-learning-row" data-learning-product="${esc(x.key)}">${shoppingSuggestionPhoto(info)}<span><strong>${esc(info.name)}</strong><small>${labels[x.status]} · ${x.count} compra${x.count===1?'':'s'}${x.interval?' · '+x.interval+' días':''}</small></span><b aria-hidden="true">›</b></button>`}).join('')||'<p class="hint">'+(filter==='muted'?'No hay productos ocultos.':q?'No hay coincidencias en las compras guardadas.':'Aparecerán productos al guardar tickets con artículos.')+'</p>';
+  }
+  ov.querySelector('#shoppingLearningSearch').addEventListener('input',draw);
+  ov.addEventListener('click',e=>{const option=e.target.closest('[data-learning-filter]');if(option){filter=option.dataset.learningFilter;ov.querySelectorAll('[data-learning-filter]').forEach(b=>b.classList.toggle('on',b===option));draw();return}const product=e.target.closest('[data-learning-product]');if(product)shoppingSuggestionDetails(product.dataset.learningProduct,draw)});
+  draw();return ov;
 }
 
 function vCompras(){
@@ -1769,13 +1806,8 @@ const CK_ACT={
   ckAppl:d=>{const a=ck().appl;ckSet('appl',a.includes(d.v)?a.filter(x=>x!==d.v):[...a,d.v])},
   ckApplNew:()=>{sheet('Otro electrodoméstico',`<input class="field" id="f_t" placeholder="Ej.: Panificadora">`,{onSave:ov=>{const v=val(ov,'f_t');if(!v)return false;const c=ck();S.cook=Object.assign({},S.cook,{applX:[...new Set([...(c.applX||[]),v])],appl:[...new Set([...c.appl,v])]});save()}})},
   ckVetoAdd:()=>{const el=$('#qVeto');const vs=el.value.split(',').map(s=>s.trim()).filter(Boolean);if(!vs.length)return;const c=ck();ckSet('vetoes',[...new Set([...c.vetoes,...vs])]);toast('Vetado: '+vs.join(', '))},
-  ckSuggest:d=>{
-    const x=shoppingSuggestions()[Number(d.id)];if(!x)return;
-    if(d.v==='add'){addToList({name:x.name});return}
-    const days=d.v==='have'?Math.max(2,Math.round(x.interval/2)):0;
-    ckSet('shoppingFeedback',{...(ck().shoppingFeedback||{}),[x.key]:{until:addDays(today(),days),answer:d.v}});
-    toast(d.v==='have'?'Lo recordaré más adelante':'No volveré a sugerirlo hoy');
-  },
+  ckSuggest:d=>shoppingSuggest(d),
+  ckSuggestLearn:()=>shoppingLearningSheet(),
   ckBuys:()=>buysSheet(),
   ckPendingReceipt:d=>ticketFlow({pendingId:d.id}),
   ckReceiptDraft:d=>resumeReceiptDraft(d.id),

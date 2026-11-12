@@ -360,3 +360,43 @@ node --test tests/pantry-purchase-history.test.cjs
 node --test tests/pantry-price-matches.test.cjs
 node tests/inventory-grid.cjs
 ```
+
+
+## Recomendaciones de reposición a partir de tus compras
+
+Desde la versión 91, «¿No se te olvida…?» en la lista Súper usa los artículos de
+los tickets y las compras guardadas del último año. No hace falta volver a subir
+los tickets anteriores. Agrupa por referencia de producto y por asociaciones
+confirmadas; los nombres sin referencia solo se unen cuando la coincidencia es
+inequívoca. Mantiene separadas las variedades. Excluye compras anuladas, tickets
+pendientes, duplicados, descuentos y bolsas de compra.
+
+Con dos fechas de compra empieza a mostrar una estimación prudente; con más
+compras usa la mediana de los intervalos recientes. Muestra foto cuando hay una
+referencia identificada, frecuencia y última compra. Si figura en casa, pide
+comprobar si queda: la presencia en el inventario no mide lo que se ha consumido.
+No recomienda lo que ya está en la lista o en el carro y deja de insistir en los
+productos que llevan mucho tiempo sin comprarse.
+
+«Añadir» lleva el producto a Súper sin duplicarlo; solo propone varios envases
+cuando la cantidad se ha repetido con suficiente consistencia. Usa el precio
+actual del catálogo o, para artículos manuales, el último precio unitario
+comprobable como estimación. «Todavía tengo» aplaza el aviso durante parte del
+intervalo estimado y «Hoy no» lo oculta hasta mañana. Una nueva compra reinicia
+el ciclo. Desde «Afinar» se puede buscar en el historial, fijar los días incluso
+con una sola compra, volver a la frecuencia automática, ocultar un producto y
+recuperarlo desde «Ocultos».
+
+Las preferencias se guardan por producto en el campo `cook` existente y se
+sincronizan con la casa sin reemplazar las de otros productos. Las sugerencias
+se calculan en el dispositivo; no envían los tickets a ningún servicio de IA ni
+requieren claves o servicios adicionales. No modifican el gasto ni las
+existencias y solo añaden a la lista al pulsar «Añadir».
+
+```sh
+node --test tests/shopping-suggestions.test.cjs
+node tests/shopping-recommendations-flow.cjs
+```
+
+Las pruebas de navegador usan compras sintéticas, persistencia local y una
+transferencia de estado entre dos sesiones; no escriben en Firebase de producción.
