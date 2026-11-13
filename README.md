@@ -484,8 +484,9 @@ ajustan al texto. Se mantiene la posición del carrusel al añadir habituales.
 
 ## Archivo de casa y rutinas de limpieza (versiones 96–97)
 
-En Recordar y Calendario, «Electrodomésticos y documentos» abre el archivo compartido.
-Desde la versión 97, el acceso principal está en Recordar y se ha retirado de Hoy.
+En Importantes y Calendario, «Electrodomésticos y documentos» abre el archivo compartido.
+Desde la versión 97, el acceso principal está fuera de Hoy; el apartado Recordar
+se llama Importantes desde la versión 98.
 Las fichas guardan nombre, tipo, marca, modelo y fin de garantía. Fecha de compra,
 número de serie y notas quedan en un desplegable. Cada ficha reúne sus PDF y
 permite añadir mantenimientos con el formulario y calendario existentes.
@@ -574,3 +575,36 @@ un transporte con revisiones y conflictos, carga repetida/sin conexión,
 verificación interrumpida, apertura real de un PDF y reconstrucción byte a byte
 en el segundo dispositivo. No se accede al hogar real. Se revisa el diseño en
 320 y 390 píxeles, con tema claro y oscuro.
+
+
+## Importantes y teléfonos de interés (versión 98)
+
+La pestaña Recordar ahora se llama Importantes, tanto en la navegación como en
+el título y los mensajes. Conserva todos los recordatorios y notas anteriores.
+Desde allí se siguen añadiendo, editando y completando recordatorios con sus
+fechas, repeticiones y calendario habituales. Se mantiene la clave interna
+`recordar` para respetar las preferencias guardadas. Electrodomésticos y
+documentos permanecen dentro del mismo apartado.
+
+«Teléfonos de interés» permite guardar nombre, número, tipo y notas opcionales
+(póliza, horario o instrucciones). Se muestran tres accesos directos y, cuando
+hay más, «Ver los N teléfonos» abre la lista completa con búsqueda por nombre,
+número, tipo y notas. El icono de llamada abre el marcador del dispositivo con
+un enlace `tel:`; se pueden editar, eliminar y deshacer la eliminación.
+
+Los contactos se guardan en `contacts` dentro del estado compartido del hogar,
+con ID estable, y usan la fusión por ID y las copias existentes. El campo está
+vacío por defecto: no se añaden contactos, números ni pólizas predeterminados.
+Se conserva la presentación del número, y el enlace de llamada elimina solo
+separadores y convierte el prefijo 00 en +. Los valores que no sean números
+de teléfono no generan enlaces de llamada. Una edición desactualizada se
+detiene si el mismo contacto cambió en otro móvil para evitar reemplazarlo
+silenciosamente. No cambia la configuración ni las reglas de Firebase.
+
+La prueba de navegador de `tests/home-files-routines.cjs` comprueba la
+conservación de recordatorios y notas, creación y edición de recordatorios
+en Importantes, altas simultáneas desde dos dispositivos, sincronización,
+conflictos, validación, enlace de llamada, edición, eliminación y deshacer,
+búsqueda y presentación en móvil. Usa números sintéticos reservados para
+ejemplos y un transporte Firebase simulado; no realiza llamadas ni accede
+a los datos reales de la casa.
