@@ -608,3 +608,54 @@ conflictos, validación, enlace de llamada, edición, eliminación y deshacer,
 búsqueda y presentación en móvil. Usa números sintéticos reservados para
 ejemplos y un transporte Firebase simulado; no realiza llamadas ni accede
 a los datos reales de la casa.
+
+
+## Fotos de documentos y garantías (versión 99)
+
+En Importantes → Electrodomésticos y documentos se puede hacer una foto,
+elegirla de la galería o seleccionar un PDF. Las mismas opciones aparecen al
+añadir un documento desde la ficha de un electrodoméstico. Se muestra una
+vista previa y se conserva el vínculo con el aparato, tipo, nombre, notas y
+fecha de vencimiento. La foto guardada se abre dentro de su ficha, se puede
+ampliar y descargar, y se consulta desde ambos móviles.
+
+Las fotos JPG, PNG, WebP y HEIC/HEIF se preparan en el dispositivo: se respeta
+la orientación, la transparencia se coloca sobre blanco y se genera un JPEG
+sin los metadatos EXIF originales. Se admiten entradas de hasta 30 MiB, con
+ajuste inicial a 4096 píxeles de lado mayor y unos 12 megapíxeles. Se ajustan
+calidad y tamaño para guardar un máximo de 5 MiB por imagen. No se promete
+conservar el archivo original sin cambios; se conserva la imagen preparada.
+
+Primero se intenta la lectura nativa de HEIC. Si el navegador no la admite,
+se carga únicamente entonces el conversor local **heic-to 1.6.7**, basado en
+libheif, como archivo separado y reemplazable. No se envían las imágenes a
+un servicio de conversión externo. El código de terceros sin modificar,
+licencias LGPL/GPL y enlaces al código fuente están en
+[`casa/vendor/heic-to/NOTICE.md`](casa/vendor/heic-to/NOTICE.md). La dependencia
+no forma parte de la descarga inicial del archivo de la app; se almacena en
+la caché del dispositivo después de usarla.
+
+La foto usa el mismo almacenamiento privado por partes inmutables y SHA-256
+que los PDF; no se cambia la configuración ni las reglas de Firebase. El
+manifiesto mantiene la versión 1 y permite `image/jpeg` además de
+`application/pdf`; los manifiestos y archivos PDF anteriores siguen válidos
+y no se migran. El estado del hogar guarda únicamente los metadatos y la
+referencia, nunca los bytes de la foto. La subida lee antes de crear, no
+reemplaza partes existentes, verifica las referencias y relee el hogar antes
+de anunciar el guardado.
+
+El hash del archivo de origen permite reconocer la misma foto aunque otro
+navegador genere un JPEG diferente. Los reintentos reutilizan la preparación
+y recuperan la referencia existente sin duplicar documentos ni modificar su
+nombre anterior. La copia JSON contiene las referencias: para conservar una
+copia independiente de la foto, se usa «Descargar foto». Abrir un archivo
+compartido requiere conexión, igual que los PDF.
+
+Se han comprobado los tres botones de selección, imagen inválida, subida sin
+conexión, verificación interrumpida y reintento, vista ampliada y recuperación
+byte a byte desde otro dispositivo independiente. También se prueban giro
+EXIF, PNG transparente, el conversor HEIC real con una imagen sintética,
+reducción de fotos mayores de 5 MiB, integridad de los archivos y presentación
+a 320/390 píxeles en temas claro y oscuro. Las pruebas usan transporte de
+Firestore simulado; no escriben datos en la casa real ni prueban la cámara
+física del iPhone. Las imágenes de prueba son sintéticas.
