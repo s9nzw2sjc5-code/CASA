@@ -659,3 +659,15 @@ reducción de fotos mayores de 5 MiB, integridad de los archivos y presentación
 a 320/390 píxeles en temas claro y oscuro. Las pruebas usan transporte de
 Firestore simulado; no escriben datos en la casa real ni prueban la cámara
 física del iPhone. Las imágenes de prueba son sintéticas.
+
+
+## Auditoría funcional y correcciones (versión 100)
+
+[Informe de auditoría del 13/11/2026](docs/AUDITORIA-2026-11-13.md), con cobertura,
+fallos reproducidos, correcciones, resultados del OCR real y comprobaciones
+externas pendientes. Se corrigen las fechas e historial de Ringo, los totales
+de gasto, la actualización de cesta con el buscador enfocado y la aceptación
+de copias de seguridad incompatibles, además del desbordamiento del botón de
+historial en pantallas estrechas. Se añaden recorridos de uso diario y
+acceso privado. Las pruebas utilizan datos sintéticos y no escriben en el
+hogar real; el informe distingue la lectura real de fotos de las simulaciones.

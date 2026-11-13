@@ -637,6 +637,7 @@ body.nav-top .toast{bottom:90px}
 .history-product-pick>span{flex:1;min-width:0;overflow-wrap:anywhere}
 .history-product-pick>b{flex:none;color:var(--muted)}
 .ck-bh{width:100%;text-align:left}
+.ck-history-link{width:100%;margin-top:12px;white-space:normal;line-height:1.4}
 .ck-cartbar .ck-cb-t{flex:1}
 .ck-tip{background:var(--accent-soft);border-radius:14px;padding:10px 12px;margin-top:8px;font-size:.92rem}
 details summary{cursor:pointer}
@@ -672,24 +673,24 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=99"></script>
-<script src="sync.js?v=99"></script>
-<script src="receipts.js?v=99"></script>
-<script src="receipt-image.js?v=99"></script>
-<script src="receipt-layout.js?v=99"></script>
-<script src="receipt-ocr.js?v=99"></script>
-<script src="product-photo.js?v=99"></script>
-<script src="product-photo-ui.js?v=99"></script>
-<script src="shopping-recommendations.js?v=99"></script>
-<script src="household-insights.js?v=99"></script>
-<script src="document-files.js?v=99"></script>
-<script src="document-photo.js?v=99"></script>
-<script src="cleaning-links.js?v=99"></script>
-<script src="home-model.js?v=99"></script>
-<script src="cocina.js?v=99"></script>
-<script src="home-ui.js?v=99"></script>
-<script src="household-ui.js?v=99"></script>
-<script src="receipt-extras.js?v=99"></script>
+<script src="push.js?v=100"></script>
+<script src="sync.js?v=100"></script>
+<script src="receipts.js?v=100"></script>
+<script src="receipt-image.js?v=100"></script>
+<script src="receipt-layout.js?v=100"></script>
+<script src="receipt-ocr.js?v=100"></script>
+<script src="product-photo.js?v=100"></script>
+<script src="product-photo-ui.js?v=100"></script>
+<script src="shopping-recommendations.js?v=100"></script>
+<script src="household-insights.js?v=100"></script>
+<script src="document-files.js?v=100"></script>
+<script src="document-photo.js?v=100"></script>
+<script src="cleaning-links.js?v=100"></script>
+<script src="home-model.js?v=100"></script>
+<script src="cocina.js?v=100"></script>
+<script src="home-ui.js?v=100"></script>
+<script src="household-ui.js?v=100"></script>
+<script src="receipt-extras.js?v=100"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -744,7 +745,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=99;
+const APP_VERSION=100;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1214,6 +1215,13 @@ function vRingoHist(){
   groups.forEach(([m,r])=>{h+=`<h2>${m.charAt(0).toUpperCase()+m.slice(1)}</h2>`+ul(r)});
   return h+`<p class="hint">${list.length} registro${list.length>1?'s':''}</p>`;
 }
+// El registro detallado y la fecha del cuidado representan la misma realización.
+function refreshCareHistory(careId,oldDate){
+  const care=find(S.pet,careId);if(!care)return;
+  const previous=care.last||'',recorded=S.petLog.filter(e=>e.careId===careId).map(e=>e.date).filter(CasaHome.validDate);
+  care.log=[...new Set([...(care.log||[]).filter(d=>d!==oldDate),...recorded])];
+  care.last=[...care.log,...(previous&&previous!==oldDate?[previous]:[])].filter(CasaHome.validDate).sort().at(-1)||'';
+}
 function histSheet(e){
   const n=!e;e=e||{date:today(),kind:'salud',title:'',notes:''};
   sheet(n?'Añadir al historial':'Registro del historial',`
@@ -1224,13 +1232,15 @@ function histSheet(e){
   {onSave:ov=>{
     const title=val(ov,'f_t');if(!title){toast('Escribe qué pasó');return false}
     const o={title,date:val(ov,'f_d')||today(),kind:val(ov,'f_k'),notes:val(ov,'f_n')};
+    if(e.careId&&o.date>today()){toast('Un cuidado realizado no puede tener una fecha futura. Para una cita, usa Calendario.');return false}
     if(n)S.petLog.push({id:uid(),careId:null,...o});
     else if(e.src==='care'){const c=find(S.pet,e.careId);if(c)c.log=(c.log||[]).filter(d=>d!==e.date);S.petLog.push({id:uid(),careId:e.careId,...o})}
     else{const y=find(S.petLog,e.id);if(y)Object.assign(y,o)}
+    if(!n&&e.careId)refreshCareHistory(e.careId,e.date);
     save();toast(n?'Añadido al historial':'Registro guardado');
   },onDelete:n?null:()=>{
     if(e.src==='care'){const c=find(S.pet,e.careId);if(c)c.log=(c.log||[]).filter(d=>d!==e.date)}
-    S.petLog=S.petLog.filter(y=>y.id!==e.id);save();toastUndo('Registro eliminado');
+    S.petLog=S.petLog.filter(y=>y.id!==e.id);if(e.careId)refreshCareHistory(e.careId,e.date);save();toastUndo('Registro eliminado');
   }});
 }
 function petSheet(x,preset){
@@ -1297,13 +1307,22 @@ function dailyBackup(data){
   saveLocalBackup(id,data,'Copia diaria');
   cloudBackup(id,data,'Copia diaria').then(ok=>{if(ok)pruneBackups()});
 }
+function readBackupData(data){
+  const invalid=()=>{throw Error('La copia contiene datos incompatibles. Elige otra copia de seguridad.')};
+  if(!data||typeof data!=='object'||Array.isArray(data)||!Array.isArray(data.tasks)||!Array.isArray(data.items))invalid();
+  for(const key of ARR_KEYS)if(Object.hasOwn(data,key)&&(!Array.isArray(data[key])||data[key].some(x=>!x||typeof x!=='object'||Array.isArray(x))))invalid();
+  for(const key of MAP_KEYS)if(Object.hasOwn(data,key)&&(!data[key]||typeof data[key]!=='object'||Array.isArray(data[key])))invalid();
+  if(Object.hasOwn(data,'sections')&&(!Array.isArray(data.sections)||data.sections.some(x=>typeof x!=='string')))invalid();
+  return Object.assign(fresh(),clone(data));
+}
 function restoreFrom(data,label){
+  let restored;try{restored=readBackupData(data)}catch(e){toast(e.message);return false}
   const cur=clone(S);
   const rid='r-'+new Date().toISOString().replace(/[:.]/g,'-');
   saveLocalBackup(rid,cur,'Antes de restaurar');cloudBackup(rid,cur,'Antes de restaurar');
   base=clone(base||cur);
-  S=Object.assign(fresh(),clone(data));S.rev=(base&&base.rev)||0;
-  save();toast('Restaurada: '+label);
+  S=restored;S.rev=(base&&base.rev)||0;
+  save();toast('Restaurada: '+label);return true;
 }
 async function backupsSheet(){
   const ov=sheet('Copias de seguridad',`
@@ -1335,10 +1354,11 @@ async function backupsSheet(){
   });
   ov.querySelector('#bkFile').addEventListener('change',e=>{
     const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-    rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!Array.isArray(d.tasks)||!Array.isArray(d.items))throw 0;
+    ov.querySelector('#bkList').innerHTML='<p class="hint">Comprobando la copia…</p>';
+    rd.onload=()=>{if(!ov.isConnected||ov.querySelector('#bkFile').files[0]!==f)return;try{const d=readBackupData(JSON.parse(rd.result));
       const box=ov.querySelector('#bkList');box.innerHTML=`<div class="summary"><span>Archivo: ${counts(d)}</span><button type="button" class="btn" id="bkImpOk">Restaurar</button></div>`;
       box.querySelector('#bkImpOk').onclick=()=>{ov.remove();restoreFrom(d,'archivo')};
-    }catch(err){toast('El archivo no es una copia válida de la app')}};
+    }catch(err){ov.querySelector('#bkList').innerHTML='<p class="hint">El archivo no es una copia válida de la app. Selecciona otra copia.</p>';toast('El archivo no es una copia válida de la app')}};
     rd.readAsText(f);
   });
 }
@@ -1369,7 +1389,7 @@ function replaceAppContent(html){
 }
 function render(){
   // No interrumpir el teclado con actualizaciones de fondo mientras se busca.
-  if(document.activeElement?.id==='qProd'&&ui.view==='compras'&&ui.ckTab==='productos')return;
+  if(document.activeElement?.id==='qProd'&&ui.view==='compras'&&ui.ckTab==='productos'){refreshFocusedProducts();updSync();refreshHomeViews();return}
   const notice=new URLSearchParams(location.search),noticeId=notice.get('noticeId'),noticeKind=notice.get('noticeKind');
   if(noticeId&&['task','reminder'].includes(noticeKind)&&find(noticeKind==='task'?S.tasks:S.reminders,noticeId)){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>answerNotice({kind:noticeKind,id:noticeId}),0)}
   const v={hoy:vHoy,tareas:vTareas,compras:()=>ui.ckTab&&ui.ckTab!=='lista'?vCocina():vCompras(),semana:vSemana,recordar:vRecordar,ringo:vRingo}[ui.view]||vHoy;

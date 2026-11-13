@@ -480,11 +480,24 @@ function vCkProductos(){
   const html=productSearchHTML(),end=html.indexOf('</div>');
   return html.includes('id="qProd"')?html.slice(0,end+6)+'<div id="ckProductResults">'+html.slice(end+6)+'</div>':html;
 }
+function replaceProductResults(results,content){
+  const images=new Map();results.querySelectorAll('img').forEach(img=>{const src=img.getAttribute('src');if(!images.has(src))images.set(src,[]);images.get(src).push(img)});
+  content.querySelectorAll('img').forEach(img=>{const old=images.get(img.getAttribute('src'))?.shift();if(old)img.replaceWith(old)});
+  results.replaceChildren(...content.childNodes);
+}
+function refreshFocusedProducts(){
+  const app=$('#app'),field=$('#qProd'),scroll=app.scrollTop,next=document.createElement('template');
+  if(field.value!==(ui.prodQ||''))field.value=ui.prodQ||'';
+  next.innerHTML=vCocina();
+  for(const selector of ['#ckProductResults','.hero-stats','.ck-cartbar']){const current=app.querySelector(selector),updated=next.content.querySelector(selector);if(current&&updated){if(selector==='#ckProductResults')replaceProductResults(current,updated);else current.replaceWith(updated)}}
+  const clear=app.querySelector('[data-act="prodClear"]');if(clear)clear.hidden=!field.value;app.scrollTop=scroll;
+  try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(e){}
+}
 function updateProductSearch(){
   const field=$('#qProd'),results=$('#ckProductResults');if(!field||!results)return;
   const next=document.createElement('template');next.innerHTML=vCkProductos();
   const content=next.content.querySelector('#ckProductResults');if(!content)return;
-  results.replaceChildren(...content.childNodes);
+  replaceProductResults(results,content);
   const clear=document.querySelector('[data-act="prodClear"]');if(clear)clear.hidden=!field.value;
 }
 function scheduleProductSearch(e){
@@ -979,14 +992,14 @@ function panSheet(x){
 const imgUrl=(img,s)=>img?`https://prod-mercadona.imgix.net/images/${img}?fit=contain&h=${s}&w=${s}`:'';
 const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(String(i.mid));return p?p[9]:i.mid?habitInfo(i.mid).img:''};
 const monthKey=d=>(d||today()).slice(0,7);
-const spentIn=m=>(S.buys||[]).filter(b=>monthKey(b.date)===m).reduce((a,b)=>a+(+b.total||0),0);
+const spentIn=m=>CasaInsights.spending(S,m,{today:today()}).totalCents/100;
 const monthName=m=>new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
 const hhmm=t=>t?new Date(t).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';
 const sameItem=(i,o)=>o.mid?i.mid===o.mid:!i.mid&&norm(i.name)===norm(o.name);
 // Resumen de dinero: lo que vamos a gastar (estimado) y lo ya gastado este mes (real)
 // Semana de lunes a domingo: lo gastado y el presupuesto semanal (opcional)
 const budgetW=()=>{const c=S.cook||{};return c.budgetW!=null?+c.budgetW||0:c.budget!=null?+c.budget||0:0};
-function spentWeek(){const a=weekStart(0),z=addDays(a,6);return(S.buys||[]).filter(b=>b.date>=a&&b.date<=z).reduce((s,b)=>s+(+b.total||0),0)}
+function spentWeek(){const a=weekStart(0),z=addDays(a,6);return CasaInsights.purchases(S,today()).filter(b=>b.date>=a&&b.date<=z).reduce((sum,b)=>{const amount=CasaReceipts.cents(b.total);return sum+(amount!==null&&amount>=0?amount:0)},0)/100}
 function weekRow(){
   const w=spentWeek(),b=budgetW(),pct=b?w/b*100:0,st=!b?'':pct>100?'over':pct>=85?'near':'ok';
   return`<button class="ck-week ${st}" data-act="ckBuys"><span class="ck-wk-t"><small>📅 Gastado esta semana</small><b>${eur(w)}</b></span><span class="ck-wk-r">${b?(w<=b?'Quedan '+eur(b-w)+'<br>de '+eur0(b):'Te has pasado<br>'+eur(w-b)):'Sin presupuesto<br>semanal'}</span>${b?`<span class="ck-mbar ${st}"><i style="width:${Math.min(100,pct)}%"></i></span>`:''}${st==='near'?'<small class="ck-mwarn">⚠️ Cerca del presupuesto de la semana</small>':st==='over'?'<small class="ck-mwarn">⛔ Presupuesto de la semana superado</small>':''}</button>`;
@@ -1149,7 +1162,7 @@ function vCompras(){
   h+=`<details class="shop-money" data-shop-money ${expanded?'open':''}><summary>Gastos, tickets y herramientas</summary>${moneyCard(pend)}<button class="btn sec" data-act="newList">+ Lista</button><button class="btn sec" data-act="editList" data-id="${L.id}">Editar lista</button></details>`;
   return h+shopLaterSection(L)+histLink();
 }
-const histLink=()=>pendingReceiptsHTML()+((S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:12px" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'');
+const histLink=()=>pendingReceiptsHTML()+((S.buys||[]).length?`<button class="btn sec ck-history-link" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'');
 // Añadir a la lista sin duplicar: si ya está, ofrece sumar una unidad
 function addToList(o,lid){
   const L=lid||curList().id,ex=S.items.find(i=>i.listId===L&&!i.done&&sameItem(i,o));
@@ -1183,7 +1196,7 @@ function marketSheet(){
     <input class="field" id="f_o" style="margin-top:8px" placeholder="Otras cosas, separadas por comas">
     <label class="ing-row" style="display:flex;margin-top:12px;color:var(--ink);font-weight:500;font-size:.95rem"><input type="checkbox" id="f_h"><span>Apuntarlo también en 🏠 En casa (nevera)</span></label>
     <p class="hint">Se resta del presupuesto de la semana y del mes. Lo podéis editar o borrar desde el historial.</p>`,
-  {saveLabel:'Guardar y recordar el ticket',onSave:ov=>{
+  {saveLabel:'Guardar compra',onSave:ov=>{
     const a=parseFloat(String(val(ov,'f_a')).replace(',','.'));if(!(a>0)){toast('Escribe el importe');return false}
     const names=[...new Set([...[...ov.querySelectorAll('#f_v .chip.on')].map(b=>b.dataset.v),...val(ov,'f_o').split(',').map(x=>x.trim()).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1))])];
     S.buys=[...(S.buys||[]),{id:uid(),at:Date.now(),manual:true,market:true,date:val(ov,'f_d')||today(),store:'Mercadillo',total:Math.round(a*100)/100,n:names.length,items:names.map(name=>({name,units:1})),note:'',by:meName()}];
@@ -1300,7 +1313,7 @@ const AI_MODEL='claude-opus-5-5',AI_LS='casa-ai-key';
 const aiKey=()=>{try{return localStorage.getItem(AI_LS)||''}catch(e){return''}};
 function aiKeySheet(then){
   sheet('Activar la IA',`<p class="hint" style="margin-top:0">Para reconocer alimentos en fotos, la app usa Claude, la IA de Anthropic. Necesita una clave de API:</p>
-    <ol class="hint" style="padding-left:18px;line-height:1.5"><li>Entra en <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a> y crea una cuenta.</li><li>Añade saldo (con 5 € hay para cientos de fotos y recetas).</li><li>En «API Keys» crea una clave y pégala aquí.</li></ol>
+    <ol class="hint" style="padding-left:18px;line-height:1.5"><li>Entra en <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a> y crea una cuenta.</li><li>Añade saldo o activa la facturación de tu cuenta para analizar fotos.</li><li>En «API Keys» crea una clave y pégala aquí.</li></ol>
     <label for="f_k">Clave de API</label><input class="field" id="f_k" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(aiKey())}">
     <p class="hint">Se guarda solo en este móvil. El reconocimiento de fotos consume saldo de la API.</p>`,
   {saveLabel:'Guardar',onSave:ov=>{const k=val(ov,'f_k');if(k&&!/^sk-ant-/.test(k)){toast('La clave empieza por «sk-ant-»');return false}
