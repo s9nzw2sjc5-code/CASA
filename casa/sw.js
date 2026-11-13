@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v94';
+const CACHE = 'casa-v95';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['push.js?v=94','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=94', 'shopping-recommendations.js?v=94', 'household-insights.js?v=94', 'household-ui.js?v=94', 'cocina.js?v=94', 'product-photo.js?v=94', 'product-photo-ui.js?v=94', 'receipts.js?v=94', 'receipt-image.js?v=94', 'receipt-layout.js?v=94', 'receipt-ocr.js?v=94', 'receipt-extras.js?v=94', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['push.js?v=95','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=95', 'shopping-recommendations.js?v=95', 'household-insights.js?v=95', 'household-ui.js?v=95', 'cocina.js?v=95', 'product-photo.js?v=95', 'product-photo-ui.js?v=95', 'receipts.js?v=95', 'receipt-image.js?v=95', 'receipt-layout.js?v=95', 'receipt-ocr.js?v=95', 'receipt-extras.js?v=95', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

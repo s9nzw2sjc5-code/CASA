@@ -474,3 +474,9 @@ node tests/receipt-review-flow.cjs
 
 Las comprobaciones usan datos sintéticos y transporte simulado; no escriben en
 el hogar real ni certifican el comportamiento de un iPhone físico.
+
+
+Desde la versión 95, el orden de Compras es: estimación de la cesta,
+«¿No se te olvida…?» plegado, Habituales y lista de productos. Las acciones
+«Añadir» y «Todavía tengo» de las recomendaciones son más compactas y se
+ajustan al texto. Se mantiene la posición del carrusel al añadir habituales.
