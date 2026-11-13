@@ -59,6 +59,8 @@
       if(name==='db')return{
         doc:p=>wrapDoc(s.fs.doc(p)),
         collection:p=>wrapCol(s.fs.collection(p)),
+        // PDFs: creación atómica e inmutable; nunca sustituye documentos existentes.
+        createDocumentAsset:entries=>CasaDocumentFiles.commit(s.fs,entries).catch(e=>{throw mapErr(e)}),
         // Solo actualiza campos explícitos de un documento existente. No reemplaza el hogar.
         transactPatch:(p,fn)=>s.fs.runTransaction(async t=>{
           const ref=s.fs.doc(p),snap=await t.get(ref);

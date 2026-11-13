@@ -480,3 +480,77 @@ Desde la versión 95, el orden de Compras es: estimación de la cesta,
 «¿No se te olvida…?» plegado, Habituales y lista de productos. Las acciones
 «Añadir» y «Todavía tengo» de las recomendaciones son más compactas y se
 ajustan al texto. Se mantiene la posición del carrusel al añadir habituales.
+
+
+## Archivo de casa y rutinas de limpieza (versión 96)
+
+En Hoy y Calendario, «Electrodomésticos y documentos» abre el archivo compartido.
+Las fichas guardan nombre, tipo, marca, modelo y fin de garantía. Fecha de compra,
+número de serie y notas quedan en un desplegable. Cada ficha reúne sus PDF y
+permite añadir mantenimientos con el formulario y calendario existentes.
+La fecha de garantía se introduce según el documento, sin asumir su duración.
+
+Documentos admite PDF de hasta 5 MiB: garantías, manuales, facturas, documentos
+de casa, seguros, salud y otros. Se pueden buscar, vincular a un electrodoméstico,
+consultar desde otro dispositivo, editar sus datos y archivar/restaurar. Archivar
+conserva el archivo; no borra los bytes. Las fechas de garantía y vencimiento
+aparecen en el calendario. Una garantía vinculada con la misma fecha de vencimiento
+no genera dos entradas equivalentes.
+
+Los archivos usan la conexión privada de Firestore ya existente. No se configura
+Firebase Storage, no se publican URL de descarga ni se suben PDF al repositorio.
+Los bytes se guardan como partes inmutables bajo
+`hogar/estado/documentos/{sha256}/partes/{n}` y un manifiesto en
+`hogar/estado/documentos/{sha256}`. El límite de 5 MiB y las partes de 192 KiB
+mantienen cada documento y la transacción por debajo de sus límites: esta vía
+está pensada para pocos PDF domésticos pequeños, no para vídeo ni un archivo
+masivo. Cada carga consume lecturas/escrituras normales de Firestore.
+
+El formato, tamaño, terminación de PDF, número de partes y hash se comprueban.
+Una transacción lee todas las referencias antes de crear únicamente las que
+faltan, rechaza colisiones y no reemplaza archivos existentes. Un reintento o dos
+móviles subiendo el mismo PDF producen una sola referencia. Después de la carga
+se releen el manifiesto y el índice del hogar antes de anunciar el guardado.
+Al abrir se reconstruye y verifica SHA-256; los PDF incompletos no se presentan
+como correctos. La descarga requiere conexión. Las copias JSON guardan fichas y
+referencias; para una copia independiente del PDF se descarga desde su visor.
+
+La autorización sigue dependiendo de las reglas desplegadas del proyecto y de
+la sesión del usuario. No se han modificado `config.js`, `firestore.rules` ni los
+usuarios. La CLI del entorno no tiene una sesión administrativa de Firebase y
+no pudo consultar la edición ni las reglas desplegadas; se mantiene la conexión
+compat 10.14.1 y la base ya usadas por CASA, sin aprovisionar ni migrar bases.
+La prueba de integración usa ese adaptador con un transporte autenticado simulado;
+no certifica la configuración del servidor de producción.
+
+En Tareas → Rutinas de limpieza hay modelos editables de baños, repaso semanal
+y sábanas/toallas, y una rutina en blanco. Cada una tiene hasta 30 tareas,
+responsable, fecha y repetición semanal, quincenal, mensual, cada ciertos días
+o una sola vez. Las tareas anteriores no se convierten ni duplican.
+Las rutinas pendientes aparecen en Hoy y la próxima fecha real en Calendario.
+
+Cada casilla se sincroniza por su propia clave en `cook`, por rutina, ronda y
+paso. Dos personas pueden marcar pasos distintos sin sustituir la lista de
+casillas de la otra. «Terminar rutina» exige que estén hechos todos los pasos,
+guarda una finalización por ronda, limpia las casillas anteriores y calcula la
+próxima fecha desde el día de realización. Conserva las últimas 24 finalizaciones
+por rutina. Una edición abierta antes de terminar una ronda exige reabrirse.
+
+Una rutina sin terminar conserva su fecha aunque esté atrasada: no avanza sola.
+«Posponer un día» cambia solo la fecha y mantiene las casillas y la ronda. Si
+está atrasada, pasa a mañana; si ya era futura, se retrasa un día desde esa fecha.
+La próxima repetición se calcula únicamente al terminarla. Se puede archivar o
+restaurar una rutina sin perder su historial. No hay nuevos avisos push.
+
+```sh
+node --test tests/*.test.cjs
+node tests/home-files-routines.cjs
+node tests/casa-workflows.cjs
+node tests/receipt-flow.cjs
+```
+
+Las pruebas utilizan PDF sintéticos, dos contextos de navegador independientes,
+un transporte con revisiones y conflictos, carga repetida/sin conexión,
+verificación interrumpida, apertura real de un PDF y reconstrucción byte a byte
+en el segundo dispositivo. No se accede al hogar real. Se revisa el diseño en
+320 y 390 píxeles, con tema claro y oscuro.
