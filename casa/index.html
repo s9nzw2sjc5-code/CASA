@@ -574,10 +574,6 @@ body.nav-top .toast{bottom:90px}
 .ck-buy .ck-u{flex:none;width:22px}
 .ck-buy .ck-st{width:32px;height:32px}
 .ck-th{width:40px;height:40px;border-radius:8px;object-fit:contain;background:#fff;flex:none}
-.ck-aibtn{width:100%;margin-top:8px;background:linear-gradient(135deg,#6C3CF0,#E62A68)!important;color:#fff!important}
-.ck-ai-wait{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 0}
-.ck-spin{width:42px;height:42px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:ckspin .8s linear infinite}
-@keyframes ckspin{to{transform:rotate(360deg)}}
 .ck-money{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ck-mc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--surface);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);min-width:0}
 .ck-mc small{color:var(--muted);font-size:.74rem;font-weight:600}
@@ -673,24 +669,24 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=101"></script>
-<script src="sync.js?v=101"></script>
-<script src="receipts.js?v=101"></script>
-<script src="receipt-image.js?v=101"></script>
-<script src="receipt-layout.js?v=101"></script>
-<script src="receipt-ocr.js?v=101"></script>
-<script src="product-photo.js?v=101"></script>
-<script src="product-photo-ui.js?v=101"></script>
-<script src="shopping-recommendations.js?v=101"></script>
-<script src="household-insights.js?v=101"></script>
-<script src="document-files.js?v=101"></script>
-<script src="document-photo.js?v=101"></script>
-<script src="cleaning-links.js?v=101"></script>
-<script src="home-model.js?v=101"></script>
-<script src="cocina.js?v=101"></script>
-<script src="home-ui.js?v=101"></script>
-<script src="household-ui.js?v=101"></script>
-<script src="receipt-extras.js?v=101"></script>
+<script src="push.js?v=102"></script>
+<script src="sync.js?v=102"></script>
+<script src="receipts.js?v=102"></script>
+<script src="receipt-image.js?v=102"></script>
+<script src="receipt-layout.js?v=102"></script>
+<script src="receipt-ocr.js?v=102"></script>
+<script src="product-photo.js?v=102"></script>
+<script src="product-photo-ui.js?v=102"></script>
+<script src="shopping-recommendations.js?v=102"></script>
+<script src="household-insights.js?v=102"></script>
+<script src="document-files.js?v=102"></script>
+<script src="document-photo.js?v=102"></script>
+<script src="cleaning-links.js?v=102"></script>
+<script src="home-model.js?v=102"></script>
+<script src="cocina.js?v=102"></script>
+<script src="home-ui.js?v=102"></script>
+<script src="household-ui.js?v=102"></script>
+<script src="receipt-extras.js?v=102"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -745,7 +741,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=101;
+const APP_VERSION=102;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

@@ -54,6 +54,9 @@ const { chromium } = require("playwright"),
       serviceWorkers: "block",
     });
     p.on("pageerror", (e) => errors.push(e.message));
+    await p.addInitScript(() =>
+      localStorage.setItem("casa-ai-key", "sk-ant-audit-legacy-placeholder"),
+    );
     await p.route("https://**/*", (r) =>
       r.request().url().startsWith("https://prod-mercadona.imgix.net/")
         ? r.fulfill({
@@ -66,6 +69,10 @@ const { chromium } = require("playwright"),
       waitUntil: "domcontentloaded",
     });
     await p.waitForFunction(() => typeof ACT !== "undefined");
+    assert.equal(
+      await p.evaluate(() => localStorage.getItem("casa-ai-key")),
+      null,
+    );
     await p.evaluate(async () => {
       await loadMC();
       S = fresh();
@@ -453,20 +460,22 @@ const { chromium } = require("playwright"),
     await p.locator("#ckBudgetM").fill("250");
     await p.locator("#ckBudgetM").dispatchEvent("change");
     assert.equal(await p.evaluate(() => S.cook.budgetM), 250);
-    await p.locator("[data-act=aiKey]").click();
-    assert(!(await p.locator(".overlay").innerText()).includes("recetas"));
-    await p.locator("#f_k").fill("clave-inválida-de-prueba");
-    await ok();
-    assert.equal(await p.evaluate(() => aiKey()), "");
-    assert.equal(await p.locator(".overlay").count(), 1);
-    await close();
+    assert.equal(
+      await p.locator("[data-act=aiKey],[data-act=aiPhoto]").count(),
+      0,
+    );
+    assert(
+      !(await p.locator("#app").innerText()).includes(
+        "Inteligencia artificial",
+      ),
+    );
     await p.evaluate(() => {
       S.buys = [];
       save();
     });
     await tab("recordar");
     console.log(
-      "PASS consistent spending summaries, duplicate/void/future exclusion, budgets and invalid AI activation",
+      "PASS consistent spending summaries, duplicate/void/future exclusion, budgets and paid AI removal",
     );
     // Safari-like taps can keep the search input focused while cart controls are used.
     await tab("compras");
@@ -595,15 +604,11 @@ const { chromium } = require("playwright"),
     });
     await p.locator("[data-act=backups]").click();
     const beforeInvalid = await p.evaluate(() => JSON.stringify(S));
-    await p
-      .locator("#bkFile")
-      .setInputFiles({
-        name: "invalid-backup.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(
-          JSON.stringify({ tasks: [], items: [], pet: null }),
-        ),
-      });
+    await p.locator("#bkFile").setInputFiles({
+      name: "invalid-backup.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({ tasks: [], items: [], pet: null })),
+    });
     await p.waitForFunction(
       () =>
         !!document.querySelector("#bkImpOk") ||
@@ -617,13 +622,11 @@ const { chromium } = require("playwright"),
       "An incompatible backup must never offer restoration",
     );
     assert.equal(await p.evaluate(() => JSON.stringify(S)), beforeInvalid);
-    await p
-      .locator("#bkFile")
-      .setInputFiles({
-        name: "synthetic-backup.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(backup.data),
-      });
+    await p.locator("#bkFile").setInputFiles({
+      name: "synthetic-backup.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(backup.data),
+    });
     await p.locator("#bkImpOk").click();
     assert.equal(await p.evaluate(() => S.tasks.length), 2);
     assert(

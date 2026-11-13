@@ -53,6 +53,17 @@ Entra con tu email y contraseña la primera vez; después se queda la sesión ab
 
 Tus datos **nunca** se guardan en este repositorio: viven en tu Firebase y en vuestros móviles.
 
+## Funciones de fotos sin API de pago (versión 102)
+
+Se ha retirado la integración con la API de Claude: desaparecen su configuración
+y el análisis de fotos de la nevera o despensa. Al abrir esta versión en cada
+móvil se borra la antigua clave local, si existía. Los productos ya guardados
+se conservan.
+
+El lector local de tickets, la identificación de un producto por foto con
+búsqueda y confirmación, y las fotos de documentos siguen disponibles sin
+una clave de Claude.
+
 ## Importación de tiques
 
 El lector de fotos ejecuta los modelos de RapidOCR/PP-OCRv4 en el navegador con
@@ -291,7 +302,7 @@ PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_retired_
 
 ## Apuntar lo que se ha acabado
 
-En «En casa», encima de la foto de la nevera, «¿Qué se ha acabado?» abre una entrada
+Al principio de «En casa», «¿Qué se ha acabado?» abre una entrada
 rápida de texto. Acepta el nombre o frases como «se ha acabado la leche». Muestra
 coincidencias de la despensa, mantiene las variedades y negaciones del nombre y
 pide elegir cuando hay varias coincidencias. Se apunta un producto cada vez.

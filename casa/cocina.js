@@ -7,6 +7,9 @@
  * Los precios salen de mercadona.json, que GitHub Actions actualiza cada día.
  */
 
+// Integración de pago retirada: elimina su clave local al actualizar cada móvil.
+try{localStorage.removeItem('casa-ai-key')}catch(e){}
+
 /* ---------- ajustes ---------- */
 const CK_APPL=[['horno','Horno'],['airfryer','Freidora de aire'],['robot','Robot de cocina'],['olla','Olla rápida / programable'],['micro','Microondas'],['fuego','Vitro / inducción / gas'],['lenta','Olla lenta'],['plancha','Plancha / grill'],['batidora','Batidora'],['vapor','Vaporera']];
 // Si no tienes el electrodoméstico de la receta, con cuál se puede hacer igual
@@ -574,11 +577,11 @@ function vCkDespensa(){
   const f=ui.panF||'todo',all=S.pantry||[];
   let a=all.slice();
   if(f==='low')a=a.filter(pantryLow);else if(f!=='todo')a=a.filter(x=>(x.loc||'Despensa')===f);
-  let h=`<button class="btn sec" data-act="pantryFinished" style="width:100%;margin-top:12px">🛒 ¿Qué se ha acabado?</button><div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="aiPhoto">📸 Foto de la nevera o despensa</button></div>
+  let h=`<button class="btn sec" data-act="pantryFinished" style="width:100%;margin-top:12px">🛒 ¿Qué se ha acabado?</button>
   <div class="ck-actions" style="margin-top:8px"><button class="btn sec" data-act="ckTab" data-v="productos">+ Añadir productos</button><button class="btn sec" data-act="ckTicket">🧾 Subir tique</button></div>
   <div class="chips" style="margin-top:10px">${[['todo','Todo'],['low','🛒 Agotados'],['Despensa','🥫 Despensa'],['Nevera','❄️ Nevera'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button class="chip ${f===k?'on':''}" data-act="panF" data-v="${k}">${l}</button>`).join('')}</div>
   <p class="hint">Toca la foto o el nombre para ver los detalles y la última compra.</p>`;
-  if(!all.length)return h+`<div class="empty" style="margin-top:14px">Aún no hay nada. Haz una <b>📸 foto</b> de la nevera o la despensa, pulsa <b>🏠+</b> en <b>Productos</b> o sube un tique.<br><br><button class="btn sec" data-act="ckSeedPan">Empezar con los básicos</button></div>`;
+  if(!all.length)return h+`<div class="empty" style="margin-top:14px">Aún no hay nada. Pulsa <b>🏠+</b> en <b>Productos</b> o sube un tique para añadir lo que tienes en casa.<br><br><button class="btn sec" data-act="ckSeedPan">Empezar con los básicos</button></div>`;
   if(!a.length)return h+`<div class="empty" style="margin-top:14px">Nada por aquí.</div>`;
   const groups=new Map();
   a.forEach(x=>{const cat=pantryCategory(x);if(!groups.has(cat))groups.set(cat,[]);groups.get(cat).push(x)});
@@ -723,7 +726,6 @@ function vCkAjustes(){
   <div class="row"><div class="row-main">Presupuesto mensual de compra<br><small class="hint">Opcional. Déjalo vacío para ver solo lo gastado.</small></div><input class="field" id="ckBudgetM" type="number" inputmode="decimal" min="0" step="10" value="${c.budgetM||''}" placeholder="—" style="width:96px;text-align:right"> €</div>
   <div class="row"><div class="row-main">Código postal de los precios de Mercadona</div><b>${esc((MC&&MC.cp)||'18210')}</b></div>
 </div>
-  <h2>Inteligencia artificial</h2><div class="list ck-set"><div class="row"><div class="row-main">${aiKey()?'✅ Activada en este móvil':'Reconocer alimentos en fotos de la nevera'}</div><button class="btn sec" data-act="aiKey">${aiKey()?'Cambiar clave':'Activar'}</button></div></div>
   <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}</div>
   <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: se guardará en el historial de compras.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${/^(Mercadona|Mercadillo)$/.test(x)?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${/^(Mercadona|Mercadillo)$/.test(x)?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
@@ -1307,79 +1309,6 @@ function buySheet(items,done){
   skip.onclick=()=>{ov.remove();done('')};ov.querySelector('.actions').after(skip);
 }
 
-/* ---------- IA (Claude): fotos de la nevera ---------- */
-// La clave se guarda solo en este móvil (no va a la nube ni a las copias de seguridad)
-const AI_MODEL='claude-opus-5-5',AI_LS='casa-ai-key';
-const aiKey=()=>{try{return localStorage.getItem(AI_LS)||''}catch(e){return''}};
-function aiKeySheet(then){
-  sheet('Activar la IA',`<p class="hint" style="margin-top:0">Para reconocer alimentos en fotos, la app usa Claude, la IA de Anthropic. Necesita una clave de API:</p>
-    <ol class="hint" style="padding-left:18px;line-height:1.5"><li>Entra en <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a> y crea una cuenta.</li><li>Añade saldo o activa la facturación de tu cuenta para analizar fotos.</li><li>En «API Keys» crea una clave y pégala aquí.</li></ol>
-    <label for="f_k">Clave de API</label><input class="field" id="f_k" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(aiKey())}">
-    <p class="hint">Se guarda solo en este móvil. El reconocimiento de fotos consume saldo de la API.</p>`,
-  {saveLabel:'Guardar',onSave:ov=>{const k=val(ov,'f_k');if(k&&!/^sk-ant-/.test(k)){toast('La clave empieza por «sk-ant-»');return false}
-    try{k?localStorage.setItem(AI_LS,k):localStorage.removeItem(AI_LS)}catch(e){}toast(k?'IA activada en este móvil':'IA desactivada');render();if(k&&then)then()}});
-}
-// Una llamada a Claude que devuelve un objeto JSON
-async function askClaude(content){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':aiKey(),'anthropic-version':'2026-10-21','anthropic-beta':'server-side-fallback-2026-07-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:AI_MODEL,max_tokens:16000,fallbacks:'default',output_config:{effort:'low'},messages:[{role:'user',content}]})});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(r.status===401?'La clave de la IA no es válida (revísala en Ajustes)':r.status===429?'Demasiadas peticiones seguidas: espera un minuto':/credit|balance/i.test(d.error&&d.error.message||'')?'No queda saldo en tu cuenta de Claude':'Error de la IA ('+r.status+')');
-  if(d.stop_reason==='refusal')throw new Error('La IA no ha podido responder a esto');
-  const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-  const m=t.match(/\{[\s\S]*\}/);if(!m)throw new Error('La IA no ha devuelto datos');
-  return JSON.parse(m[0]);
-}
-// Foto reducida a 1568 px en JPEG (más rápida y más barata)
-function photoB64(file){return new Promise((ok,ko)=>{const img=new Image();const u=URL.createObjectURL(file);
-  img.onload=()=>{const k=Math.min(1,1568/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
-    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.85).split(',')[1])};
-  img.onerror=()=>{URL.revokeObjectURL(u);ko(new Error('No se ha podido abrir la foto'))};img.src=u})}
-function pickPhotos(){return new Promise(ok=>{const i=document.createElement('input');i.type='file';i.accept='image/*';i.multiple=true;i.style.display='none';
-  i.onchange=()=>{ok([...i.files]);i.remove()};document.body.appendChild(i);i.click()})}
-function aiWait(title,msg){return sheet(title,`<div class="ck-ai-wait"><span class="ck-spin"></span><p class="hint">${esc(msg)}</p></div>`,{})}
-
-async function photoFlow(){
-  if(!aiKey()){aiKeySheet(photoFlow);return}
-  const loc=await new Promise(ok=>{const ov=sheet('¿Qué vas a fotografiar?',`<div class="ck-actions">${[['Nevera','❄️ Nevera'],['Despensa','🥫 Despensa'],['Congelador','🧊 Congelador']].map(([k,l])=>`<button type="button" class="btn sec" data-l="${k}">${l}</button>`).join('')}</div><p class="hint">Puedes elegir varias fotos a la vez (por ejemplo, una por estante).</p>`,{});
-    ov.addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(b){ov.remove();ok(b.dataset.l)}})});
-  const files=await pickPhotos();if(!files.length)return;
-  const w=aiWait('Mirando las fotos…','La IA está buscando los alimentos. Tarda unos segundos.');
-  let res;
-  try{
-    const imgs=await Promise.all(files.slice(0,6).map(photoB64));
-    res=await askClaude([...imgs.map(data=>({type:'image',source:{type:'base64',media_type:'image/jpeg',data}})),{type:'text',text:
-`Estas fotos son de la ${loc.toLowerCase()} de una casa en España. Haz inventario de los alimentos y productos de cocina que se ven.
-Para cada uno: nombre corto en español como se llamaría en el súper (p. ej. «Leche semidesnatada», «Yogur natural», «Pimiento rojo»), cuántas unidades o envases se ven, y si es un envase empezado, cuánto queda aproximadamente.
-Devuelve solo un JSON con esta forma, sin texto alrededor:
-{"items":[{"name":"Leche semidesnatada","count":2,"size":"1 l","unit":"ml","amount":1500,"loc":"${loc}","search":"leche semidesnatada","note":"una está empezada"}]}
-- "unit" es "g", "ml" o "ud". "amount" es la cantidad total que hay en esa unidad (suma de todos los envases, contando lo que queda en los empezados).
-- "loc" es "Nevera", "Despensa" o "Congelador".
-- No inventes lo que no se ve con claridad; si dudas de la marca, no la pongas.`}]);
-  }catch(e){w.remove();toast(e.message||'No se ha podido analizar la foto');return}
-  w.remove();
-  const items=(res.items||[]).filter(x=>x&&x.name);
-  if(!items.length){toast('No he reconocido alimentos en la foto');return}
-  photoReview(items);
-}
-function photoReview(items){
-  const pans=(S.pantry||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'es'));
-  const rows=items.map((a,i)=>{const x=pantryFind(a.name),p=searchMC(a.search||a.name,1)[0];const u=['g','ml','ud'].includes(a.unit)?a.unit:'ud';
-    return`<div class="ck-tl"><div class="ck-tl-h"><input type="checkbox" data-on="${i}" aria-label="Incluir artículo ${i+1}" checked><input class="field" data-nm="${i}" aria-label="Nombre del artículo ${i+1}" value="${esc(a.name)}"><input class="field" data-am="${i}" type="number" min="0" step="any" value="${Math.round((+a.amount||+a.count||1)*10)/10}" style="width:76px;flex:none;text-align:right"><select class="field" data-un="${i}" style="width:66px;flex:none;padding-left:6px">${opt([['g','g'],['ml','ml'],['ud','ud']],u)}</select></label>
-      <small>${a.count?a.count+' × '+esc(a.size||''):''}${a.note?' · '+esc(a.note):''}${p?' · '+esc(p.name):''}</small>
-      <select class="field" data-pn="${i}"><option value="new">➕ Nuevo en ${esc(a.loc||'Despensa')}</option>${pans.map(y=>`<option value="${y.id}" ${x&&x.id===y.id?'selected':''}>🔄 Actualizar: ${esc(y.name)}</option>`).join('')}</select></div>`});
-  sheet('He encontrado '+items.length+' producto'+(items.length>1?'s':''),`<p class="hint" style="margin-top:0">Revisa lo que ha visto la IA: corrige nombres o cantidades y desmarca lo que no sea. Lo que ya tenías se actualiza con la cantidad de la foto.</p><div id="f_tl">${rows.join('')}</div>`,
-  {saveLabel:'Guardar en casa',onSave:ov=>{let nu=0,up=0;
-    ov.querySelectorAll('[data-on]').forEach(cb=>{if(!cb.checked)return;const i=+cb.dataset.on,a=items[i];
-      const nm=ov.querySelector(`[data-nm="${i}"]`).value.trim()||a.name,am=parseFloat(ov.querySelector(`[data-am="${i}"]`).value)||0,u=ov.querySelector(`[data-un="${i}"]`).value,pv=ov.querySelector(`[data-pn="${i}"]`).value;
-      const p=searchMC(a.search||nm,1)[0];
-      if(pv!=='new'){const x=find(S.pantry||[],pv);if(x){const n=pUnit(x)===(u==='ud'?'ud':'m')?am:(()=>{const w=unitW(x.name);return w?(u==='ud'?am*w:am/w):am})();x.n=Math.round(n*10)/10;x.full=Math.max(x.full||0,x.n);x.at=today();up++}}
-      else{S.pantry=[...(S.pantry||[]),{id:uid(),name:nm,n:am,u,full:Math.max(am,p&&prod(p).d===(u==='ud'?'ud':'m')?prod(p).size:0),min:0,loc:['Nevera','Despensa','Congelador'].includes(a.loc)?a.loc:'Despensa',mid:p?p.id:'',auto:false,at:today()}];nu++}
-    });
-    save();toastUndo(`En casa: ${nu} nuevo${nu===1?'':'s'}, ${up} actualizado${up===1?'':'s'}`);
-  }});
-}
-
 /* ---------- tique: foto o PDF → precios, despensa y gasto ---------- */
 const loadJS=src=>new Promise((ok,ko)=>{if(document.querySelector(`script[src="${src}"]`)){ok();return}const x=document.createElement('script');x.src=src;x.onload=ok;x.onerror=ko;document.head.appendChild(x)});
 function pickFile(accept){return new Promise(ok=>{const i=document.createElement('input');i.type='file';i.accept=accept;i.style.display='none';
@@ -1833,8 +1762,6 @@ const CK_ACT={
   clearDone:()=>{const L=curList();const dn=S.items.filter(i=>i.listId===L.id&&i.done);const n=dn.length;if(!n)return;
     buySheet(dn,(store,fromTicket,record)=>{let p=0;if(!fromTicket)for(const item of dn){const before=new Map(S.pantry.map(x=>[x.id,Number(x.n||0)]));if(addToPantry(item)){p++;for(const x of S.pantry){const amount=Number(x.n||0)-(before.get(x.id)||0);if(amount>0&&record){const prior=record.pendingInventory.find(p=>p.pantryId===x.id&&p.unit===x.u);if(prior)prior.amount+=amount;else record.pendingInventory.push({id:uid(),name:item.name,mid:item.mid||'',pantryId:x.id,amount,unit:x.u})}}}}dn.forEach(i=>noteStaplePurchase(i));S.items=S.items.filter(i=>!(i.listId===L.id&&i.done));save();toastUndo('Compra terminada: '+n+' producto'+(n>1?'s':'')+(store?' · '+store:'')+(p?' · '+p+' a casa':''))})},
   shopPhoto:()=>shoppingProductPhoto(),
-  aiPhoto:()=>{MC?photoFlow():loadMC().then(photoFlow)},
-  aiKey:()=>aiKeySheet(),
   ckTicket:()=>ticketFlow(),
   ckStoreNew:()=>{sheet('Otro supermercado',`<input class="field" id="f_t" placeholder="Ej.: Covirán">`,{onSave:ov=>{const v=val(ov,'f_t');if(!v)return false;ckSet('stores',[...new Set([...ck().stores,v])])}})},
   ckStoreDel:d=>{const a=ck().stores.slice();if(/^(Mercadona|Mercadillo)$/.test(a[+d.v]))return;const x=a.splice(+d.v,1)[0];ckSet('stores',a);toastUndo(x+' quitado')},
