@@ -395,7 +395,9 @@ Las preferencias se guardan por producto en el campo `cook` existente y se
 sincronizan con la casa sin reemplazar las de otros productos. Las sugerencias
 se calculan en el dispositivo; no envían los tickets a ningún servicio de IA ni
 requieren claves o servicios adicionales. No modifican el gasto ni las
-existencias y solo añaden a la lista al pulsar «Añadir».
+existencias. En el modo de aprendizaje solo añaden a la lista al pulsar «Añadir»;
+el modo «Cada ciertos días» permite activar explícitamente la incorporación
+automática al abrir CASA.
 
 ```sh
 node --test tests/shopping-suggestions.test.cjs
@@ -404,3 +406,71 @@ node tests/shopping-recommendations-flow.cjs
 
 Las pruebas de navegador usan compras sintéticas, persistencia local y una
 transferencia de estado entre dos sesiones; no escriben en Firebase de producción.
+
+
+## Uso diario más directo (versión 93)
+
+La barra superior muestra si los cambios están guardados solo en ese móvil,
+pendientes de sincronizar, enviándose o sincronizados con la casa. Una lectura
+de caché no anuncia una sincronización nueva con el servidor. El estado se
+actualiza con la cola, la escritura confirmada y los errores de la conexión ya
+existente; no se han cambiado la configuración ni las reglas de Firebase.
+Se ha corregido también el fallo al abrir Recordar con mantenimientos mezclados
+con otros avisos: la posición de un elemento en una lista no se interpreta como
+una fecha de repetición.
+
+En Compras, la lista y la cesta actual aparecen primero. La cesta estima todos
+los productos de esa lista y distingue el importe ya tachado en el carro. El
+botón Terminar se mantiene visible junto al total cuando hay productos tachados.
+«Añadir» lleva al formulario existente, y «Gastos, tickets y herramientas» agrupa
+los resúmenes y la edición de listas en un desplegable. Las cinco pestañas de
+Compras siguen accesibles, sin desplazamiento horizontal en la pantalla de lista.
+«¿No se te olvida…?» continúa plegado al abrir la app.
+
+«Buscar» está disponible desde cualquier sección. La búsqueda reúne productos de
+En casa, todas las listas, favoritos, compras guardadas y catálogo. Muestra dónde
+figuran y la última compra. La ficha permite elegir la lista de destino, añadir
+sin repetir un producto ya pendiente o tachado, guardar un habitual de esa lista,
+abrir la ficha de inventario y consultar sus precios. Escribir no reconstruye el
+campo ni interrumpe el teclado. Las variedades y referencias ambiguas se conservan
+separadas; buscar no registra compras ni crea existencias.
+
+Habituales y Afinar abren la misma configuración de reposición por producto y
+lista: aprender de las compras, cada ciertos días o no recomendar. Los plazos
+manuales anteriores se respetan antes de aplicar una preferencia explícita nueva.
+Cambiar a aprendizaje o desactivar deshabilita la regla automática anterior;
+no recomendar también evita el aviso de «Se está acabando» de esa regla. En modo
+manual puede elegirse la incorporación automática al abrir CASA, desde una fecha
+de referencia válida y sin duplicar lo ya pendiente o en el carro. Las respuestas
+«Todavía tengo» y «Hoy no» aplazan también esa incorporación durante el ciclo
+actual. Un ticket más reciente reinicia el ciclo. No hay tareas programadas ni
+nuevos avisos push.
+
+El historial de precios conserva las cantidades verificables del ticket. Solo
+muestra una variación frente al catálogo actual cuando coinciden referencia,
+comercio y formato, o la unidad por kg. Los tickets nuevos guardan la categoría y
+el formato identificados durante la revisión. Los antiguos sin formato confirmado
+siguen mostrando el precio por envase, sin inventar una subida o bajada ni alterar
+el ticket original.
+
+El historial de compras incorpora un desglose mensual de alimentación, limpieza
+e higiene. Los nombres o categorías desconocidos, descuentos y diferencias entre
+líneas y total quedan en «Sin clasificar y ajustes». Los gastos manuales sin
+artículos se incluyen ahí; las compras aún pendientes de ticket tienen su propio
+apartado. El desglose suma el importe registrado en céntimos y excluye compras
+anuladas y duplicados identificados por la huella del ticket.
+
+```sh
+node --test tests/*.test.cjs
+node tests/casa-workflows.cjs
+node tests/shopping-recommendations-flow.cjs
+node tests/habit-scroll.cjs
+node tests/fav-lists.cjs
+node tests/inventory-grid.cjs
+node tests/history-products.cjs
+node tests/receipt-flow.cjs
+node tests/receipt-review-flow.cjs
+```
+
+Las comprobaciones usan datos sintéticos y transporte simulado; no escriben en
+el hogar real ni certifican el comportamiento de un iPhone físico.

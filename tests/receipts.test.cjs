@@ -155,3 +155,7 @@ test('balanced totals alone do not bypass confirmation of a doubtful article',as
  assert.throws(()=>R.patch(s,t,{}),/confirmar/);t.lines[0].lineValidated=true;assert(R.validate(t).ok);
  const op=R.patch(s,t,await R.identify(t));assert.equal(op.patch.buys[0].items[0].validated,true);
 });
+
+test('new confirmed product formats and categories are saved as data without changing the ticket fingerprint or its total',async()=>{
+ const t=receipt(),original=await R.identify(t);Object.assign(t.lines[0].plan,{packUnit:'g',packLabel:'1 kg',category:'Arroz, legumbres y pasta'});const id=await R.identify(t);assert.equal(id.id,original.id);const operation=R.patch(state(),t,id),record=operation.patch.buys[0];assert.equal(record.total,5);assert.equal(record.items[0].packSize,1000);assert.equal(record.items[0].packUnit,'g');assert.equal(record.items[0].category,'Arroz, legumbres y pasta');assert.equal(record.items[0].packLabel,'1 kg');R.assertData(operation.patch);
+});

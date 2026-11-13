@@ -441,7 +441,7 @@ function vCocina(){
 // Pestañas dentro de Compras
 function ckSubTabs(){
   const tab=ui.ckTab||'lista';
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}">${l}${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
+  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}"><span class="ck-tab-icon" aria-hidden="true">${l.split(' ')[0]}</span><span>${l.split(' ').slice(1).join(' ')}</span>${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
@@ -940,7 +940,7 @@ function panSheet(x){
   let available=x.n>0;
   const last=n?null:pantryLastPurchase(x),lastDate=last?new Date(last.date+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'';
   const ov=sheet(n?'Añadir a En casa':x.name,`<div class="pantry-detail-picture" id="pantryPhotoPreview" ${n?'hidden':''}>${n?'':pantryImage(x,480)}</div>${n?'':`<dl class="pantry-facts"><div><dt>Última compra</dt><dd data-last-purchase>${last?esc(lastDate):'Sin compra registrada'}</dd></div>${last?.store?`<div><dt>Comercio</dt><dd>${esc(last.store)}</dd></div>`:''}<div><dt>Categoría</dt><dd data-pantry-category>${esc(pantryCategory(x))}</dd></div><div><dt>Ubicación</dt><dd>${esc(x.loc||'Despensa')}</dd></div>${x.exp?`<div><dt>Caducidad</dt><dd>${esc(relDate(x.exp))}</dd></div>`:''}</dl>`}
-    <button type="button" class="btn sec" data-k="mc" style="width:100%">🖼️ ${x.mid?'Cambiar':'Asociar'} foto y categoría</button><p class="hint" id="f_mc">${x.mid&&MC?.byId.has(String(x.mid))?esc(MC.byId.get(String(x.mid))[1]):'Busca el producto para ponerle su foto y colocarlo en su categoría.'}</p>
+    ${n?'':`<details class="house-price-fold"><summary>Precios anteriores</summary>${housePriceHTML(x)}</details>`}<button type="button" class="btn sec" data-k="mc" style="width:100%">🖼️ ${x.mid?'Cambiar':'Asociar'} foto y categoría</button><p class="hint" id="f_mc">${x.mid&&MC?.byId.has(String(x.mid))?esc(MC.byId.get(String(x.mid))[1]):'Busca el producto para ponerle su foto y colocarlo en su categoría.'}</p>
     <label>Estado</label><div class="chips"><button type="button" class="chip ${available?'on':''}" data-home-state="available" aria-pressed="${available}">✅ En casa</button><button type="button" class="chip ${available?'':'on'}" data-home-state="empty" aria-pressed="${!available}">🛒 Se ha acabado</button></div>
     <details class="product-more" ${n?'open':''}><summary>Editar datos del producto</summary>
     <label for="f_t">Producto</label><input class="field" id="f_t" value="${esc(x.name)}" placeholder="Ej.: Arroz">
@@ -1013,13 +1013,9 @@ function itemRow(i){
 }
 // Habituales: los marcados con ☆ (con foto) y los de «cada X días»
 function habitSchedule(key,lid=curList().id,item){
-  key=String(key);
-  const info=habitInfo(key),p=info.p,name=p?p[1]:item?.name||(info.known?info.name:'');
+  key=String(key);const info=habitInfo(key),p=info.p,name=p?p[1]:item?.name||(info.known?info.name:'');
   if(!name){repairHabit(key,lid);return}
-  const mid=p?key:item?.mid||(!key.startsWith('n:')?key:'');
-  const existing=S.staples.find(s=>matchesStaple(s,{listId:lid,name,mid}));
-  const seed=existing||{name,mid,listId:lid,days:7,last:today(),section:item?.section||S.secMem[norm(name)]||'Despensa',auto:true,basePrice:p?p[3]:item?.uprice||item?.price||0,packQty:p?prodSize(prod(p)):item?.qty||''};
-  stapleSheet(seed,!existing);
+  return replenishmentSheet({name,mid:p?key:item?.mid||(!key.startsWith('n:')?key:''),listId:lid});
 }
 function repairHabit(key,lid){
   key=String(key);
@@ -1086,7 +1082,7 @@ function shoppingReminderCard(){
   const title=`<summary class="shopping-suggestion-toggle"><h2>¿No se te olvida…?</h2><span class="shopping-suggestion-chevron" aria-hidden="true">⌄</span></summary><div class="shopping-suggestion-content"><div class="shopping-suggestion-heading"><button type="button" class="link" data-act="ckSuggestLearn">Afinar</button></div>`;
   if(!suggestions.length){const upcoming=model.upcoming[0],learning=model.profiles.some(x=>x.status==='learning');return `<details class="card shopping-suggestions" data-shopping-suggestions ${open?'open':''}>${title}<p class="hint">${stats.products?upcoming?'Por ahora no hay nuevas sugerencias. '+esc(shoppingSuggestionInfo(upcoming).name)+' podría tocar en '+upcoming.daysUntil+' día'+(upcoming.daysUntil===1?'':'s')+'.':learning?'Ya hay '+stats.products+' productos en el historial. Puedes indicar cuánto suelen duraros mientras se aprende la frecuencia.':'Las sugerencias se actualizarán con las próximas compras y con tus respuestas.':'Se irá aprendiendo de los tickets que guardes. No hace falta volver a subir los anteriores.'}</p><button type="button" class="shopping-learning-link" data-act="ckSuggestLearn">Ver lo que está aprendiendo${stats.products?' · '+stats.products+' productos':''}</button></div></details>`}
   return `<details class="card shopping-suggestions" data-shopping-suggestions ${open?'open':''}>${title}<p class="hint">Según tus tickets y las compras guardadas. Comprueba si te queda.</p><div class="shopping-suggestion-list">${suggestions.map(x=>{
-    const info=shoppingSuggestionInfo(x);return `<article class="shopping-suggestion" data-suggestion-card="${esc(x.key)}"><button type="button" class="shopping-suggestion-main" data-act="ckSuggest" data-v="settings" data-key="${esc(x.key)}" data-lid="${esc(cartList())}" aria-label="Ajustar recomendación de ${esc(info.name)}">${shoppingSuggestionPhoto(info)}<span><strong>${esc(info.name)}</strong><small>${x.custom?'Recordatorio cada':'Lo compras aproximadamente cada'} ${x.interval} días · última compra hace ${x.elapsed} días</small><em>${x.inInventory?'Figura en casa: comprueba si queda':x.confidence==='initial'?'Primer patrón: aún hay pocas compras':x.count+' compras en días distintos'}</em></span></button><div class="shopping-suggestion-actions"><button type="button" class="btn" data-act="ckSuggest" data-v="add" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">+ Añadir${x.suggestedUnits>1?' '+x.suggestedUnits:''}</button><button type="button" class="btn sec" data-act="ckSuggest" data-v="have" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">Todavía tengo</button><button type="button" class="link" data-act="ckSuggest" data-v="skip" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">Hoy no</button></div></article>`
+    const info=shoppingSuggestionInfo(x);return `<article class="shopping-suggestion" data-suggestion-card="${esc(x.key)}"><button type="button" class="shopping-suggestion-main" data-act="ckSuggest" data-v="settings" data-key="${esc(x.key)}" data-lid="${esc(cartList())}" aria-label="Ajustar recomendación de ${esc(info.name)}">${shoppingSuggestionPhoto(info)}<span><strong>${esc(info.name)}</strong><small>${x.custom?'Recordatorio cada':'Lo compras aproximadamente cada'} ${x.interval} días · ${x.referenceOnly?'fecha de referencia':'última compra'} hace ${x.elapsed} días</small><em>${x.inInventory?'Figura en casa: comprueba si queda':x.confidence==='initial'?'Primer patrón: aún hay pocas compras':x.count+' compras en días distintos'}</em></span></button><div class="shopping-suggestion-actions"><button type="button" class="btn" data-act="ckSuggest" data-v="add" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">+ Añadir${x.suggestedUnits>1?' '+x.suggestedUnits:''}</button><button type="button" class="btn sec" data-act="ckSuggest" data-v="have" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">Todavía tengo</button><button type="button" class="link" data-act="ckSuggest" data-v="skip" data-key="${esc(x.key)}" data-lid="${esc(cartList())}">Hoy no</button></div></article>`
   }).join('')}</div><button type="button" class="shopping-learning-link" data-act="ckSuggestLearn">Aprendiendo de ${stats.purchases} compras · ver y ajustar</button></div></details>`;
 }
 function shoppingSuggestionPreference(x,patch){
@@ -1115,14 +1111,9 @@ function shoppingCoachLayout(ov){
 }
 function shoppingSuggestionDetails(key,onChange=()=>{}){
   const x=shoppingModel().profiles.find(p=>p.key===key);if(!x)return toast('Este producto ya no está en el historial.');
-  const info=shoppingSuggestionInfo(x),ov=sheet('Afinar recomendación',`<div class="shopping-coach-product">${shoppingSuggestionPhoto(info)}<strong>${esc(info.name)}</strong></div><p class="hint">${x.count} compra${x.count===1?'':'s'} en días distintos. Última: ${esc(x.last.split('-').reverse().join('/'))}.${x.automaticInterval?' El patrón estimado es de unos '+x.automaticInterval+' días.':' Todavía no hay suficientes compras para calcular la frecuencia.'}</p><label for="suggestionDays">¿Cada cuántos días quieres recordarlo?</label><input class="field" id="suggestionDays" type="number" inputmode="numeric" min="1" max="365" step="1" placeholder="${x.automaticInterval?'Automático: '+x.automaticInterval+' días':'Dejar que aprenda de los tickets'}" value="${x.custom?x.interval:''}"><p class="hint">Déjalo vacío para aprender de las próximas compras. Las sugerencias no añaden nada por sí solas.</p><p id="suggestionPreferenceStatus" role="status" class="hint"></p><button type="button" class="shopping-learning-link" data-suggestion-mute>${x.preference.muted?'Volver a recomendar este producto':'No recomendar este producto'}</button>`,{autoFocus:false,saveLabel:'Guardar preferencia',onSave:()=>{
-    const value=val(ov,'suggestionDays'),days=value?Number(value):null;if(value&&(!Number.isInteger(days)||days<1||days>365)){ov.querySelector('#suggestionPreferenceStatus').textContent='Escribe entre 1 y 365 días o deja el campo vacío.';ov.querySelector('#suggestionDays').setAttribute('aria-invalid','true');return false}
-    const current=shoppingModel().profiles.find(p=>p.key===key);if(!current){toast('El historial ha cambiado. Vuelve a abrir el producto.');return}
-    shoppingSuggestionPreference(current,{days,until:'',answer:'configure'});onChange();toast(days?'Recordatorio ajustado a '+days+' días.':'Volverá a aprender de los tickets.');
-  }});shoppingCoachLayout(ov);
-  ov.querySelector('[data-suggestion-mute]').onclick=()=>{const current=shoppingModel().profiles.find(p=>p.key===key);if(!current)return;shoppingSuggestionPreference(current,{muted:!current.preference.muted,until:'',answer:'configure'});ov.remove();onChange();toast(current.preference.muted?'Volverá a recomendarse.':'No se volverá a recomendar. Puedes cambiarlo desde Afinar.')};
-  return ov;
+  return replenishmentSheet({...x,listId:cartList()},onChange);
 }
+
 function shoppingLearningSheet(){
   let filter='all';
   const ov=sheet('Aprender de tus compras',`<p class="hint">Los tickets guardados ya cuentan. Aquí puedes ajustar cuánto suele duraros cada producto o recuperar una sugerencia oculta.</p><label for="shoppingLearningSearch">Buscar en tu historial</label><input class="field" id="shoppingLearningSearch" type="search" autocomplete="off" placeholder="Ej.: café"><div class="chips shopping-learning-filters"><button type="button" class="chip on" data-learning-filter="all">Todos</button><button type="button" class="chip" data-learning-filter="muted">Ocultos</button></div><p class="hint" id="shoppingLearningStats"></p><div id="shoppingLearningRows"></div>`,{autoFocus:false});shoppingCoachLayout(ov);
@@ -1139,24 +1130,23 @@ function shoppingLearningSheet(){
 
 function vCompras(){
   loadMC();
-  const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done);
+  const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done),total=items.reduce((n,i)=>n+(Number(i.price)||0),0);
   let h=`<h1>Compras</h1><p class="sub">${esc(L.name)}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
-  h+=moneyCard(pend);
-  h+=shoppingReminderCard();
-  h+=`<div class="chips" style="margin-top:12px">${S.lists.map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(l.name)}</button>`).join('')}<button class="chip add" data-act="newList">+ Lista</button><button class="chip add" data-act="editList" data-id="${L.id}">Editar lista</button></div>`;
+  h+=`<div class="chips shop-lists">${S.lists.map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(l.name)}</button>`).join('')}</div>`;
+  h+=`<div class="shop-current"><div><small>Cesta actual · estimación</small><strong>≈ ${eur(total)}</strong>${dn.length?`<small>En el carro: ${eur(dn.reduce((n,i)=>n+(Number(i.price)||0),0))}</small>`:''}</div><button type="button" class="link" data-act="shopAddFocus">+ Añadir</button>${dn.length?`<button class="btn" data-act="clearDone">Terminar (${dn.length})</button>`:''}</div>`;
+  const secs=[...S.sections,...new Set(items.map(i=>i.section).filter(s=>s&&!S.sections.includes(s)))],rows=[];
+  secs.forEach(sec=>{const group=items.filter(i=>(i.section||'Otros')===sec);if(group.length){rows.push(`<li class="sec-head">${esc(sec)} · ${group.length}</li>`);rows.push(...group.map(itemRow))}});
+  h+=rows.length?`<div class="shop-product-list">${ul(rows)}</div>`:'<div class="empty">Lista vacía. Añade productos o elige tus habituales.</div>';
+  if(dn.length)h+='<p class="hint">Al terminar, puedes subir el ticket para comprobar la compra y actualizar lo que hay en casa.</p>';
   h+=`<div class="ck-add2"><div class="quick" style="margin-top:12px"><input class="field" id="qItem" placeholder="Añadir producto (busca en Mercadona)" enterkeyhint="done" autocomplete="off" style="flex:2"><input class="field" id="qQty" placeholder="Cant." style="flex:.7"><button class="btn" data-act="quickItem" aria-label="Añadir producto">+</button></div>
     <div id="qSug" class="ck-qsug"></div>
     <select class="field" id="qSec" style="margin-top:8px">${S.sections.map(s=>`<option ${s===ui.lastSec?'selected':''}>${esc(s)}</option>`).join('')}</select></div>`;
   h+=`<button class="btn sec" style="margin-top:12px" data-act="shopPhoto">📷 Añadir producto con foto</button>`;
   h+=habSection(L);
-  if(!items.length)return h+`<div class="empty" style="margin-top:16px">Lista vacía. Añade productos arriba, desde ⭐ Habituales o en 🛍️ Productos.</div>${shopLaterSection(L)}${histLink()}`;
-  const secs=[...S.sections,...new Set(items.map(i=>i.section).filter(s=>s&&!S.sections.includes(s)))];
-  const rows=[];
-  secs.forEach(sec=>{const a=items.filter(i=>(i.section||'Otros')===sec);if(a.length){rows.push(`<li class="sec-head">${esc(sec)} · ${a.length}</li>`);rows.push(...a.map(itemRow))}});
-  const lost=items.filter(i=>!secs.includes(i.section||'Otros'));if(lost.length){rows.push(`<li class="sec-head">Otros</li>`);rows.push(...lost.map(itemRow))}
 
-  h+=`<div style="margin-top:14px">${ul(rows)}</div>`;
-  if(dn.length)h+=`<div class="ck-actions" style="margin-top:12px"><button class="btn" data-act="clearDone">✅ Terminar compra (${dn.length})</button></div><p class="hint">Al terminar, lo tachado sale de la lista y pasa a casa. Puedes apuntar lo que habéis pagado o subir el tique.</p>`;
+  h+=shoppingReminderCard();
+  const expanded=$('#app [data-shop-money]')?.open;
+  h+=`<details class="shop-money" data-shop-money ${expanded?'open':''}><summary>Gastos, tickets y herramientas</summary>${moneyCard(pend)}<button class="btn sec" data-act="newList">+ Lista</button><button class="btn sec" data-act="editList" data-id="${L.id}">Editar lista</button></details>`;
   return h+shopLaterSection(L)+histLink();
 }
 const histLink=()=>pendingReceiptsHTML()+((S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:12px" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'');
@@ -1227,6 +1217,7 @@ function buyProductSheet(x,list,onChange=()=>{}){
   const inList=()=>S.items.some(i=>i.listId===list.id&&!i.done&&sameItem(i,repeatBuyItem(x)));
   const ov=sheet('Producto del ticket',`${p?productSheetPhoto(p[9],x.name):''}<p><b>${esc(x.name)}</b></p><p class="hint">${x.price!==undefined?eur(x.price)+' pagado en aquel ticket. ':''}${p?eur(p[3])+' por envase hoy. ':''}Se añadirá a «${esc(list.name)}».</p><label for="historyProductUnits">Cantidad para la cesta</label><input class="field" id="historyProductUnits" type="number" inputmode="numeric" min="1" max="99" step="1" value="1"><div class="ck-actions" style="margin-top:12px"><button type="button" class="btn" data-history-add>🛒 Añadir a la cesta</button><button type="button" class="btn sec" data-history-fav></button></div><p class="hint" data-history-status role="status" aria-live="polite"></p>`,{autoFocus:false});
   ov.querySelector('[data-s="cancel"]').textContent='Volver al ticket';
+  ov.querySelector('[data-history-status]').insertAdjacentHTML('beforebegin',`<details class="house-price-fold"><summary>Precios anteriores</summary>${housePriceHTML({name:x.name,mid:x.mid||''})}</details>`);
   const update=()=>{const add=ov.querySelector('[data-history-add]'),fav=ov.querySelector('[data-history-fav]');add.disabled=inList();add.textContent=add.disabled?'✓ Ya está en la cesta':'🛒 Añadir a la cesta';fav.textContent=isFav(key,list.id)?'★ Quitar de Habituales':'☆ Guardar en Habituales';fav.setAttribute('aria-pressed',String(isFav(key,list.id)))};
   ov.querySelector('[data-history-add]').addEventListener('click',()=>{
     const quantity=Number(ov.querySelector('#historyProductUnits').value),status=ov.querySelector('[data-history-status]');
@@ -1243,8 +1234,8 @@ function buyProductSheet(x,list,onChange=()=>{}){
 function buysSheet(){
   const all=(S.buys||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||0)-(a.at||0));
   const months=[...new Set(all.map(b=>monthKey(b.date)))];
-  const ov=sheet('Historial de compras',`<button type="button" class="btn sec" data-k="add" style="width:100%">+ Añadir gasto de compra</button>
-    ${months.map(m=>{const bs=all.filter(b=>monthKey(b.date)===m);return`<h4>${esc(monthName(m))} · ${eur(spentIn(m))}</h4><div class="ck-box">${bs.map(b=>`<button type="button" class="ck-buy ck-bh" data-b="${b.id}"><span><b>${b.store==='Mercadillo'?'🧺 ':''}${esc(b.store||'—')}</b> · ${relDate(b.date)}${b.receiptPending?' · <small>📷 Ticket pendiente</small>':b.voided?' · <small>Anulada</small>':b.market?'':b.manual?' · <small>a mano</small>':b.ticket?' · <small>🧾 tique</small>':''}<br><small>${b.note?esc(b.note)+' · ':''}${buyItems(b).length?buyItems(b).length+' producto'+(buyItems(b).length>1?'s':''):'sin productos'}</small></span><b>${b.total?eur(b.total):'<small>sin importe</small>'}</b></button>`).join('')}</div>`}).join('')||'<p class="hint">Aún no hay compras registradas.</p>'}`,{});
+  const ov=sheet('Historial de compras',`${houseSpendingHTML(monthKey())}<button type="button" class="btn sec" data-k="add" style="width:100%">+ Añadir gasto de compra</button>
+    ${months.map(m=>{const bs=all.filter(b=>monthKey(b.date)===m);return`${m===monthKey()?'':houseSpendingHTML(m)}<h4>${esc(monthName(m))} · ${eur(spentIn(m))}</h4><div class="ck-box">${bs.map(b=>`<button type="button" class="ck-buy ck-bh" data-b="${b.id}"><span><b>${b.store==='Mercadillo'?'🧺 ':''}${esc(b.store||'—')}</b> · ${relDate(b.date)}${b.receiptPending?' · <small>📷 Ticket pendiente</small>':b.voided?' · <small>Anulada</small>':b.market?'':b.manual?' · <small>a mano</small>':b.ticket?' · <small>🧾 tique</small>':''}<br><small>${b.note?esc(b.note)+' · ':''}${buyItems(b).length?buyItems(b).length+' producto'+(buyItems(b).length>1?'s':''):'sin productos'}</small></span><b>${b.total?eur(b.total):'<small>sin importe</small>'}</b></button>`).join('')}</div>`}).join('')||'<p class="hint">Aún no hay compras registradas.</p>'}`,{});
   ov.addEventListener('click',e=>{if(e.target.closest('[data-k="add"]')){ov.remove();spendSheet();return}
     const b=e.target.closest('[data-b]');if(b){ov.remove();buyDetail(find(S.buys,b.dataset.b))}});
 }
@@ -1506,7 +1497,7 @@ function ticketLinePlan(a,store,inventory){
   const amount=a.kg?a.kg*1000:p?p.size*a.units:q?q.n*a.units:a.units;
   const unit=a.kg?'g':p?p.d==='ud'?'ud':p.fmt==='l'?'ml':'g':q?q.d==='ud'?'ud':/^(l|ml|cl)$/.test(q.raw)?'ml':'g':'ud';
   const nonFood=/\b(bolsa(s)? plastico|bolsa(s)? papel|descuento|cupon)\b/.test(norm(a.name))||a.price<=0;
-  return {mid:p?p.id:'',amount,unit,packSize:p?p.size:1,packLabel:p?prodSize(p):'1 ud',loc:p?defLoc(p):'Despensa',weight:existing?unitW(existing.name)||0:0,inventory:nonFood?'':inventory===undefined?existing?existing.id:possible.length>1?'':'new':inventory,confident:nonFood||(!!p&&sameName.length<=1&&(!existing||sameName.length===1)),ambiguous:possible.length>1,label:p?p.name:'Producto sin envase identificado: confirmar cantidad'};
+  return {mid:p?p.id:'',amount,unit,packSize:p?p.size:1,packLabel:p?prodSize(p):'1 ud',category:p?p.cat:'',packUnit:p?(p.d==='ud'?'ud':p.fmt==='l'?'ml':'g'):'',loc:p?defLoc(p):'Despensa',weight:existing?unitW(existing.name)||0:0,inventory:nonFood?'':inventory===undefined?existing?existing.id:possible.length>1?'':'new':inventory,confident:nonFood||(!!p&&sameName.length<=1&&(!existing||sameName.length===1)),ambiguous:possible.length>1,label:p?p.name:'Producto sin envase identificado: confirmar cantidad'};
 }
 function prepareTicket(t){return {...t,lines:t.lines.map(l=>{const alias=S.cook?.receiptAliases?.[CasaReceipts.norm(t.store)+'|'+CasaReceipts.norm(l.originalName||l.name)],name=alias?.name||l.name;return {...l,originalName:l.originalName||l.name,name,nice:alias?name:l.nice||name,plan:ticketLinePlan({...l,name},t.store,l.plan?.inventory)}})}}
 async function receiptRemoteState(){
@@ -1776,6 +1767,7 @@ function seedPantry(){
 
 /* ---------- acciones ---------- */
 const CK_ACT={
+  shopAddFocus:()=>{const input=$('#qItem');input?.scrollIntoView({block:'center'});input?.focus({preventScroll:true})},
   habitSchedule:d=>habitSchedule(d.v,d.lid||curList().id),
   repairHabit:d=>repairHabit(d.v,d.lid||curList().id),
   laterEdit:d=>laterEdit(d.id), laterMove:d=>laterMove(d.id),

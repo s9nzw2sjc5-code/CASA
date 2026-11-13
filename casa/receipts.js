@@ -59,7 +59,7 @@
     for(const l of t.lines)for(const key of l.plan?.shoppingIds||[])totals[key]=(totals[key]||0)+Number(l.plan.shoppingAmount??(l.kg?0:l.units));
     for(let index=0;index<t.lines.length;index++){
       const l=t.lines[index],plan=l.plan||{},price=cents(l.price)/100;
-      const line={...(l.lineValidated?{validated:true}:{}),name:l.name,units:l.units,unitPrice:l.unit,price,qty:l.kg?l.kg+' kg':'',...(l.kg?{kg:l.kg}:{}),...(plan.mid?{mid:plan.mid}:{})};
+      const line={...(l.lineValidated?{validated:true}:{}),name:l.name,units:l.units,unitPrice:l.unit,price,qty:l.kg?l.kg+' kg':'',...(l.kg?{kg:l.kg}:{}),...(plan.mid?{mid:plan.mid}:{}),...(plan.mid&&plan.packSize>0&&['g','ml','ud'].includes(plan.packUnit)?{packSize:plan.packSize,packUnit:plan.packUnit,packLabel:plan.packLabel||''}:{}),...(plan.category?{category:plan.category}:{})};
       items.push(line);
       if(!inventory||price<=0)continue;
       let x;
