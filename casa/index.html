@@ -409,13 +409,14 @@ body.nav-top .toast{bottom:90px}
 .sheet [aria-invalid="true"]{border:2px solid var(--danger)}
 .receipt-save-sheet .actions{position:sticky;bottom:0;z-index:1;background:var(--bg);padding:12px 0;border-top:1px solid var(--line)}
 
-.shopping-suggestions.card{padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--surface);margin-top:14px}
-.shopping-suggestion-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.shopping-suggestion-heading h2{margin:0;color:var(--ink);font-size:1rem;font-weight:750}.shopping-suggestion-heading .link{font-size:.8rem}
-.shopping-suggestions>.hint{font-size:.8rem;line-height:1.45;margin:8px 0 12px}.shopping-suggestion-list{display:grid;gap:12px}.shopping-suggestion{border-top:1px solid var(--line);padding-top:12px}
+.shopping-suggestions.card{padding:0;border:1px solid var(--line);border-radius:20px;background:var(--surface);margin-top:14px}
+.shopping-suggestion-toggle{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;padding:16px;min-height:56px}.shopping-suggestion-toggle::-webkit-details-marker{display:none}.shopping-suggestion-toggle h2{margin:0;color:var(--ink);font-size:1rem;font-weight:750}.shopping-suggestion-chevron{font-size:1.4rem;line-height:1;color:var(--muted);transition:transform .15s}.shopping-suggestions[open]>.shopping-suggestion-toggle .shopping-suggestion-chevron{transform:rotate(180deg)}.shopping-suggestion-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:20px}
+.shopping-suggestion-content{padding:0 16px 16px}.shopping-suggestion-heading{display:flex;justify-content:flex-end}.shopping-suggestion-heading .link{font-size:.8rem}
+.shopping-suggestion-content>.hint{font-size:.8rem;line-height:1.45;margin:8px 0 12px}.shopping-suggestion-list{display:grid;gap:12px}.shopping-suggestion{border-top:1px solid var(--line);padding-top:12px}
 .shopping-suggestion-main{display:flex;align-items:center;gap:10px;text-align:left;width:100%;min-width:0}.shopping-suggestion-main>span:last-child{display:block;flex:1;min-width:0}.shopping-suggestion-main strong{font-size:.88rem;line-height:1.35;display:block}.shopping-suggestion-main small{display:block;color:var(--muted);font-size:.73rem;margin-top:4px;line-height:1.4}.shopping-suggestion-main em{font-style:normal;display:inline-block;color:var(--muted);font-size:.67rem;margin-top:5px;line-height:1.4}
 .shopping-suggestion-photo{display:flex;align-items:center;justify-content:center;width:48px;height:56px;flex:none;border-radius:12px;background:#fff;border:1px solid var(--line);overflow:hidden}.shopping-suggestion-photo img{display:block;width:42px;height:50px;object-fit:contain}.shopping-suggestion-photo>span{font-size:1.35rem}
 .shopping-suggestion-actions{display:flex;align-items:center;gap:7px;margin-top:10px}.shopping-suggestion-actions .btn{flex:1;padding:9px 8px;min-height:39px;box-shadow:none;font-size:.76rem;border-radius:11px}.shopping-suggestion-actions .btn.sec{border:1px solid var(--line)}.shopping-suggestion-actions .link{font-size:.7rem;flex:none;padding:8px 2px}
-.shopping-learning-link{display:block;color:var(--accent);font-weight:600;font-size:.78rem;text-align:left;line-height:1.45;padding:9px 0;min-height:34px}.shopping-suggestions>.shopping-learning-link{margin-top:8px;padding-bottom:0}
+.shopping-learning-link{display:block;color:var(--accent);font-weight:600;font-size:.78rem;text-align:left;line-height:1.45;padding:9px 0;min-height:34px}.shopping-suggestion-content>.shopping-learning-link{margin-top:8px;padding-bottom:0}
 .shopping-coach-sheet .sheet{display:flex;flex-direction:column;padding:0;max-height:90dvh;overflow:hidden}.shopping-coach-sheet .sheet>h3{flex:none;padding:20px 18px 10px;margin:0;font-size:1.25rem}.shopping-coach-body{flex:1;min-height:0;overflow-y:auto;padding:0 18px 18px;overscroll-behavior:contain}.shopping-coach-sheet .sheet>.actions{flex:none;position:static;margin:0;padding:12px 18px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--surface)}.shopping-coach-body .field{font-size:16px;min-width:0;max-width:100%}.shopping-coach-body .hint{font-size:.82rem;line-height:1.5}
 .shopping-coach-product{display:flex;align-items:center;gap:12px;margin:4px 0 12px}.shopping-coach-product strong{font-size:1rem}.shopping-learning-filters{margin-top:10px}.shopping-learning-filters .chip{font-size:.8rem}
 .shopping-learning-row{display:flex;align-items:center;gap:10px;width:100%;border-top:1px solid var(--line);padding:11px 0;text-align:left}.shopping-learning-row>span:nth-child(2){flex:1;min-width:0}.shopping-learning-row strong{display:block;font-size:.85rem;line-height:1.4}.shopping-learning-row small{display:block;color:var(--muted);font-size:.72rem;margin-top:3px;line-height:1.4}.shopping-learning-row>b{color:var(--muted)}
@@ -653,17 +654,17 @@ body[data-view="compras"] .ck-qsug{max-height:35vh;overflow-y:auto}
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=91"></script>
-<script src="sync.js?v=91"></script>
-<script src="receipts.js?v=91"></script>
-<script src="receipt-image.js?v=91"></script>
-<script src="receipt-layout.js?v=91"></script>
-<script src="receipt-ocr.js?v=91"></script>
-<script src="product-photo.js?v=91"></script>
-<script src="product-photo-ui.js?v=91"></script>
-<script src="shopping-recommendations.js?v=91"></script>
-<script src="cocina.js?v=91"></script>
-<script src="receipt-extras.js?v=91"></script>
+<script src="push.js?v=92"></script>
+<script src="sync.js?v=92"></script>
+<script src="receipts.js?v=92"></script>
+<script src="receipt-image.js?v=92"></script>
+<script src="receipt-layout.js?v=92"></script>
+<script src="receipt-ocr.js?v=92"></script>
+<script src="product-photo.js?v=92"></script>
+<script src="product-photo-ui.js?v=92"></script>
+<script src="shopping-recommendations.js?v=92"></script>
+<script src="cocina.js?v=92"></script>
+<script src="receipt-extras.js?v=92"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -718,7 +719,7 @@ function toast(msg,undo){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=91;
+const APP_VERSION=92;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

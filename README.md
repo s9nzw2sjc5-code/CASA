@@ -364,7 +364,11 @@ node tests/inventory-grid.cjs
 
 ## Recomendaciones de reposición a partir de tus compras
 
-Desde la versión 91, «¿No se te olvida…?» en la lista Súper usa los artículos de
+Desde la versión 92, «¿No se te olvida…?» aparece plegado en la lista Súper: se
+abre y se cierra al tocar el título. Permanece abierto mientras añades productos
+o respondes a las sugerencias y vuelve a empezar plegado al abrir de nuevo la app.
+
+Desde la versión 91, este apartado usa los artículos de
 los tickets y las compras guardadas del último año. No hace falta volver a subir
 los tickets anteriores. Agrupa por referencia de producto y por asociaciones
 confirmadas; los nombres sin referencia solo se unen cuando la coincidencia es
