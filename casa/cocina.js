@@ -1134,6 +1134,7 @@ function vCompras(){
   let h=`<h1>Compras</h1><p class="sub">${esc(L.name)}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
   h+=`<div class="chips shop-lists">${S.lists.map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(l.name)}</button>`).join('')}</div>`;
   h+=`<div class="shop-current"><div><small>Cesta actual · estimación</small><strong>≈ ${eur(total)}</strong>${dn.length?`<small>En el carro: ${eur(dn.reduce((n,i)=>n+(Number(i.price)||0),0))}</small>`:''}</div><button type="button" class="link" data-act="shopAddFocus">+ Añadir</button>${dn.length?`<button class="btn" data-act="clearDone">Terminar (${dn.length})</button>`:''}</div>`;
+  h+=shoppingReminderCard();
   const secs=[...S.sections,...new Set(items.map(i=>i.section).filter(s=>s&&!S.sections.includes(s)))],rows=[];
   secs.forEach(sec=>{const group=items.filter(i=>(i.section||'Otros')===sec);if(group.length){rows.push(`<li class="sec-head">${esc(sec)} · ${group.length}</li>`);rows.push(...group.map(itemRow))}});
   h+=rows.length?`<div class="shop-product-list">${ul(rows)}</div>`:'<div class="empty">Lista vacía. Añade productos o elige tus habituales.</div>';
@@ -1144,7 +1145,6 @@ function vCompras(){
   h+=`<button class="btn sec" style="margin-top:12px" data-act="shopPhoto">📷 Añadir producto con foto</button>`;
   h+=habSection(L);
 
-  h+=shoppingReminderCard();
   const expanded=$('#app [data-shop-money]')?.open;
   h+=`<details class="shop-money" data-shop-money ${expanded?'open':''}><summary>Gastos, tickets y herramientas</summary>${moneyCard(pend)}<button class="btn sec" data-act="newList">+ Lista</button><button class="btn sec" data-act="editList" data-id="${L.id}">Editar lista</button></details>`;
   return h+shopLaterSection(L)+histLink();
