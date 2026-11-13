@@ -1159,7 +1159,7 @@ function vCompras(){
   h+=`<button class="btn sec" style="margin-top:12px" data-act="shopPhoto">📷 Añadir producto con foto</button>`;
 
   const expanded=$('#app [data-shop-money]')?.open;
-  h+=`<details class="shop-money" data-shop-money ${expanded?'open':''}><summary>Gastos, tickets y herramientas</summary>${moneyCard(pend)}<button class="btn sec" data-act="newList">+ Lista</button><button class="btn sec" data-act="editList" data-id="${L.id}">Editar lista</button></details>`;
+  h+=`<details class="shop-money" data-shop-money ${expanded?'open':''}><summary>Gastos, tickets y herramientas</summary><button type="button" class="house-inline" data-act="houseSearch">⌕ Buscar en Casa</button>${moneyCard(pend)}<button class="btn sec" data-act="newList">+ Lista</button><button class="btn sec" data-act="editList" data-id="${L.id}">Editar lista</button></details>`;
   return h+shopLaterSection(L)+histLink();
 }
 const histLink=()=>pendingReceiptsHTML()+((S.buys||[]).length?`<button class="btn sec ck-history-link" data-act="ckBuys">🧾 Historial de compras · repetir una compra</button>`:'');
