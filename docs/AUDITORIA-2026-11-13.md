@@ -114,6 +114,11 @@ Firebase.
 
 - [Actualización de precios comprobada](https://github.com/s9nzw2sjc5-code/CASA/actions/runs/43430659145)
 - [Publicación posterior comprobada](https://github.com/s9nzw2sjc5-code/CASA/actions/runs/43430893440)
+- [Publicación de las correcciones de la versión 100](https://github.com/s9nzw2sjc5-code/CASA/actions/runs/43438084949): finalizada correctamente.
+
+El proxy de esta sesión devuelve 403 también al acceder directamente a la URL
+pública de Pages. La publicación se ha verificado en GitHub Actions; los
+recorridos de navegador se ejecutaron sirviendo localmente el código real.
 
 ## Comprobaciones externas pendientes y alcance
 
