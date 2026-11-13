@@ -482,9 +482,10 @@ Desde la versión 95, el orden de Compras es: estimación de la cesta,
 ajustan al texto. Se mantiene la posición del carrusel al añadir habituales.
 
 
-## Archivo de casa y rutinas de limpieza (versión 96)
+## Archivo de casa y rutinas de limpieza (versiones 96–97)
 
-En Hoy y Calendario, «Electrodomésticos y documentos» abre el archivo compartido.
+En Recordar y Calendario, «Electrodomésticos y documentos» abre el archivo compartido.
+Desde la versión 97, el acceso principal está en Recordar y se ha retirado de Hoy.
 Las fichas guardan nombre, tipo, marca, modelo y fin de garantía. Fecha de compra,
 número de serie y notas quedan en un desplegable. Cada ficha reúne sus PDF y
 permite añadir mantenimientos con el formulario y calendario existentes.
@@ -523,24 +524,43 @@ compat 10.14.1 y la base ya usadas por CASA, sin aprovisionar ni migrar bases.
 La prueba de integración usa ese adaptador con un transporte autenticado simulado;
 no certifica la configuración del servidor de producción.
 
-En Tareas → Rutinas de limpieza hay modelos editables de baños, repaso semanal
-y sábanas/toallas, y una rutina en blanco. Cada una tiene hasta 30 tareas,
-responsable, fecha y repetición semanal, quincenal, mensual, cada ciertos días
-o una sola vez. Las tareas anteriores no se convierten ni duplican.
-Las rutinas pendientes aparecen en Hoy y la próxima fecha real en Calendario.
+En Tareas → Rutinas de limpieza, «Usar mis tareas programadas» permite vincular
+las tareas reales que ya existen. Las sugerencias se forman con las tareas de
+limpieza que tienen la misma fecha, repetición y responsable; no se presupone
+una agenda personal ni se crean tareas al mostrar las propuestas. Se pueden
+revisar, buscar y seleccionar otras tareas programadas antes de guardar.
+Se conservan los ID, títulos, fechas, repeticiones, responsables e instrucciones
+originales. Una tarea solo puede pertenecer a una rutina vinculada activa.
+Los modelos genéricos y la creación manual quedan en «Crear otra rutina».
 
-Cada casilla se sincroniza por su propia clave en `cook`, por rutina, ronda y
-paso. Dos personas pueden marcar pasos distintos sin sustituir la lista de
-casillas de la otra. «Terminar rutina» exige que estén hechos todos los pasos,
-guarda una finalización por ronda, limpia las casillas anteriores y calcula la
-próxima fecha desde el día de realización. Conserva las últimas 24 finalizaciones
-por rutina. Una edición abierta antes de terminar una ronda exige reabrirse.
+Las rutinas vinculadas guardan referencias a `tasks`, no copias de sus tareas.
+La lista y el calendario consultan las fechas reales de las tareas pendientes.
+Cada casilla completa la tarea original con la misma regla de repetición de
+Tareas; al completar desde Tareas también se actualiza la rutina. Se añade una
+marca de finalización con fecha, instante y autor para reconocer la ronda
+sin confundir un simple cambio de fecha con una tarea realizada. «Terminar
+rutina» guarda un registro y prepara la nueva ronda, sin avanzar otra vez las
+fechas originales. Una tarea eliminada se indica y se puede desvincular al editar.
+
+El desmarcado de una tarea recurrente comprueba un registro de antes/después
+en `cook`: solo restaura sus campos de programación si nadie los ha cambiado
+después. Se conservan los demás datos y las tareas ajenas a la rutina. Las
+revisiones abiertas antes de terminar una ronda exigen reabrirse. Los
+registros de finalización conservan las últimas 24 rondas de cada rutina.
+
+Las rutinas manuales siguen admitiendo hasta 30 pasos, responsable, fecha y
+repetición semanal, quincenal, mensual, cada ciertos días o una sola vez.
+Sus casillas se sincronizan con una clave por rutina, ronda y paso en `cook`.
+También se pueden vincular a tareas programadas desde su edición. Una rutina
+pendiente aparece en Hoy y en Calendario en su fecha real.
 
 Una rutina sin terminar conserva su fecha aunque esté atrasada: no avanza sola.
-«Posponer un día» cambia solo la fecha y mantiene las casillas y la ronda. Si
-está atrasada, pasa a mañana; si ya era futura, se retrasa un día desde esa fecha.
-La próxima repetición se calcula únicamente al terminarla. Se puede archivar o
-restaurar una rutina sin perder su historial. No hay nuevos avisos push.
+«Posponer un día» mantiene las casillas y la ronda. En una rutina vinculada,
+retrasa únicamente las tareas originales pendientes; las ya realizadas conservan
+su siguiente fecha. Si una tarea está atrasada, pasa a mañana; si ya era futura,
+se retrasa un día desde esa fecha. Las rutinas manuales calculan la repetición
+al terminarlas, y las vinculadas respetan la repetición de cada tarea original.
+Se puede archivar o restaurar sin perder el historial. No hay nuevos avisos push.
 
 ```sh
 node --test tests/*.test.cjs
