@@ -677,27 +677,27 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=117"></script>
-<script src="sync.js?v=117"></script>
-<script src="receipts.js?v=117"></script>
-<script src="receipt-image.js?v=117"></script>
-<script src="receipt-layout.js?v=117"></script>
-<script src="receipt-ocr.js?v=117"></script>
-<script src="product-photo.js?v=117"></script>
-<script src="product-photo-ui.js?v=117"></script>
-<script src="shopping-recommendations.js?v=117"></script>
-<script src="household-insights.js?v=117"></script>
-<script src="document-files.js?v=117"></script>
-<script src="document-photo.js?v=117"></script>
-<script src="cleaning-links.js?v=117"></script>
-<script src="home-model.js?v=117"></script>
-<script src="cocina.js?v=117"></script>
-<script src="home-ui.js?v=117"></script>
-<script src="household-ui.js?v=117"></script>
-<script src="receipt-extras.js?v=117"></script>
-<script src="house-plan.js?v=117"></script>
-<script src="house-plan-ui.js?v=117"></script>
-<script src="lidl-ui.js?v=117"></script>
+<script src="push.js?v=118"></script>
+<script src="sync.js?v=118"></script>
+<script src="receipts.js?v=118"></script>
+<script src="receipt-image.js?v=118"></script>
+<script src="receipt-layout.js?v=118"></script>
+<script src="receipt-ocr.js?v=118"></script>
+<script src="product-photo.js?v=118"></script>
+<script src="product-photo-ui.js?v=118"></script>
+<script src="shopping-recommendations.js?v=118"></script>
+<script src="household-insights.js?v=118"></script>
+<script src="document-files.js?v=118"></script>
+<script src="document-photo.js?v=118"></script>
+<script src="cleaning-links.js?v=118"></script>
+<script src="home-model.js?v=118"></script>
+<script src="cocina.js?v=118"></script>
+<script src="home-ui.js?v=118"></script>
+<script src="household-ui.js?v=118"></script>
+<script src="receipt-extras.js?v=118"></script>
+<script src="house-plan.js?v=118"></script>
+<script src="house-plan-ui.js?v=118"></script>
+<script src="lidl-ui.js?v=118"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -752,7 +752,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=117;
+const APP_VERSION=118;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1404,7 +1404,10 @@ function render(){
   if(houseUnify())return;
   // Lo de Lidl va en su propia lista, separado de la cesta de Mercadona
   if(lidlSeparate())return;
+  if(lidlFillImages())return;
   if(marketListCleanup())return;
+  // Rutinas de limpieza repetidas (mismo nombre) se juntan en una
+  if(houseMergeRoutines())return;
   const notice=new URLSearchParams(location.search),noticeId=notice.get('noticeId'),noticeKind=notice.get('noticeKind');
   if(noticeId&&['task','reminder'].includes(noticeKind)&&find(noticeKind==='task'?S.tasks:S.reminders,noticeId)){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>answerNotice({kind:noticeKind,id:noticeId}),0)}
   const v={hoy:vHoy,tareas:vTareas,compras:()=>ui.ckTab&&ui.ckTab!=='lista'?vCocina():vCompras(),semana:vSemana,recordar:vRecordar,ringo:vRingo}[ui.view]||vHoy;

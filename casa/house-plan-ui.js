@@ -130,6 +130,16 @@ function houseUnify(){
   return true;
  }finally{houseUnify.busy=false}
 }
+// Rutinas con el mismo nombre (p. ej. muchas «Limpieza semanal») se juntan en una, con copia antes.
+// Devuelve true si ha guardado (y, por tanto, ya se ha vuelto a pintar).
+function houseMergeRoutines(){
+ if(houseMergeRoutines.busy||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
+ const r=CasaCleaningLinks.mergeSameTitle(S);if(!r.merged)return false;
+ houseMergeRoutines.busy=true;
+ try{const id='antes-de-juntar-rutinas-'+Date.now(),before=clone(S);saveLocalBackup(id,before,'Antes de juntar rutinas');cloudBackup(id,before,'Antes de juntar rutinas');
+  S.routines=r.routines;save();setTimeout(()=>toast(`Rutinas de limpieza agrupadas: ${r.merged} repetida${r.merged===1?'':'s'} unida${r.merged===1?'':'s'} (hay copia de seguridad)`),0);return true}
+ finally{houseMergeRoutines.busy=false}
+}
 /* ---------- consejos ---------- */
 const houseTipSteps=tip=>`<ol class="tip-steps">${tip.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`;
 function houseTipSheet(task){const tip=CasaHousePlan.tipFor(task);if(!tip)return;const ov=sheet('💡 '+tip.title,`<p class="hint">${esc(task.title)}</p>${houseTipSteps(tip)}<button type="button" class="link" data-tips-all>Ver todos los consejos</button>`,{autoFocus:false});ov.querySelector('[data-s=cancel]').textContent='Cerrar';ov.querySelector('[data-tips-all]').onclick=()=>{ov.remove();houseTipsLibrary()};return ov}

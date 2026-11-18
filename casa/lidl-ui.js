@@ -8,7 +8,7 @@ function lidlLoad(force){
  fetch('lidl.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})
   .then(d=>{LIDL={at:d.at||'',region:d.region||'',items:Array.isArray(d.items)?d.items:[]}})
   .catch(()=>{lidlError='No se han podido cargar las ofertas de Lidl. Revisa la conexión.'})
-  .finally(()=>{lidlLoading=false;if(ui.view==='compras'&&ui.ckTab==='lidl')render()});
+  .finally(()=>{lidlLoading=false;if(ui.view==='compras')render()});
 }
 const LIDL_FILTERS=[['semana','🏷️ Esta semana'],['finde','🎉 Fin de semana'],['proxima','⏭️ Próxima semana'],['super','🛒 Comida'],['fruta','🥬 Fruta y verdura'],['limpieza','🧴 Limpieza']];
 const LIDL_WHEN={semana:'Esta semana',finde:'Fin de semana',proxima:'Próxima semana','finde-proxima':'Fin de semana que viene'};
@@ -61,18 +61,29 @@ function lidlSeparate(){
  try{const id=lidlList();for(const i of wrong){i.listId=id;i.name=String(i.name).replace(/ \(Lidl\)$/,'');i.store='Lidl'}save();setTimeout(()=>toast(`${wrong.length} ${wrong.length===1?'producto de Lidl pasado':'productos de Lidl pasados'} a su lista`),0);return true}
  finally{lidlSeparate.busy=false}
 }
-// El mercadillo ya no se usa: su lista se quita (con sus productos), con copia de seguridad antes.
+// El mercadillo ya no se usa: se quita cualquier lista que lo lleve en el nombre (aunque tenga emoji u
+// otras palabras), con sus productos, y una sección «Mercadillo» si la hay. Con copia de seguridad antes.
 // Devuelve true si ha guardado (y, por tanto, ya se ha vuelto a pintar).
+const isMarket=name=>/mercadillo/.test(norm(name));
 function marketListCleanup(){
  if(marketListCleanup.busy||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
- const gone=S.lists.filter(l=>norm(l.name)==='mercadillo');if(!gone.length||S.lists.length<=gone.length)return false;
+ const gone=S.lists.filter(l=>isMarket(l.name)),secs=(S.sections||[]).filter(isMarket);
+ if(!secs.length&&(!gone.length||S.lists.length<=gone.length))return false;
  marketListCleanup.busy=true;
  try{
   const bid='antes-quitar-mercadillo-'+Date.now(),before=clone(S);saveLocalBackup(bid,before,'Antes de quitar la lista Mercadillo');cloudBackup(bid,before,'Antes de quitar la lista Mercadillo');
-  const ids=new Set(gone.map(l=>l.id));S.lists=S.lists.filter(l=>!ids.has(l.id));S.items=S.items.filter(i=>!ids.has(i.listId));S.staples=S.staples.filter(x=>!ids.has(x.listId));
-  if(ids.has(ui.list))ui.list=S.lists[0].id;
-  save();setTimeout(()=>toast('Lista «Mercadillo» quitada (hay copia de seguridad)'),0);return true;
+  if(gone.length&&S.lists.length>gone.length){const ids=new Set(gone.map(l=>l.id));S.lists=S.lists.filter(l=>!ids.has(l.id));S.items=S.items.filter(i=>!ids.has(i.listId));S.staples=S.staples.filter(x=>!ids.has(x.listId));if(ids.has(ui.list))ui.list=S.lists[0].id}
+  if(secs.length){const to=(S.sections||[]).includes('Fruta y verdura')?'Fruta y verdura':'Otros';S.sections=S.sections.filter(x=>!isMarket(x));for(const i of S.items)if(isMarket(i.section))i.section=to}
+  save();setTimeout(()=>toast('Mercadillo quitado de Compras (hay copia de seguridad)'),0);return true;
  }finally{marketListCleanup.busy=false}
+}
+// Productos de Lidl de la lista sin foto (añadidos antes de la 118): se busca la suya en las ofertas
+function lidlFillImages(){
+ const missing=S.items.filter(i=>i.listId===LIDL_LIST.id&&!i.img&&!i.mid);if(!missing.length||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
+ if(!LIDL){lidlLoad();return false}
+ let n=0;for(const i of missing){const x=LIDL.items.find(x=>x.c===i.lidlCode)||LIDL.items.find(x=>norm(x.n)===norm(i.name));if(x&&x.i){i.img=x.i;i.lidlCode=x.c;n++}}
+ if(!n||lidlFillImages.done===n+':'+missing.length)return false;
+ lidlFillImages.done=n+':'+missing.length;save();return true;
 }
 // Buscar mientras se escribe, sin perder el cursor
 document.addEventListener('input',e=>{if(e.target.id!=='qLidl')return;ui.lidlQ=e.target.value;clearTimeout(lidlLoad.t);lidlLoad.t=setTimeout(()=>{render();const el=$('#qLidl');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},250)});
@@ -83,6 +94,6 @@ const LIDL_ACT={
  lidlAdd:d=>{
   const x=LIDL?.items.find(i=>i.c===d.c);if(!x)return;
   // A su propia lista «Lidl», no a la del súper (que es la cesta de Mercadona)
-  if(addToList({name:x.n,qty:x.k||'',section:lidlListSection(x),...(x.p!=null?{price:x.p,uprice:x.p}:{}),store:'Lidl'},lidlList()))toast('«'+x.n+'» añadido a la lista Lidl');
+  if(addToList({name:x.n,qty:x.k||'',section:lidlListSection(x),...(x.p!=null?{price:x.p,uprice:x.p}:{}),...(x.i?{img:x.i}:{}),lidlCode:x.c,store:'Lidl'},lidlList()))toast('«'+x.n+'» añadido a la lista Lidl');
  }
 };

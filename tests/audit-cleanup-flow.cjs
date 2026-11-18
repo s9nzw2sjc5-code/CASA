@@ -136,6 +136,27 @@ const { chromium } = require("playwright"),
     assert.match(await p.locator("#toast").innerText(), /2 tareas repetidas quitadas \(hay copia de seguridad\)/);
     assert.equal(await p.evaluate(() => S.tasks.some((t) => t.title === "Comprar regalo")), true);
 
+    // 6) Rutinas: muchas «Limpieza semanal» se juntan en una y las sugerencias van por frecuencia
+    await p.evaluate(() => {
+      const add = (n) => addDays(today(), n);
+      S.tasks.push(
+        { id: "lw1", title: "Limpiar baño grande", date: add(1), repeat: "weekly", who: "yo", notes: "", done: false },
+        { id: "lw2", title: "Limpiar cocina a fondo", date: add(2), repeat: "weekly", who: "juanma", notes: "", done: false },
+        { id: "lw3", title: "Fregar escaleras", date: add(3), repeat: "weekly", who: "yo", notes: "", done: false },
+        { id: "lw4", title: "Barrer garaje", date: add(4), repeat: "weekly", who: "juanma", notes: "", done: false },
+      );
+      S.routines.push(CasaCleaningLinks.link(S, null, "sem-b", "Limpieza semanal", ["lw1"], 1));
+      S.routines.push(CasaCleaningLinks.link(S, null, "sem-a", "Limpieza semanal", ["lw2"], 1));
+      save();
+    });
+    await p.waitForFunction(() => S.routines.filter((r) => r.title === "Limpieza semanal").length === 1);
+    assert.deepEqual(await p.evaluate(() => S.routines.find((r) => r.title === "Limpieza semanal").taskIds.sort()), ["lw1", "lw2"]);
+    assert.match(await p.locator("#toast").innerText(), /Rutinas de limpieza agrupadas: 1 repetida unida/);
+    await tab("tareas");
+    await p.locator('[data-act=taskMode][data-v="routines"]').click();
+    const sug = await p.evaluate(() => [...document.querySelectorAll(".home-routine-suggestions .home-routine-card strong")].map((x) => x.textContent));
+    assert.deepEqual(sug.filter((t) => t === "Limpieza semanal").length, 1, "una sola sugerencia semanal");
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("audit-cleanup-flow: OK");
   } finally {

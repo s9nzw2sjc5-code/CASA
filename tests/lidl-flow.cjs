@@ -9,10 +9,10 @@ const fixture = {
   at: "2026-11-18T05:43:00Z",
   region: "Granada",
   items: [
-    { c: "1", n: "MILBONA Yogur bífidus", g: "super", s: "Postres y yogures", w: "semana", p: 1.15, o: 1.45, d: 20, k: "4x150 g", b: "En tienda", f: "2026-11-16", e: "2026-11-22", u: "/p/yogur/p1" },
+    { c: "1", n: "MILBONA Yogur bífidus", g: "super", s: "Postres y yogures", w: "semana", p: 1.15, o: 1.45, d: 20, k: "4x150 g", b: "En tienda", f: "2026-11-16", e: "2026-11-22", u: "/p/yogur/p1", i: "https://www.lidl.es/assets/yogur.png" },
     { c: "2", n: "ALESTO Cacahuetes fritos", g: "super", s: "Aperitivos", p: 0.75, k: "250 g", b: "En tienda", u: "/p/cacahuetes/p2" },
     { c: "3", n: "Naranja mesa", g: "fruta", s: "Fruta y verdura", w: "finde", p: 1.29, o: 1.89, d: 31, k: "A granel", f: "2026-11-20", e: "2026-11-22", u: "/p/naranja/p3" },
-    { c: "4", n: "FORMIL Detergente Marsella", g: "limpieza", s: "Limpieza y hogar", w: "semana", p: 3.49, o: 4.29, d: 19, k: "40 lavados", u: "/p/detergente/p4" },
+    { c: "4", n: "FORMIL Detergente Marsella", g: "limpieza", s: "Limpieza y hogar", w: "semana", p: 3.49, o: 4.29, d: 19, k: "40 lavados", u: "/p/detergente/p4", i: "https://www.lidl.es/assets/detergente.png" },
     { c: "6", n: "Caracola con uvas pasas", g: "super", s: "Panadería y pastelería", b: "En tienda", u: "/p/caracola/p6" },
     { c: "7", n: "Realvalle Pechuga de pollo fileteada", g: "super", s: "Carne", w: "proxima", p: 5.69, o: 7.2, d: 20, l: 5.29, k: "Aprox. 950 g", f: "2026-11-23", e: "2026-11-30", u: "/p/pollo/p7" },
     { c: "8", n: "Pan de pueblo", g: "super", s: "Panadería y pastelería", w: "finde-proxima", p: 0.99, f: "2026-11-27", e: "2026-11-29", u: "/p/pan/p8" },
@@ -86,6 +86,7 @@ const fixture = {
     // Va a su propia lista «Lidl», separada de la cesta de Mercadona (lista del súper)
     const item = await p.evaluate(() => S.items.find((i) => i.store === "Lidl"));
     assert.deepEqual([item.name, item.qty, item.price, item.listId, item.section], ["MILBONA Yogur bífidus", "4x150 g", 1.15, "lidl", "Frescos"]);
+    assert.equal(item.img, "https://www.lidl.es/assets/yogur.png", "guarda la foto");
     assert.deepEqual(await p.evaluate(() => S.lists.filter((l) => l.id === "lidl").map((l) => l.name)), ["Lidl"]);
     assert.equal(await p.evaluate(() => cartItems().length), 0, "no entra en la cesta de Mercadona");
     assert.match(await p.locator("#toast").innerText(), /añadido a la lista Lidl/);
@@ -99,6 +100,8 @@ const fixture = {
     const lidlList = await p.locator("#app").innerText();
     assert.match(lidlList, /MILBONA Yogur bífidus/);
     assert.match(lidlList, /FORMIL Detergente Marsella/);
+    // Miniaturas en la lista Lidl (también para lo añadido antes sin foto)
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll("#app .ck-it")].filter((li) => /Lidl|Yogur|Detergente/.test(li.textContent)).map((li) => li.querySelector("img.ck-ith")?.getAttribute("src")).sort()), ["https://www.lidl.es/assets/detergente.png", "https://www.lidl.es/assets/yogur.png"]);
     assert.doesNotMatch(lidlList, /\bLeche\b/);
     await p.locator('#app [data-act=ckTab][data-v="lidl"]').first().click();
     assert.equal(await p.evaluate(() => document.body.scrollWidth <= innerWidth + 2), true, "sin desbordar a 390 px");
@@ -107,8 +110,8 @@ const fixture = {
     if (process.env.SHOT) { await p.locator("#qLidl").fill(""); await p.locator('[data-act=lidlFilter][data-v="semana"]').click(); await p.setViewportSize({ width: 390, height: 844 }); await p.screenshot({ path: process.env.SHOT }); }
 
     // La lista «Mercadillo» se quita (con copia de seguridad) y las demás se conservan
-    await p.evaluate(() => { S.lists.push({ id: "mk", name: "Mercadillo" }); S.items.push({ id: "tom", listId: "mk", name: "Tomates", section: "Fruta y verdura", qty: "", by: "", done: false, units: 1 }); save(); });
-    await p.waitForFunction(() => !S.lists.some((l) => l.name === "Mercadillo"));
+    await p.evaluate(() => { S.lists.push({ id: "mk", name: "🧺 Mercadillo" }); S.items.push({ id: "tom", listId: "mk", name: "Tomates", section: "Fruta y verdura", qty: "", by: "", done: false, units: 1 }); save(); });
+    await p.waitForFunction(() => !S.lists.some((l) => /Mercadillo/.test(l.name)));
     assert.deepEqual(await p.evaluate(() => [S.lists.map((l) => l.id).sort().join(), S.items.some((i) => i.id === "tom"), localBackups().some((b) => b.label === "Antes de quitar la lista Mercadillo")]), ["casa,farmacia,lidl,super", false, true]);
     // Las seis pestañas de Compras caben en una fila, en todas ellas
     await p.setViewportSize({ width: 390, height: 844 });

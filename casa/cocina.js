@@ -991,8 +991,9 @@ function panSheet(x){
 }
 
 /* ---------- Compras: lista con fotos, cantidades y tachado ---------- */
-const imgUrl=(img,s)=>img?`https://prod-mercadona.imgix.net/images/${img}?fit=contain&h=${s}&w=${s}`:'';
-const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(String(i.mid));return p?p[9]:i.mid?habitInfo(i.mid).img:''};
+// Las fotos de Mercadona se piden a su tamaño; las de Lidl son direcciones completas
+const imgUrl=(img,s)=>!img?'':/^https:\/\//.test(img)?img:`https://prod-mercadona.imgix.net/images/${img}?fit=contain&h=${s}&w=${s}`;
+const itemImg=i=>{const p=i.mid&&MC&&MC.byId.get(String(i.mid));return p?p[9]:i.mid?habitInfo(i.mid).img:(i.img||'')};
 const monthKey=d=>(d||today()).slice(0,7);
 const spentIn=m=>CasaInsights.spending(S,m,{today:today()}).totalCents/100;
 const monthName=m=>new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});

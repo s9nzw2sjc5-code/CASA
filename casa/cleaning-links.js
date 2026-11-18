@@ -1,6 +1,7 @@
 /* Rutinas vinculadas a tareas reales: conserva IDs, fechas y responsables. */
 (function(root){
  'use strict';
+ const MAX=60; // tareas por rutina
  const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
  const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&Number.isFinite(Date.parse(d+'T12:00:00Z'))&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
  const repeated=t=>!!t.repeat&&t.repeat!=='none';
@@ -11,10 +12,13 @@
  const same=(a,b)=>fields.every(k=>a[k]===b[k]);
  function isCleaning(task){const s=norm(task.title);return !/\b(ringo|perro|gato|mascota|veterinario|pastilla|vacuna|desparasitacion)\b/.test(s)&&/\b(limpiar|limpieza|repaso|aspirar|aspiradora|barrer|fregar|mopa|polvo|sabanas?|toallas?|colada|lavadora|tender|desinfectar|ordenar|cristales?|ventanas?|lavabo|inodoro|banos?|escalera|escaleras|reciclaje|basura)\b/.test(s)}
  function candidates(state,routineId=''){const used=new Set((state.routines||[]).filter(r=>r.linkedTasks&&!r.archived&&r.id!==routineId).flatMap(r=>r.taskIds||[]));const own=(state.routines||[]).find(r=>r.id===routineId)?.taskIds||[];return (state.tasks||[]).filter(t=>!used.has(t.id)&&((!t.done&&validDate(t.date))||own.includes(t.id)))}
- function groups(state){const result=new Map();for(const t of candidates(state).filter(isCleaning)){const k=JSON.stringify([t.date,t.repeat||'none',t.every||0,t.unit||'',t.who||'yo']);if(!result.has(k))result.set(k,{title:({daily:'Repaso diario',weekly:'Limpieza semanal',monthly:'Limpieza mensual',yearly:'Limpieza anual'})[t.repeat]||'Limpieza programada',date:t.date,who:t.who||'yo',taskIds:[],names:[]});const g=result.get(k);g.taskIds.push(t.id);g.names.push(t.title)}return [...result.values()].flatMap(g=>Array.from({length:Math.ceil(g.taskIds.length/30)},(_,i)=>({...g,taskIds:g.taskIds.slice(i*30,i*30+30),names:g.names.slice(i*30,i*30+30)}))).sort((a,b)=>a.date.localeCompare(b.date))}
+ // Nombre de la rutina según cada cuánto se repite
+ function title(t){const r=t.repeat;if(r==='daily')return 'Repaso diario';if(r==='weekly')return 'Limpieza semanal';if(r==='every2')return 'Limpieza cada 2 días';if(r==='every3')return 'Limpieza cada 3 días';if(r==='monthly')return 'Limpieza mensual';if(r==='yearly')return 'Limpieza anual';if(r==='custom'&&Number(t.every)>0){const n=Number(t.every),u=t.unit||'m';if(u==='w'&&n===2)return 'Limpieza quincenal';if(u==='m'&&n===3)return 'Limpieza trimestral';if(u==='m'&&n===6)return 'Limpieza semestral';return 'Limpieza cada '+n+' '+(u==='d'?'días':u==='w'?'semanas':'meses')}return 'Limpieza puntual'}
+ // Sugerencias: una por frecuencia (semanal, quincenal, mensual…). Cada tarea conserva su día y su responsable.
+ function groups(state){const result=new Map();for(const t of candidates(state).filter(isCleaning)){const k=JSON.stringify([t.repeat||'none',Number(t.every)||0,t.unit||'']);if(!result.has(k))result.set(k,{title:title(t),date:t.date,whos:new Set(),taskIds:[],names:[]});const g=result.get(k);if(t.date<g.date)g.date=t.date;g.whos.add(t.who||'yo');g.taskIds.push(t.id);g.names.push(t.title)}return [...result.values()].flatMap(g=>Array.from({length:Math.ceil(g.taskIds.length/MAX)},(_,i)=>({title:g.title,date:g.date,who:g.whos.size===1?[...g.whos][0]:'ambos',taskIds:g.taskIds.slice(i*MAX,i*MAX+MAX),names:g.names.slice(i*MAX,i*MAX+MAX)}))).sort((a,b)=>a.date.localeCompare(b.date))}
  function baseline(task){return {stamp:stamp(task),date:task.date||''}}
  function link(state,existing,id,title,ids,at){
-  if(!title||title.length>100||!Array.isArray(ids)||!ids.length||ids.length>30||new Set(ids).size!==ids.length)throw Error('Elige de 1 a 30 tareas y escribe un nombre para la rutina.');
+  if(!title||title.length>100||!Array.isArray(ids)||!ids.length||ids.length>MAX||new Set(ids).size!==ids.length)throw Error('Elige de 1 a '+MAX+' tareas y escribe un nombre para la rutina.');
   const allowed=new Map(candidates(state,existing?.id).map(t=>[t.id,t]));if(ids.some(id=>!allowed.has(id)))throw Error('Una tarea ha cambiado, ya está en otra rutina o no está programada. Revisa la selección.');
   const tasks=ids.map(id=>allowed.get(id)),sourceBaseline={};for(const t of tasks)sourceBaseline[t.id]=existing?.linkedTasks&&existing.sourceBaseline?.[t.id]||baseline(t);
   const who=new Set(tasks.map(t=>t.who||'yo')),r={...(existing||{}),id,title,linkedTasks:true,taskIds:ids.slice(),sourceBaseline,repeat:'linked',steps:[],cycle:existing?.cycle||0,archived:false,who:who.size===1?[...who][0]:'ambos',updatedAt:at};r.date=effectiveDate(state,r);return r;
@@ -36,5 +40,22 @@
   return {tasks,routines:(state.routines||[]).map(x=>x.id===r.id?{...x,date:next,postponedAt:at,postponedBy:by||'',postponements:[...(x.postponements||[]),{from:current,to:next,at,by:by||''}].slice(-12)}:x)};
  }
  function finishRoutine(state,r,day){const sourceBaseline={};for(const id of r.taskIds||[]){const t=(state.tasks||[]).find(t=>t.id===id);if(!t)throw Error('Falta una tarea. Revisa los vínculos antes de terminar.');sourceBaseline[id]=baseline(t)}const next={...r,sourceBaseline,cycle:Number(r.cycle||0)+1,last:day},canRepeat=(r.taskIds||[]).some(id=>repeated(state.tasks.find(t=>t.id===id)));next.date=canRepeat?effectiveDate(state,next):'';next.archived=!canRepeat;return next}
- const api={isCleaning,candidates,groups,link,progress,effectiveDate,advanceTask,toggle,postpone,finishRoutine};root.CasaCleaningLinks=api;if(typeof module!=='undefined')module.exports=api;
+ // Rutinas con el mismo nombre (p. ej. veinte «Limpieza semanal») se juntan en una: se queda la de menor id
+ // con todas las tareas y lo que ya estaba marcado. Igual en los dos móviles.
+ function mergeSameTitle(state){
+  const live=(state.routines||[]).filter(r=>r.linkedTasks&&!r.archived),byTitle=new Map();
+  for(const r of live){const k=norm(r.title);if(!byTitle.has(k))byTitle.set(k,[]);byTitle.get(k).push(r)}
+  let routines=state.routines||[],merged=0;
+  for(const g of byTitle.values()){
+   if(g.length<2)continue;
+   const ordered=g.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),keep=ordered[0],ids=[...new Set(ordered.flatMap(r=>r.taskIds||[]))];
+   if(ids.length>MAX)continue;
+   const sourceBaseline=Object.assign({},...ordered.slice().reverse().map(r=>r.sourceBaseline||{}));
+   const owners=new Set(ids.map(id=>(state.tasks||[]).find(t=>t.id===id)).filter(Boolean).map(t=>t.who||'yo'));
+   const next={...keep,taskIds:ids,sourceBaseline,who:owners.size===1?[...owners][0]:'ambos'};next.date=effectiveDate(state,next);
+   const drop=new Set(ordered.slice(1).map(r=>r.id));routines=routines.filter(r=>!drop.has(r.id)).map(r=>r.id===keep.id?next:r);merged+=drop.size;
+  }
+  return {routines,merged};
+ }
+ const api={isCleaning,mergeSameTitle,candidates,groups,link,progress,effectiveDate,advanceTask,toggle,postpone,finishRoutine};root.CasaCleaningLinks=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);
