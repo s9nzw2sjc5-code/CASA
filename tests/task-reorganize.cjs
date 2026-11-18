@@ -186,6 +186,35 @@ const { chromium } = require("playwright"),
     assert.ok(await p.locator("text=Baño y ducha").count());
     await p.locator('[data-act=taskMode][data-v=tasks]').click();
 
+    // «Estoy fuera N días»: lo de esos días se corre N días, lo atrasado va al día de la vuelta,
+    // lo de después y lo sin fecha no se toca, las urgentes ❗ se quedan y «Deshacer» lo revierte todo.
+    await p.evaluate(() => {
+      const t = today(), add = (n) => addDays(t, n), base = { who: "yo", repeat: "none", notes: "", done: false };
+      S.tasks = [
+        { ...base, id: "a-late", title: "Atrasada", date: add(-2) },
+        { ...base, id: "a-today", title: "De hoy", date: t },
+        { ...base, id: "a-mid", title: "A mitad", date: add(3) },
+        { ...base, id: "a-after", title: "Después", date: add(6) },
+        { ...base, id: "a-nodate", title: "Sin fecha", date: "" },
+        { ...base, id: "a-urgent", title: "Fuente", date: t, urgent: true },
+        { ...base, id: "a-done", title: "Hecha", date: add(1), done: true },
+      ];
+      S.routines = []; save(); render();
+    });
+    const awayBefore = await p.evaluate(() => JSON.stringify(S.tasks));
+    await p.locator("[data-act=reorgStart]").click();
+    await p.locator("#reorgAway").fill("5");
+    await p.locator("[data-act=reorgAway]").click();
+    const away = await p.evaluate(() => Object.fromEntries(S.tasks.map((x) => [x.id, x.date])));
+    const d = (n) => p.evaluate((n) => addDays(today(), n), n);
+    assert.deepEqual(away, { "a-late": await d(5), "a-today": await d(5), "a-mid": await d(8), "a-after": await d(6), "a-nodate": "", "a-urgent": await d(0), "a-done": await d(1) });
+    assert.match(await p.locator("#toast").innerText(), /3 tareas reprogramadas · vuelves .* · 1 urgente ❗ sin posponer/);
+    await p.locator(".toast-undo").click();
+    assert.equal(await p.evaluate(() => JSON.stringify(S.tasks)), awayBefore);
+    assert.equal(await p.evaluate(() => document.body.scrollWidth <= innerWidth + 2), true, "sin desbordar");
+    if (process.env.SHOT) { await p.locator(".reorg-away").scrollIntoViewIfNeeded(); await p.screenshot({ path: process.env.SHOT }); }
+    await p.locator("[data-act=reorgStart]").click();
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("task-reorganize: OK");
   } finally {
