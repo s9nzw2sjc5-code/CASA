@@ -240,7 +240,12 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .ts-title{font-size:1.05rem;font-weight:600;margin-bottom:4px}
 .ts-grid{gap:8px 10px}.ts-full{grid-column:1/-1}.ts-grid label{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
 .ts-clr{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;color:var(--muted);font-size:.85rem;padding:0}
-.ts-flags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 8px}.ts-flags .urgent-check{margin:0!important}.ts-flags .imp-check{margin-left:0}.ts-tip{width:44px;height:44px;font-size:1.2rem}
+.ts-flags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 8px}.ts-flags .urgent-check{margin:0!important}.ts-flags .imp-check{margin-left:0}.ts-flags .urgent-check{position:relative;width:46px!important;height:46px!important;min-height:0!important;flex:none;padding:0!important;justify-content:center;border-radius:50%!important;border:1.5px solid var(--line)!important;background:none;cursor:pointer}
+.ts-flags .urgent-check input{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;opacity:0;cursor:pointer}
+.ts-flags .urgent-check span{font-size:1.3rem!important;line-height:1;filter:grayscale(1);opacity:.55}
+.ts-flags .urgent-check.on{border-color:var(--danger)!important;background:color-mix(in srgb,var(--danger) 14%,transparent)}.ts-flags .urgent-check.on span{filter:none;opacity:1}
+.ts-flags .imp-check.on{border-color:var(--c-recordar)!important;background:color-mix(in srgb,var(--c-recordar) 18%,transparent)}
+.ts-tip{width:44px;height:44px;font-size:1.2rem}.ts-tomorrow{width:44px;height:44px;font-size:1.3rem}.imp-check span{font-size:1.2rem!important}
 
 .wx-h{display:flex;align-items:center;gap:6px}.wx-h>b{min-width:0;overflow-wrap:anywhere}.wx-sync{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;font-size:1.1rem;padding:0}.wx-sync.spin{animation:wxspin 1s linear infinite}@keyframes wxspin{to{transform:rotate(360deg)}}.wx-age{flex:1;color:var(--muted);font-size:.75rem;white-space:nowrap}.wx-h .link{margin-left:auto}
 .imp-check{margin-left:8px;border-color:var(--line)!important}.imp-check span{font-size:.92rem;font-weight:600}.imp-dates{margin:6px 0 16px}
@@ -785,29 +790,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=149"></script>
-<script src="sync.js?v=149"></script>
-<script src="receipts.js?v=149"></script>
-<script src="receipt-image.js?v=149"></script>
-<script src="receipt-layout.js?v=149"></script>
-<script src="receipt-ocr.js?v=149"></script>
-<script src="product-photo.js?v=149"></script>
-<script src="product-photo-ui.js?v=149"></script>
-<script src="shopping-recommendations.js?v=149"></script>
-<script src="household-insights.js?v=149"></script>
-<script src="document-files.js?v=149"></script>
-<script src="document-photo.js?v=149"></script>
-<script src="cleaning-links.js?v=149"></script>
-<script src="home-model.js?v=149"></script>
-<script src="cocina.js?v=149"></script>
-<script src="cleaning-view.js?v=149"></script>
-<script src="home-ui.js?v=149"></script>
-<script src="household-ui.js?v=149"></script>
-<script src="receipt-extras.js?v=149"></script>
-<script src="house-plan.js?v=149"></script>
-<script src="house-plan-ui.js?v=149"></script>
-<script src="lidl-ui.js?v=149"></script>
-<script src="tasks-ui.js?v=149"></script>
+<script src="push.js?v=150"></script>
+<script src="sync.js?v=150"></script>
+<script src="receipts.js?v=150"></script>
+<script src="receipt-image.js?v=150"></script>
+<script src="receipt-layout.js?v=150"></script>
+<script src="receipt-ocr.js?v=150"></script>
+<script src="product-photo.js?v=150"></script>
+<script src="product-photo-ui.js?v=150"></script>
+<script src="shopping-recommendations.js?v=150"></script>
+<script src="household-insights.js?v=150"></script>
+<script src="document-files.js?v=150"></script>
+<script src="document-photo.js?v=150"></script>
+<script src="cleaning-links.js?v=150"></script>
+<script src="home-model.js?v=150"></script>
+<script src="cocina.js?v=150"></script>
+<script src="cleaning-view.js?v=150"></script>
+<script src="home-ui.js?v=150"></script>
+<script src="household-ui.js?v=150"></script>
+<script src="receipt-extras.js?v=150"></script>
+<script src="house-plan.js?v=150"></script>
+<script src="house-plan-ui.js?v=150"></script>
+<script src="lidl-ui.js?v=150"></script>
+<script src="tasks-ui.js?v=150"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -862,7 +867,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=149;
+const APP_VERSION=150;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1666,7 +1671,8 @@ function taskSheet(t,date,extra){
     <div id="f_cw" style="display:none;gap:6px;margin-top:8px;align-items:center"><span>Cada</span><input class="field" type="number" min="1" inputmode="numeric" id="f_ce" value="${t.every||''}" style="width:72px;flex:none"><select class="field" id="f_cu">${opt(Object.entries(UNITS),t.unit||'m')}</select></div>
     <div id="calcRep" class="summary" style="display:none"></div>
     <div class="ts-flags"><label class="urgent-check" title="Urgente"><input type="checkbox" id="f_u" aria-label="Urgente" ${t.urgent?'checked':''}><span aria-hidden="true">❗</span></label>
-    <label class="urgent-check imp-check" title="Verla en Importantes"><input type="checkbox" id="f_imp" aria-label="Fecha importante: verla en Importantes" ${isImportantTask(t)?'checked':''}><span>📅 En Importantes</span></label>
+    <label class="urgent-check imp-check" title="Verla en Importantes"><input type="checkbox" id="f_imp" aria-label="Fecha importante: verla en Importantes" ${isImportantTask(t)?'checked':''}><span aria-hidden="true">📅</span></label>
+    ${!n&&!t.done?`<button type="button" class="tomorrow-ic ts-tomorrow" data-ts-tomorrow aria-label="Pasar a mañana" title="Pasar a mañana">⏭️</button>`:''}
     ${CasaHousePlan.tipFor(t)?`<button type="button" class="tip-inline ts-tip" data-ts-tip aria-label="Cómo hacerlo" title="Cómo hacerlo">💡</button>`:''}</div>
     <textarea class="field ts-notes" id="f_n" rows="2" placeholder="Notas" aria-label="Notas">${esc(t.notes)}</textarea>`,
   {onSave:ov=>{
@@ -1683,6 +1689,10 @@ function taskSheet(t,date,extra){
   ov0.classList.add('task-sheet');repeatPreview(ov0);
   // 💡 abre el consejo en su propia ventana, sin alargar la ficha
   const tipBtn=ov0.querySelector('[data-ts-tip]');if(tipBtn)tipBtn.addEventListener('click',()=>houseTipSheet(t));
+  // ❗ y 📅: solo el icono; se resalta cuando está activo
+  ov0.querySelectorAll('.ts-flags .urgent-check').forEach(l=>{const i=l.querySelector('input'),sync=()=>l.classList.toggle('on',i.checked);sync();i.addEventListener('change',sync)});
+  // ⏭️ pasa la tarea a mañana al momento (sin tocar lo demás); lo urgente no se pospone
+  const tmBtn=ov0.querySelector('[data-ts-tomorrow]');if(tmBtn)tmBtn.addEventListener('click',()=>{const x=find(S.tasks,t.id);if(!x)return;const d=addDays(today(),1);if(CasaHousePlan.blocksPostpone(x,d,today())){toast('Es urgente ❗: no se puede posponer');return}x.date=d;save();ov0.remove();toastUndo('Pasada a mañana')});
 }
 function gcalUrl(r){
   const d=r.date.replace(/-/g,'');let dates;

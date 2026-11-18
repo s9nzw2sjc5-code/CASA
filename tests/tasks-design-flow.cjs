@@ -205,6 +205,29 @@ const { chromium } = require("playwright"),
     await p.locator('#tabs [data-v="tareas"]').click();
     assert.equal(await p.locator(".tz-seg .on").innerText(), "Por zonas");
 
+    // Ficha: 📅 solo icono y ⏭️ para pasar a mañana al momento (con deshacer); en lo urgente no se pospone
+    await p.evaluate(() => { S.tasks.push({ id: "tm", title: "Pasar a mañana", date: today(), repeat: "none", done: false }, { id: "tmu", title: "Urgente", date: today(), repeat: "none", urgent: true, done: false }); save(); ui.view = "tareas"; ui.taskView = "hoy"; render(); taskSheet(S.tasks.find((t) => t.id === "tm")); });
+    assert.equal((await p.locator(".overlay .imp-check").innerText()).trim(), "📅");
+    // ❗ y 📅 son solo el icono (sin casilla cuadrada) y se resaltan al activarlos
+    for (const id of ["f_u", "f_imp"]) assert.equal(await p.locator("#" + id).evaluate((el) => getComputedStyle(el).opacity), "0", id + " sin casilla visible");
+    await p.locator(".overlay .imp-check").click();
+    assert.equal(await p.locator("#f_imp").isChecked(), true);
+    assert.equal(await p.locator(".overlay .imp-check.on").count(), 1, "resaltado");
+    await p.locator(".overlay .imp-check").click();
+    await p.locator(".overlay [data-ts-tomorrow]").click();
+    assert.equal(await p.locator(".overlay").count(), 0);
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tm").date), await p.evaluate(() => addDays(today(), 1)));
+    await p.locator(".toast-undo").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tm").date), await p.evaluate(() => today()));
+    await p.evaluate(() => taskSheet(S.tasks.find((t) => t.id === "tmu")));
+    await p.locator(".overlay [data-ts-tomorrow]").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tmu").date), await p.evaluate(() => today()), "lo urgente no se pospone");
+    await p.locator(".overlay [data-s=cancel]").click();
+    await p.evaluate(() => { taskSheet(null, today()); });
+    assert.equal(await p.locator(".overlay [data-ts-tomorrow]").count(), 0, "en una tarea nueva no hace falta");
+    await p.locator(".overlay [data-s=cancel]").click();
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !["tm", "tmu"].includes(t.id)); save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {
