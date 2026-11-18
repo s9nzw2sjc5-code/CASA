@@ -98,6 +98,17 @@ const fixture = {
     assert.equal(await p.evaluate(() => document.body.scrollWidth <= innerWidth + 2), true, "sin desbordar a 320 px");
     if (process.env.SHOT) { await p.locator("#qLidl").fill(""); await p.locator('[data-act=lidlFilter][data-v="semana"]').click(); await p.setViewportSize({ width: 390, height: 844 }); await p.screenshot({ path: process.env.SHOT }); }
 
+    // La lista «Mercadillo» se quita (con copia de seguridad) y las demás se conservan
+    await p.evaluate(() => { S.lists.push({ id: "mk", name: "Mercadillo" }); S.items.push({ id: "tom", listId: "mk", name: "Tomates", section: "Fruta y verdura", qty: "", by: "", done: false, units: 1 }); save(); });
+    await p.waitForFunction(() => !S.lists.some((l) => l.name === "Mercadillo"));
+    assert.deepEqual(await p.evaluate(() => [S.lists.map((l) => l.id).sort().join(), S.items.some((i) => i.id === "tom"), localBackups().some((b) => b.label === "Antes de quitar la lista Mercadillo")]), ["casa,farmacia,lidl,super", false, true]);
+    // Las seis pestañas de Compras caben en una fila, en todas ellas
+    await p.setViewportSize({ width: 390, height: 844 });
+    for (const tab of ["lista", "productos", "lidl", "despensa"]) {
+      await p.evaluate((t) => { ui.ckTab = t; render(); }, tab);
+      assert.equal(await p.evaluate(() => new Set([...document.querySelectorAll(".ck-tabs .chip")].map((c) => Math.round(c.getBoundingClientRect().top))).size), 1, tab + ": una sola fila");
+    }
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("lidl-flow: OK");
   } finally {

@@ -49,6 +49,19 @@ function lidlSeparate(){
  try{const id=lidlList();for(const i of wrong){i.listId=id;i.name=String(i.name).replace(/ \(Lidl\)$/,'');i.store='Lidl'}save();setTimeout(()=>toast(`${wrong.length} ${wrong.length===1?'producto de Lidl pasado':'productos de Lidl pasados'} a su lista`),0);return true}
  finally{lidlSeparate.busy=false}
 }
+// El mercadillo ya no se usa: su lista se quita (con sus productos), con copia de seguridad antes.
+// Devuelve true si ha guardado (y, por tanto, ya se ha vuelto a pintar).
+function marketListCleanup(){
+ if(marketListCleanup.busy||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
+ const gone=S.lists.filter(l=>norm(l.name)==='mercadillo');if(!gone.length||S.lists.length<=gone.length)return false;
+ marketListCleanup.busy=true;
+ try{
+  const bid='antes-quitar-mercadillo-'+Date.now(),before=clone(S);saveLocalBackup(bid,before,'Antes de quitar la lista Mercadillo');cloudBackup(bid,before,'Antes de quitar la lista Mercadillo');
+  const ids=new Set(gone.map(l=>l.id));S.lists=S.lists.filter(l=>!ids.has(l.id));S.items=S.items.filter(i=>!ids.has(i.listId));S.staples=S.staples.filter(x=>!ids.has(x.listId));
+  if(ids.has(ui.list))ui.list=S.lists[0].id;
+  save();setTimeout(()=>toast('Lista «Mercadillo» quitada (hay copia de seguridad)'),0);return true;
+ }finally{marketListCleanup.busy=false}
+}
 // Buscar mientras se escribe, sin perder el cursor
 document.addEventListener('input',e=>{if(e.target.id!=='qLidl')return;ui.lidlQ=e.target.value;clearTimeout(lidlLoad.t);lidlLoad.t=setTimeout(()=>{render();const el=$('#qLidl');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},250)});
 const LIDL_ACT={
