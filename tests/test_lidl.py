@@ -55,6 +55,9 @@ class LidlTest(unittest.TestCase):
         self.assertEqual(base('SCOTTEX Papel higiénico original', 'Food')['g'], 'limpieza')
         self.assertEqual(base('- Dorada limpia', 'Food')['g'], 'super', 'no se confunde con limpieza')
         self.assertEqual(base('MILBONA Yogur bífidus', 'Food')['g'], 'super')
+        self.assertIsNone(base('Lupilu Pañales talla 5', 'Food'))
+        self.assertIsNone(base('Toallitas faciales', 'Food'))
+        self.assertEqual(base('W5 Toallitas de limpieza multiusos', 'Food')['g'], 'limpieza', 'las de limpieza se quedan')
 
     def test_lee_los_productos_de_la_pagina(self):
         page = '<div data-grid-data="%s"></div><div data-grid-data="no es json"></div>' % html.escape(json.dumps(product(GRANADA, PRICES)), quote=True)

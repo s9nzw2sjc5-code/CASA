@@ -77,6 +77,10 @@ CLEANING = re.compile(r'detergent|lejia|friegasuelo|lavavajilla|suavizante|papel
                       r'multiusos|desinfectante|bloque wc|gel wc|toallitas? (humedas )?(de )?limpieza|lavado a mano')
 
 
+# Lo que Lidl vende como súper pero no interesa: pañales y toallitas (las de limpieza sí se quedan)
+NOT_WANTED = re.compile(r'panal|toallit')
+
+
 def fold(text):
     return unicodedata.normalize('NFD', text or '').encode('ascii', 'ignore').decode().lower()
 
@@ -88,7 +92,7 @@ def kind_of(category, name):
         return None
     if CLEANING.search(fold(name)):
         return 'limpieza', 'Limpieza'
-    if kind == 'casa':
+    if kind == 'casa' or NOT_WANTED.search(fold(name)):
         return None
     return kind, section
 
