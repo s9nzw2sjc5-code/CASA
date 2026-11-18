@@ -78,7 +78,7 @@ const P = require("../casa/house-plan.js");
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tender").date), await p.evaluate(() => today()));
 
     // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
-    await p.locator("[data-act=housePlan]").click();
+    await p.locator(".chip[data-act=housePlan]").click();
     assert.match(await p.locator("[data-plan-count]").innerText(), new RegExp("Se crearán " + P.ITEMS.length + " tareas"));
     await p.locator('[data-plan-zone="gimnasio"]').uncheck();
     const expected = P.ITEMS.length - P.ITEMS.filter((i) => i.zone === "gimnasio").length;
@@ -88,19 +88,42 @@ const P = require("../casa/house-plan.js");
     assert.equal(await planCount(), expected);
     await p.locator(".toast-undo").click();
     assert.equal(await planCount(), 0);
-    await p.locator("[data-act=housePlan]").click();
+    await p.locator(".chip[data-act=housePlan]").click();
     await p.locator('[data-plan-zone="gimnasio"]').uncheck();
     await p.locator("#planWho").selectOption("alternar");
     await ok();
     assert.equal(await planCount(), expected);
     assert.deepEqual(await p.evaluate(() => [...new Set(S.tasks.filter((t) => t.plan === "casa").map((t) => t.who))].sort()), ["juanma", "yo"]);
-    await p.locator("[data-act=housePlan]").click();
+    await p.locator(".chip[data-act=housePlan]").click();
     assert.match(await p.locator(".overlay").innerText(), new RegExp("Ya tienes " + expected + " tareas del plan"));
-    assert.match(await p.locator("[data-plan-count]").innerText(), /Se crearán 1 tareas/);
+    // Recuerda las zonas elegidas: el gimnasio sigue desmarcado y no hay nada nuevo que crear
+    assert.equal(await p.locator('[data-plan-zone="gimnasio"]').isChecked(), false);
+    assert.equal(await p.locator('[data-plan-zone="ropa"]').isChecked(), true);
+    assert.match(await p.locator("[data-plan-count]").innerText(), /No hay tareas nuevas/);
     await p.locator(".overlay [data-s=cancel]").click();
     const titles = await p.evaluate(() => [...document.querySelectorAll("#app .row-title")].map((x) => x.textContent));
     assert.equal(new Set(titles).size, titles.length, "cada tarea aparece una sola vez");
-    assert.ok(titles.includes("Purgar los radiadores antes de encender la calefacción"));
+    for (const t of ["Purgar los radiadores antes de encender la calefacción", "Poner una lavadora", "Poner otra lavadora", "Doblar y guardar la ropa limpia", "Doblar y guardar la ropa limpia (2.ª vez)"]) assert.ok(titles.includes(t), t);
+
+    // Consejos: desde la propia tarea, en su ficha y en la biblioteca
+    await p.locator(".row", { hasText: "Rieles de las ventanas" }).locator(".tipbtn").click();
+    assert.match(await p.locator(".overlay").last().innerText(), /Rieles de las ventanas[\s\S]*cepillo de dientes/);
+    await p.locator(".overlay [data-tips-all]").click();
+    assert.equal(await p.locator(".overlay .tips-lib details").count(), Object.keys(P.TIPS).length);
+    await p.locator(".overlay [data-s=cancel]").click();
+    await p.locator(".row", { hasText: "Cintas de las persianas" }).locator(".row-main").click();
+    assert.match(await p.locator(".overlay .tipbox summary").innerText(), /Cómo hacerlo: Cintas de las persianas/);
+    await p.locator(".overlay [data-s=cancel]").click();
+    await p.locator("[data-act=tipsLibrary]").click();
+    assert.equal(await p.locator(".overlay .tips-lib details").count(), Object.keys(P.TIPS).length);
+    await p.locator(".overlay [data-s=cancel]").click();
+
+    // Calendario de temporada al final de Tareas: 3 meses o todo el año
+    assert.equal(await p.locator(".season .season-m").count(), 3);
+    assert.match(await p.locator(".season .season-m").first().innerText(), /^Este mes/);
+    await p.locator("[data-act=seasonAll]").click();
+    assert.equal(await p.locator(".season .season-m").count(), 12);
+    await p.locator("[data-act=seasonAll]").click();
 
     // 4) Frío mañana: pregunta por la calefacción y adelanta la purga de radiadores
     const heat = p.locator(".wx-recs li", { hasText: "¿has puesto ya la calefacción?" });
@@ -108,6 +131,17 @@ const P = require("../casa/house-plan.js");
     await heat.locator("[data-act=wxMove]").click();
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.planKey === "radiadores-purgar").date), await p.evaluate(() => today()));
     assert.match(await p.locator(".wx").innerText(), /Día de interior: puedes adelantar|Rincón de hoy/);
+    assert.match(await p.locator(".season").innerText(), /Purgar los radiadores/);
+
+    // En el Calendario (vista de mes) las tareas de temporada aparecen en su día y abajo, en «toca»
+    await p.locator('#tabs [data-v="semana"]').click();
+    assert.match(await p.locator("section.day").innerText(), /Purgar los radiadores/);
+    assert.ok(await p.locator('.mcell.today .dots i[style*="c-tareas"]').count());
+    assert.match(await p.locator(".season").innerText(), /toca[\s\S]*Purgar los radiadores/);
+    assert.doesNotMatch(await p.locator("section.day").innerText(), /Rieles de las ventanas|Poner una lavadora/, "el resto de tareas sigue solo en Tareas");
+    await p.evaluate(() => { document.querySelector("#toast").classList.remove("show"); const box = $("#app"), sec = box.querySelector(".season"); box.scrollTop = sec.offsetTop - 80; });
+    await p.screenshot({ path: (process.env.SHOT || path.join(require("node:os").tmpdir(), "casa-tareas-tiempo.png")).replace(/\.png$/, "-calendario.png"), fullPage: true });
+    await p.locator('#tabs [data-v="tareas"]').click();
     await p.screenshot({ path: process.env.SHOT || path.join(require("node:os").tmpdir(), "casa-tareas-tiempo.png"), fullPage: false });
 
     // 5) Sin conexión, al volver a abrir se ve la última previsión guardada sin pedirla otra vez

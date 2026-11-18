@@ -117,3 +117,55 @@ test('sugiere un rincón al día sin repetir y no inventa recomendaciones sin pr
   assert.ok(P.recommendations(state, [day(TODAY)], TODAY, { relDate }).some(r => r.text === 'Rincón de hoy: «Cintas de las persianas: pasar un paño».'));
   assert.deepEqual(P.recommendations(state, [day(plus(TODAY, 1))], TODAY, { relDate }), []);
 });
+
+test('cada tarea del plan trae su consejo y las tareas propias también lo encuentran', () => {
+  for (const it of P.ITEMS) if (it.tip) assert.ok(P.TIPS[it.tip], it.key);
+  for (const [k, tip] of Object.entries(P.TIPS)) { assert.ok(tip.title, k); assert.ok(tip.steps.length >= 3, k); }
+  assert.equal(P.tipFor({ planKey: 'rieles', title: 'Cualquier título' }).key, 'rieles');
+  assert.match(P.tipFor({ planKey: 'rieles' }).steps.join(' '), /cepillo de dientes/);
+  assert.equal(P.tipFor({ title: 'Limpiar los rieles del salón' }).key, 'rieles');
+  assert.equal(P.tipFor({ title: 'Limpiar la cinta de la persiana' }).key, 'persianas');
+  assert.equal(P.tipFor({ title: 'Purgar radiadores' }).key, 'radiadores');
+  assert.equal(P.tipFor({ title: 'Llamar al fontanero' }), null);
+  assert.equal(P.tipFor({ planKey: 'garaje', title: 'Garaje: barrer y ordenar' }), null);
+});
+
+test('colada: dos lavadoras y dos días de doblar entre semana, sin fin de semana', () => {
+  const { tasks } = P.buildPlan({ tasks: [] }, { zones: ['ropa'], who: 'yo', today: TODAY, uid });
+  const by = k => tasks.find(t => t.planKey === k);
+  assert.deepEqual(['lavadora-1', 'doblar-1', 'lavadora-2', 'doblar-2'].map(k => wd(by(k).date)), [0, 1, 3, 4]);
+  assert.ok(['lavadora-1', 'doblar-1', 'lavadora-2', 'doblar-2'].every(k => by(k).repeat === 'weekly'));
+  assert.equal(new Set(tasks.map(t => t.title)).size, tasks.length);
+});
+
+test('el plan recuerda las zonas elegidas y propone las nuevas', () => {
+  assert.deepEqual(P.defaultZones(undefined), allZones);
+  const z = P.defaultZones({ chosen: ['cocina'], known: allZones.filter(id => id !== 'ropa') });
+  assert.ok(z.includes('cocina') && z.includes('ropa'));
+  assert.ok(!z.includes('gimnasio'));
+});
+
+test('calendario de temporada: lo que toca cada mes, pendiente o hecho', () => {
+  const tasks = [
+    { id: 'a', title: 'Revisar burletes', repeat: 'yearly', planKind: 'temporada', date: '2026-11-25', done: false },
+    { id: 'b', title: 'Purgar radiadores', repeat: 'yearly', planKind: 'temporada', date: '2027-11-10', lastDone: '2026-11-10', done: false },
+    { id: 'c', title: 'Cocina', repeat: 'weekly', planKind: 'semanal', date: '2026-11-23', done: false },
+    { id: 'd', title: 'Filtros del aire', repeat: 'yearly', planKind: 'temporada', date: '2027-05-15', done: false },
+  ];
+  assert.deepEqual(P.monthItems({ tasks }, '2026-11').map(x => [x.task.id, x.date, x.done]), [['b', '2026-11-10', true], ['a', '2026-11-25', false]]);
+  assert.deepEqual(P.monthItems({ tasks }, '2027-11').map(x => [x.task.id, x.date, x.done]), [['b', '2027-11-10', false], ['a', '2027-11-25', false]]);
+  assert.deepEqual(P.monthItems({ tasks }, '2027-05').map(x => x.task.id), ['d']);
+  assert.deepEqual(P.nextMonths('2026-11-18', 3), ['2026-11', '2026-12', '2027-01']);
+  assert.equal(P.isSeasonal(tasks[2]), false);
+});
+
+test('el día de lavadora recomienda secadora si llueve y tender fuera si no', () => {
+  const wash = { id: 'w', title: 'Poner una lavadora', date: TODAY, done: false, planKey: 'lavadora-1' };
+  const wet = P.recommendations({ tasks: [wash] }, [day(TODAY, { rain: 80, mm: 3 }), day(plus(TODAY, 1))], TODAY, { relDate });
+  assert.ok(wet.some(r => /Poner una lavadora.*secadora/.test(r.text) && r.tip === 'w'));
+  const dry = P.recommendations({ tasks: [wash] }, [day(TODAY), day(plus(TODAY, 1)), day(plus(TODAY, 2))], TODAY, { relDate });
+  assert.ok(dry.some(r => /Poner una lavadora.*tiéndela fuera/.test(r.text)));
+  const before = P.recommendations({ tasks: [wash] }, [day(TODAY), day(plus(TODAY, 1), { rain: 90 })], TODAY, { relDate });
+  assert.ok(before.some(r => /Llueve mañana .*Poner una lavadora.*tiende fuera/.test(r.text)));
+  assert.equal(before.filter(r => /lavadora/.test(r.text)).length, 1, 'un solo aviso de colada');
+});

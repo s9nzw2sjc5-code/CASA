@@ -1,4 +1,4 @@
-/* Plan de limpieza por zonas y recomendaciones según el tiempo.
+/* Plan de limpieza por zonas, consejos y recomendaciones según el tiempo.
    Funciones puras: no guardan nada ni contienen datos de ninguna casa concreta.
    Las zonas las marca cada hogar en la app y la ubicación se guarda en sus datos privados. */
 (function(root){
@@ -14,67 +14,120 @@
   ['cocina','Cocina'],['banoPrincipal','Baño principal'],['banoInvitados','Baño de invitados'],['aseo','Aseo o baño de la entrada'],
   ['dormitorio','Dormitorio principal'],['invitados','Cuarto de invitados'],['salon','Salón'],['estarSotano','Zona de estar del sótano'],
   ['patio','Patio'],['terraza','Terraza'],['gimnasio','Gimnasio'],['escaleras','Escaleras'],['taller','Taller'],
-  ['lavadero','Lavadero'],['secadora','Secadora'],['garaje','Garaje'],['almacen','Almacén'],
+  ['ropa','Colada: lavadoras y ropa limpia'],['lavadero','Lavadero'],['secadora','Secadora'],['garaje','Garaje'],['almacen','Almacén'],
   ['ventanas','Ventanas y persianas'],['radiadores','Radiadores y caldera'],['aire','Aire acondicionado'],['chimenea','Chimenea']
  ];
+
+ /* Consejos paso a paso. Se muestran en la tarea, en el rincón del día y en la biblioteca. */
+ const TIPS={
+  rieles:{title:'Rieles de las ventanas',steps:['Aspira primero la arena, los pelos y los bichitos con la boquilla estrecha de la aspiradora.','Rocía agua caliente con un chorrito de vinagre (o jabón neutro) y deja actuar 5 minutos para ablandar la suciedad pegada.','Frota las esquinas con un cepillo de dientes viejo. Para el fondo del riel, un palito o un cuchillo de untar envuelto en un paño.','Recoge con papel de cocina y seca bien: si queda húmedo, sale moho.','Si el alféizar es de mármol o piedra, nada de vinagre: solo agua y jabón neutro.','Truco: una vez limpio, pasa la aspiradora por los rieles cada semana al aspirar la habitación. Es un minuto y no se vuelve a acumular.']},
+  persianas:{title:'Cintas de las persianas',steps:['Baja la persiana del todo para que quede fuera la mayor parte de la cinta.','Sujeta la cinta tensa con una mano y pásale un paño de microfibra apenas húmedo con agua y jabón neutro.','Sube la persiana poco a poco y repite tramo a tramo hasta llegar arriba.','Sécala con un paño seco antes de que se enrolle.','No la empapes ni uses lejía: se enrolla dentro del cajón y la humedad la estropea.','Si está deshilachada o negra del todo, cambiarla es barato: mide el ancho antes de comprarla.']},
+  cristales:{title:'Cristales y marcos por dentro',steps:['Mejor en un día nublado o cuando no les dé el sol: con sol se secan antes de tiempo y quedan marcas.','Limpia primero los marcos con un paño húmedo y jabón neutro.','Para el cristal: agua templada con un chorrito de vinagre o alcohol, y un paño de microfibra.','Pasa en forma de «S» o «Z» de arriba abajo y seca enseguida con un segundo paño seco.']},
+  ventanasFuera:{title:'Ventanas por fuera',steps:['Solo con tiempo seco y sin viento. Con sol directo quedan marcas: mejor a primera hora o por la tarde.','No te asomes ni te subas a sillas junto a la ventana: usa una mopa o un limpiacristales con mango extensible.','Quita primero el polvo y las telarañas del marco con una escoba suave.','Después agua con un chorrito de vinagre y seca con una rasqueta de goma de arriba abajo.']},
+  radiadores:{title:'Purgar los radiadores',steps:['Hazlo con la calefacción apagada y los radiadores fríos.','Empieza por los de la planta más baja y sube hasta la más alta: el aire tiende a subir.','Pon un trapo y un vaso bajo la llave de purga (arriba, en un lateral) y ábrela un cuarto de vuelta con una moneda o la llave de purgar.','Primero sale aire (se oye un siseo). Cierra en cuanto salga solo agua.','Al terminar, mira la presión de la caldera en frío: suele ir entre 1 y 1,5 bar. Si ha bajado, rellena como indica el manual.','Señal de que hace falta: radiadores fríos por arriba y calientes por abajo, o ruido de agua.']},
+  radiadoresPolvo:{title:'Quitar el polvo de radiadores y rejillas',steps:['Con la calefacción apagada y fría.','Usa un cepillo largo de radiador o un plumero fino entre las placas.','Truco: pon una toalla húmeda debajo y sopla con el secador de pelo en frío entre las aletas; el polvo cae en la toalla.','Termina con un paño húmedo por fuera y por las rejillas.']},
+  caldera:{title:'Caldera',steps:['Mira el manómetro con la calefacción fría: suele ir entre 1 y 1,5 bar (compruébalo en el manual).','Si está por debajo, rellena con la llave de llenado poco a poco y ciérrala.','Pide la revisión periódica a un técnico autorizado, mejor antes del frío, cuando hay menos lista de espera.','Si la presión baja a menudo, avisa al técnico: puede haber una fuga.']},
+  secadoraFiltro:{title:'Filtro de la secadora',steps:['Saca el filtro de pelusa después de cada secado y quita la pelusa con la mano.','Una vez al mes, acláralo bajo el grifo y déjalo secar del todo antes de ponerlo.','Si es de condensación, vacía el depósito de agua cada vez (o conecta el desagüe).','Un filtro limpio seca antes, gasta menos y evita riesgo de incendio.']},
+  secadoraCondensador:{title:'Condensador y sensores de la secadora',steps:['Desenchufa la secadora.','Abre la tapa de abajo, saca el condensador (mira el manual) y acláralo con la ducha con agua templada por los dos lados.','No frotes las láminas con cepillos duros: se doblan.','Déjalo escurrir y secar antes de volver a ponerlo.','Limpia también las dos tiras metálicas del tambor (los sensores de humedad) con un paño con un poco de vinagre.']},
+  secadoraGoma:{title:'Goma y desagüe de la secadora',steps:['Limpia la goma de la puerta con un paño húmedo y revisa que no esté rota.','Comprueba que el tubo de desagüe no esté doblado ni obstruido.','Si es de evacuación, revisa que el tubo de salida al exterior no tenga pelusa acumulada.']},
+  lavadoraFiltro:{title:'Filtro y goma de la lavadora',steps:['Pon una toalla y una bandeja baja delante: va a salir agua.','Abre la tapa de abajo, saca el tubito de vaciado y deja salir el agua.','Desenrosca el filtro y quítale pelusas, monedas y horquillas. Acláralo y enróscalo bien.','Limpia los pliegues de la goma de la puerta con un paño con agua y jabón y sécalos.','Deja la puerta y el cajetín del detergente abiertos después de cada lavado para que no huela.','Una vez al mes, un lavado en vacío a 60 °C con limpialavadoras.']},
+  lavar:{title:'Poner una lavadora',steps:['La noche anterior, separa la ropa: blanca, color y oscura, y toallas aparte.','Vacía los bolsillos y cierra cremalleras.','Programa el inicio diferido para que termine cuando estés en casa y la ropa no se quede húmeda dentro.','Mira la tarjeta del tiempo: si llueve, usa la secadora o tiende dentro junto a una ventana abierta.','Dos lavadoras entre semana evitan llegar al sábado con la cesta llena.']},
+  doblar:{title:'Doblar y guardar la ropa limpia',steps:['Dóblala en cuanto la recojas: se arruga menos y te ahorras plancha.','Haz un montón por persona y otro de ropa de casa (toallas, sábanas).','Guárdala en el momento: si se queda en una silla, se acumula.','Las camisetas, dobladas en vertical en el cajón: se ve todo de un vistazo.']},
+  campana:{title:'Filtros de la campana',steps:['Los filtros metálicos van en el lavavajillas, solos y a temperatura alta.','Sin lavavajillas: déjalos 15 minutos en agua muy caliente con lavavajillas y dos cucharadas de bicarbonato, frota con un cepillo y aclara.','Sécalos bien antes de ponerlos.','Los filtros de carbón no se lavan: se cambian cuando lo indique el manual.','Limpia también la carcasa de la campana con desengrasante.']},
+  horno:{title:'Horno y microondas',steps:['Microondas: calienta 3–5 minutos un bol con agua y medio limón, espera 2 minutos sin abrir y pasa un paño: la suciedad sale sola.','Horno: con el horno frío, unta una pasta de bicarbonato y agua por dentro (no en la resistencia) y déjala toda la noche.','Al día siguiente retírala con un paño húmedo y una espátula de plástico.','Rocía un poco de vinagre para quitar los restos blancos y aclara.','Bandejas y rejillas, a remojo en agua caliente con lavavajillas.']},
+  nevera:{title:'Nevera por dentro',steps:['Hazlo antes de la compra, cuando está más vacía. Lo perecedero, a una nevera portátil o bolsa térmica.','Tira lo caducado y lo que lleve días abierto.','Saca bandejas y cajones. Los de cristal, deja que cojan temperatura ambiente antes de lavarlos con agua caliente para que no se rajen.','Limpia el interior con agua templada y bicarbonato (una cucharada por litro). No uses lejía.','Seca todo antes de volver a colocarlo. Un vasito con bicarbonato quita los olores.']},
+  juntas:{title:'Juntas, mampara y desagüe de la ducha',steps:['Juntas: pasta de bicarbonato y agua, deja 10 minutos y frota con un cepillo de dientes.','Si están negras de moho: producto antimoho con la ventana abierta y guantes.','Nunca mezcles lejía con vinagre, amoniaco ni otros limpiadores: desprende gases tóxicos.','Mampara: agua con vinagre y, a diario, una pasada de rasqueta después de ducharte.','Desagüe: quita los pelos con unas pinzas o una tira de plástico para desatascar y echa agua muy caliente.']},
+  bano:{title:'Limpieza semanal del baño',steps:['Echa primero el producto en el inodoro y déjalo actuar mientras limpias lo demás.','De lo más limpio a lo más sucio: espejo, lavabo, grifos, ducha y, al final, el inodoro.','Usa un paño distinto (o de otro color) para el inodoro.','Seca los grifos para que no queden marcas de cal.','Termina con el suelo, de dentro hacia la puerta.']},
+  cocina:{title:'Limpieza semanal de la cocina',steps:['Recoge y despeja la encimera antes de empezar.','Agua caliente con un poco de lavavajillas para la encimera y los frentes de los muebles; las asas, que se tocan mucho, con atención.','Vitrocerámica: rasqueta para lo pegado y limpiador específico.','Fregadero: bicarbonato y un poco de vinagre en el desagüe, y seca el grifo.','Saca la basura y pasa un paño por la tapa del cubo.']},
+  aire:{title:'Filtros del aire acondicionado',steps:['Desenchufa el aparato o baja su interruptor.','Abre la tapa frontal y saca los filtros (suelen deslizarse hacia abajo).','Aspíralos y después lávalos con agua tibia y jabón neutro.','Déjalos secar a la sombra del todo antes de ponerlos: si van húmedos, sale moho y huele.','Pasa un paño húmedo por la carcasa y las lamas.']},
+  aireExterior:{title:'Unidad exterior del aire acondicionado',steps:['Desconecta el aparato.','Quita hojas, plumas y suciedad alrededor de la unidad: necesita espacio para respirar.','Pasa un cepillo suave por las aletas en el sentido de las láminas, sin agua a presión porque se doblan.','Comprueba que el tubo de desagüe gotea libre y no está atascado.']},
+  chimenea:{title:'Chimenea',steps:['Una vez al año, antes de la temporada, deshollinado por un profesional.','Saca la ceniza siempre fría (mejor al día siguiente) y guárdala en un cubo metálico con tapa, nunca de plástico.','Cristal: moja papel de periódico, mójalo en la propia ceniza y frota; luego un paño húmedo.','Quema solo leña seca: la húmeda ensucia más el tiro.']},
+  canaletas:{title:'Canaletas y desagües antes de las lluvias',steps:['Con guantes y sin subirte a sitios inestables.','Retira hojas, tierra y nidos de las canaletas y de las rejillas de los desagües.','Echa un cubo de agua para comprobar que corre bien.','Revísalos también después de una tormenta o de días de viento.']},
+  terraza:{title:'Terraza',steps:['Barre en seco las hojas y la tierra hacia fuera de los desagües, no hacia ellos.','Vacía los platos de las macetas para que no críen mosquitos.','Friega con agua y jabón neutro; en día seco se seca enseguida.','Revisa que la rejilla del desagüe esté limpia.']},
+  burletes:{title:'Burletes de puertas y ventanas',steps:['Con la ventana cerrada, pasa la mano o una tira de papel por el borde: si notas aire, el burlete falla.','Limpia el marco y pega un burlete adhesivo nuevo (de espuma o goma) del grosor que necesites.','Para la parte de abajo de las puertas, un burlete bajo puerta.','Es de lo que más se nota en la factura de la calefacción.']},
+  colchones:{title:'Colchones',steps:['Quita la ropa de cama y ventila el colchón un rato.','Espolvorea bicarbonato, déjalo una hora y aspíralo con la boquilla de tapicería.','Dale la vuelta o gíralo de pies a cabeza para que se desgaste igual (si el fabricante lo permite).','Lava el protector de colchón.']},
+  humedades:{title:'Humedades y moho',steps:['Ventila 10 minutos cada día, también en invierno, sobre todo baños y dormitorios.','Revisa las esquinas del techo, detrás de los muebles y dentro de los armarios.','Si hay manchas de moho: producto antimoho o agua con un poco de lejía, con guantes y ventilando. Sin mezclar con otros productos.','Separa los muebles un par de dedos de las paredes frías.','Si vuelve una y otra vez en el mismo sitio, consulta con un profesional.']},
+  cubos:{title:'Cubos de basura',steps:['Vacíalos y friégalos con agua caliente y jabón o bicarbonato.','Déjalos secar al aire, mejor al sol, antes de poner bolsa nueva.','Una cucharada de bicarbonato en el fondo evita olores.']},
+  interruptores:{title:'Interruptores, pomos y mandos',steps:['Paño de microfibra con un poco de alcohol o desinfectante, nunca pulverizado directamente sobre el interruptor.','Repasa pomos de puertas, tiradores de armarios, mandos a distancia y barandillas.','Son lo que más se toca: con una vez al mes se nota mucho.']},
+  lamparas:{title:'Lámparas y ventiladores',steps:['Siempre apagados y con las bombillas frías.','Pantallas de tela: rodillo quitapelusas o aspiradora con cepillo.','Aspas del ventilador: mete cada aspa en una funda de almohada vieja y tira hacia ti: el polvo se queda dentro.']},
+  zocalos:{title:'Zócalos y marcos de puertas',steps:['Aspíralos con el cepillo de la aspiradora.','Paño húmedo con agua y jabón neutro y seca.','Truco: pasa después una toallita de suavizante seca; el polvo tarda más en volver a pegarse.']},
+  escaleras:{title:'Escaleras',steps:['Siempre de arriba abajo: barre o aspira escalón a escalón, también las esquinas.','Friega empezando por arriba y espera a que seque antes de usarlas.','Pasamanos y barandilla con un paño húmedo: es lo que más se toca.']},
+  cortinas:{title:'Lavar las cortinas',steps:['Mira la etiqueta: muchas van a la lavadora en programa delicado y en frío.','Quítales los ganchos o anillas antes de lavarlas.','Cuélgalas todavía un poco húmedas: se estiran solas y no hace falta planchar.','Aprovecha para limpiar la barra o el riel de la cortina.']},
+  sofa:{title:'Sofá y bajo los muebles',steps:['Aspira el sofá con la boquilla de tapicería, también entre los cojines.','Para el pelo, un guante de goma húmedo pasado por la tela lo arrastra.','Bajo los muebles, el accesorio plano de la aspiradora o una mopa.']},
+  sabanas:{title:'Dormitorio y sábanas',steps:['Al levantarte, abre la ventana 10 minutos y deja la cama destapada para que se airee.','Quita el polvo de arriba abajo: estantes, mesillas y, al final, el suelo.','Sábanas cada semana; las almohadas, a lavar o airear cada pocos meses.']},
+  gimnasio:{title:'Gimnasio',steps:['Abre las ventanas para ventilar: si se usa poco, coge olor a cerrado.','Quita el polvo de las máquinas y limpia agarres y asientos con un paño con un poco de alcohol.','Revisa que no haya humedad en el suelo ni en las esterillas.']}
+ };
+ // Para tareas propias (no del plan): el primer patrón que coincide con el título
+ const TIP_MATCH=[[/riel/,'rieles'],[/cinta.*persiana|persiana.*cinta/,'persianas'],[/purg.*radiador|radiador.*purg/,'radiadores'],[/radiador|rejilla/,'radiadoresPolvo'],[/caldera/,'caldera'],[/condensador/,'secadoraCondensador'],[/secadora/,'secadoraFiltro'],[/filtro.*lavadora|lavadora.*filtro/,'lavadoraFiltro'],[/lavadora|colada/,'lavar'],[/doblar|ropa limpia|guardar la ropa/,'doblar'],[/campana/,'campana'],[/horno|microondas/,'horno'],[/nevera|frigorifico/,'nevera'],[/junta|mampara|ducha/,'juntas'],[/por fuera/,'ventanasFuera'],[/cristal|ventana/,'cristales'],[/unidad exterior/,'aireExterior'],[/aire acondicionado|filtros? del aire/,'aire'],[/chimenea/,'chimenea'],[/canaleta|desague/,'canaletas'],[/terraza/,'terraza'],[/burlete/,'burletes'],[/colchon/,'colchones'],[/humedad|moho/,'humedades'],[/cubos? de (la )?basura/,'cubos'],[/interruptor|pomo/,'interruptores'],[/lampara|ventilador/,'lamparas'],[/zocalo/,'zocalos'],[/escalera/,'escaleras'],[/cortina/,'cortinas'],[/sofa/,'sofa'],[/bano|aseo|inodoro/,'bano'],[/sabana|dormitorio/,'sabanas'],[/cocina|encimera/,'cocina'],[/gimnasio/,'gimnasio']];
 
  // kind: week = cada semana · fortnight = cada 2 semanas · month4 = cada 4 semanas (rincón que rota)
  //       every = cada N meses desde hoy · year = una vez al año, en su temporada
  // day: 0 = lunes … 6 = domingo · week: semana del ciclo en la que toca · zone null = cualquier casa
  const ITEMS=[
-  {key:'cocina-semanal',zone:'cocina',kind:'week',day:0,title:'Cocina: encimera, frente de los muebles y fregadero',notes:'10–15 minutos. Termina secando el grifo para que no queden marcas de cal.'},
-  {key:'bano-principal',zone:'banoPrincipal',kind:'week',day:1,title:'Baño principal: inodoro, lavabo, ducha y espejo',notes:'Deja actuar el producto en el inodoro mientras limpias el lavabo.'},
-  {key:'aseo-entrada',zone:'aseo',kind:'week',day:1,title:'Aseo de la entrada: repaso rápido',notes:'Lavabo, inodoro y espejo: 5 minutos.'},
-  {key:'dormitorio',zone:'dormitorio',kind:'week',day:2,title:'Dormitorio principal: polvo, ventilar y cambiar las sábanas',notes:'Ventila 10 minutos mientras quitas el polvo.'},
-  {key:'salon',zone:'salon',kind:'week',day:3,title:'Salón: aspirar el sofá y bajo los muebles'},
+  {key:'cocina-semanal',zone:'cocina',kind:'week',day:0,tip:'cocina',title:'Cocina: encimera, frente de los muebles y fregadero',notes:'10–15 minutos. Termina secando el grifo para que no queden marcas de cal.'},
+  {key:'bano-principal',zone:'banoPrincipal',kind:'week',day:1,tip:'bano',title:'Baño principal: inodoro, lavabo, ducha y espejo',notes:'Deja actuar el producto en el inodoro mientras limpias el lavabo.'},
+  {key:'aseo-entrada',zone:'aseo',kind:'week',day:1,tip:'bano',title:'Aseo de la entrada: repaso rápido',notes:'Lavabo, inodoro y espejo: 5 minutos.'},
+  {key:'dormitorio',zone:'dormitorio',kind:'week',day:2,tip:'sabanas',title:'Dormitorio principal: polvo, ventilar y cambiar las sábanas',notes:'Ventila 10 minutos mientras quitas el polvo.'},
+  {key:'salon',zone:'salon',kind:'week',day:3,tip:'sofa',title:'Salón: aspirar el sofá y bajo los muebles'},
   {key:'lavadero',zone:'lavadero',kind:'week',day:4,title:'Lavadero: limpiar la pila y el suelo'},
-  {key:'secadora-filtro',zone:'secadora',kind:'week',day:4,title:'Secadora: vaciar el filtro de pelusa y el depósito',notes:'Lo ideal es hacerlo después de cada secado: seca mejor, gasta menos y evita riesgo de incendio.'},
-  {key:'escaleras',zone:'escaleras',kind:'week',day:5,title:'Escaleras: barrer y fregar',notes:'De arriba abajo. El pasamanos, con un paño húmedo.'},
+  {key:'secadora-filtro',zone:'secadora',kind:'week',day:4,tip:'secadoraFiltro',title:'Secadora: vaciar el filtro de pelusa y el depósito',notes:'Lo ideal es hacerlo después de cada secado: seca mejor, gasta menos y evita riesgo de incendio.'},
+  {key:'escaleras',zone:'escaleras',kind:'week',day:5,tip:'escaleras',title:'Escaleras: barrer y fregar',notes:'De arriba abajo. El pasamanos, con un paño húmedo.'},
   {key:'repaso-semana',zone:null,kind:'week',day:6,title:'Repaso de la semana: mirar pendientes y reorganizar',notes:'5 minutos: en Tareas → Reorganizar pendientes, pasa lo atrasado a días con hueco.'},
+  // Colada entre semana: dos lavadoras y dos días de doblar, para no llegar al fin de semana con la cesta llena
+  {key:'lavadora-1',zone:'ropa',kind:'week',day:0,tip:'lavar',title:'Poner una lavadora',notes:'Si llueve, usa la secadora o tiende dentro.'},
+  {key:'doblar-1',zone:'ropa',kind:'week',day:1,tip:'doblar',title:'Doblar y guardar la ropa limpia'},
+  {key:'lavadora-2',zone:'ropa',kind:'week',day:3,tip:'lavar',title:'Poner otra lavadora',notes:'Si llueve, usa la secadora o tiende dentro.'},
+  {key:'doblar-2',zone:'ropa',kind:'week',day:4,tip:'doblar',title:'Doblar y guardar la ropa limpia (2.ª vez)'},
 
-  {key:'bano-invitados',zone:'banoInvitados',kind:'fortnight',day:1,week:1,title:'Baño de invitados: repaso, abrir grifos y tirar de la cadena',notes:'Si casi no se usa, correr el agua evita que el sifón huela.'},
-  {key:'cuarto-invitados',zone:'invitados',kind:'fortnight',day:2,week:1,title:'Cuarto de invitados: ventilar y quitar el polvo'},
-  {key:'patio',zone:'patio',kind:'fortnight',day:3,week:0,title:'Patio: barrer y regar las plantas'},
-  {key:'estar-sotano',zone:'estarSotano',kind:'fortnight',day:3,week:1,title:'Zona de estar del sótano: polvo y aspirar'},
+  {key:'bano-invitados',zone:'banoInvitados',kind:'fortnight',day:1,week:1,tip:'bano',title:'Baño de invitados: repaso, abrir grifos y tirar de la cadena',notes:'Si casi no se usa, correr el agua evita que el sifón huela.'},
+  {key:'cuarto-invitados',zone:'invitados',kind:'fortnight',day:2,week:1,tip:'sabanas',title:'Cuarto de invitados: ventilar y quitar el polvo'},
+  {key:'patio',zone:'patio',kind:'fortnight',day:3,week:0,tip:'terraza',title:'Patio: barrer y regar las plantas'},
+  {key:'estar-sotano',zone:'estarSotano',kind:'fortnight',day:3,week:1,tip:'sofa',title:'Zona de estar del sótano: polvo y aspirar'},
   {key:'garaje',zone:'garaje',kind:'fortnight',day:4,week:1,title:'Garaje: barrer y ordenar'},
-  {key:'terraza',zone:'terraza',kind:'fortnight',day:5,week:0,title:'Terraza: barrer y revisar los desagües',notes:'Las hojas y la tierra atascan los desagües. Mejor con el suelo seco.'},
+  {key:'terraza',zone:'terraza',kind:'fortnight',day:5,week:0,tip:'terraza',title:'Terraza: barrer y revisar los desagües',notes:'Las hojas y la tierra atascan los desagües. Mejor con el suelo seco.'},
 
-  {key:'nevera',zone:'cocina',kind:'month4',day:0,week:0,title:'Nevera: vaciar y limpiar por dentro',notes:'Aprovecha antes de hacer la compra, cuando está más vacía.'},
-  {key:'juntas-bano',zone:'banoPrincipal',kind:'month4',day:1,week:0,title:'Baños: juntas, mampara y desagüe de la ducha'},
-  {key:'interruptores',zone:null,kind:'month4',day:2,week:0,title:'Interruptores, pomos y mandos: desinfectar'},
-  {key:'lamparas',zone:null,kind:'month4',day:3,week:0,title:'Lámparas y ventiladores: quitar el polvo'},
-  {key:'lavadora-filtro',zone:'lavadero',kind:'month4',day:4,week:0,title:'Lavadora: limpiar el filtro y la goma de la puerta'},
-  {key:'gimnasio',zone:'gimnasio',kind:'month4',day:5,week:0,title:'Gimnasio: ventilar, quitar el polvo y limpiar las máquinas'},
-  {key:'rieles',zone:'ventanas',kind:'month4',day:0,week:1,title:'Rieles de las ventanas: aspirar y pasar un paño',notes:'Primero aspira la arena con la boquilla estrecha. Después, un cepillo de dientes o un bastoncillo con agua y un poco de vinagre, y seca.'},
-  {key:'radiadores-polvo',zone:'radiadores',kind:'month4',day:3,week:1,title:'Radiadores y rejillas: quitar el polvo'},
+  {key:'nevera',zone:'cocina',kind:'month4',day:0,week:0,tip:'nevera',title:'Nevera: vaciar y limpiar por dentro',notes:'Aprovecha antes de hacer la compra, cuando está más vacía.'},
+  {key:'juntas-bano',zone:'banoPrincipal',kind:'month4',day:1,week:0,tip:'juntas',title:'Baños: juntas, mampara y desagüe de la ducha'},
+  {key:'interruptores',zone:null,kind:'month4',day:2,week:0,tip:'interruptores',title:'Interruptores, pomos y mandos: desinfectar'},
+  {key:'lamparas',zone:null,kind:'month4',day:3,week:0,tip:'lamparas',title:'Lámparas y ventiladores: quitar el polvo'},
+  {key:'lavadora-filtro',zone:'lavadero',kind:'month4',day:4,week:0,tip:'lavadoraFiltro',title:'Lavadora: limpiar el filtro y la goma de la puerta'},
+  {key:'gimnasio',zone:'gimnasio',kind:'month4',day:5,week:0,tip:'gimnasio',title:'Gimnasio: ventilar, quitar el polvo y limpiar las máquinas'},
+  {key:'rieles',zone:'ventanas',kind:'month4',day:0,week:1,tip:'rieles',title:'Rieles de las ventanas: aspirar y pasar un paño',notes:'Primero aspira la arena con la boquilla estrecha. Después, un cepillo de dientes o un bastoncillo con agua y un poco de vinagre, y seca.'},
+  {key:'radiadores-polvo',zone:'radiadores',kind:'month4',day:3,week:1,tip:'radiadoresPolvo',title:'Radiadores y rejillas: quitar el polvo'},
   {key:'almacen',zone:'almacen',kind:'month4',day:4,week:1,title:'Almacén: ordenar y barrer'},
   {key:'taller',zone:'taller',kind:'month4',day:5,week:1,title:'Taller: ordenar y barrer'},
-  {key:'campana',zone:'cocina',kind:'month4',day:0,week:2,title:'Campana: lavar los filtros',notes:'En el lavavajillas o en agua caliente con desengrasante.'},
-  {key:'cintas-persianas',zone:'ventanas',kind:'month4',day:2,week:2,title:'Cintas de las persianas: pasar un paño',notes:'Paño apenas húmedo con jabón neutro. Sube y baja la persiana para llegar a toda la cinta. No la empapes.'},
-  {key:'zocalos',zone:null,kind:'month4',day:3,week:2,title:'Zócalos y marcos de las puertas'},
-  {key:'ventanas-fuera',zone:'ventanas',kind:'month4',day:5,week:2,title:'Ventanas por fuera',notes:'Solo en día seco y sin viento.'},
-  {key:'horno',zone:'cocina',kind:'month4',day:0,week:3,title:'Horno y microondas por dentro'},
-  {key:'cristales-dentro',zone:'ventanas',kind:'month4',day:2,week:3,title:'Cristales y marcos de las ventanas por dentro'},
-  {key:'cubos-basura',zone:null,kind:'month4',day:4,week:3,title:'Cubos de basura: lavar'},
+  {key:'campana',zone:'cocina',kind:'month4',day:0,week:2,tip:'campana',title:'Campana: lavar los filtros',notes:'En el lavavajillas o en agua caliente con desengrasante.'},
+  {key:'cintas-persianas',zone:'ventanas',kind:'month4',day:2,week:2,tip:'persianas',title:'Cintas de las persianas: pasar un paño',notes:'Paño apenas húmedo con jabón neutro. Sube y baja la persiana para llegar a toda la cinta. No la empapes.'},
+  {key:'zocalos',zone:null,kind:'month4',day:3,week:2,tip:'zocalos',title:'Zócalos y marcos de las puertas'},
+  {key:'ventanas-fuera',zone:'ventanas',kind:'month4',day:5,week:2,tip:'ventanasFuera',title:'Ventanas por fuera',notes:'Solo en día seco y sin viento.'},
+  {key:'horno',zone:'cocina',kind:'month4',day:0,week:3,tip:'horno',title:'Horno y microondas por dentro'},
+  {key:'cristales-dentro',zone:'ventanas',kind:'month4',day:2,week:3,tip:'cristales',title:'Cristales y marcos de las ventanas por dentro'},
+  {key:'cubos-basura',zone:null,kind:'month4',day:4,week:3,tip:'cubos',title:'Cubos de basura: lavar'},
 
-  {key:'secadora-condensador',zone:'secadora',kind:'every',every:3,offset:10,title:'Secadora: limpiar el condensador',notes:'Mira el manual: suele sacarse por la parte de abajo. Se aclara con agua y se deja secar antes de volver a ponerlo.'},
-  {key:'secadora-goma',zone:'secadora',kind:'every',every:6,offset:24,title:'Secadora: revisar la goma de la puerta y el tubo de desagüe'},
-  {key:'humedades',zone:null,kind:'every',every:3,offset:17,title:'Revisar humedades y moho en esquinas y armarios'},
-  {key:'colchones',zone:'dormitorio',kind:'every',every:3,offset:31,title:'Colchones: aspirar y darles la vuelta'},
+  {key:'secadora-condensador',zone:'secadora',kind:'every',every:3,offset:10,tip:'secadoraCondensador',title:'Secadora: limpiar el condensador',notes:'Mira el manual: suele sacarse por la parte de abajo. Se aclara con agua y se deja secar antes de volver a ponerlo.'},
+  {key:'secadora-goma',zone:'secadora',kind:'every',every:6,offset:24,tip:'secadoraGoma',title:'Secadora: revisar la goma de la puerta y el tubo de desagüe'},
+  {key:'humedades',zone:null,kind:'every',every:3,offset:17,tip:'humedades',title:'Revisar humedades y moho en esquinas y armarios'},
+  {key:'colchones',zone:'dormitorio',kind:'every',every:3,offset:31,tip:'colchones',title:'Colchones: aspirar y darles la vuelta'},
 
-  {key:'radiadores-purgar',zone:'radiadores',kind:'year',month:10,mday:15,window:[10,11],title:'Purgar los radiadores antes de encender la calefacción',notes:'Con la calefacción apagada y fría, abre la llave de purga con un trapo debajo hasta que salga agua sin aire. Después comprueba la presión de la caldera.'},
-  {key:'caldera',zone:'radiadores',kind:'year',month:10,mday:1,window:[9,11],title:'Caldera: comprobar la presión y pedir la revisión anual',notes:'La presión en frío suele ir entre 1 y 1,5 bar. Mira la de tu caldera en el manual.'},
-  {key:'chimenea',zone:'chimenea',kind:'year',month:9,mday:20,window:[9,11],title:'Chimenea: deshollinar y revisar el tiro',notes:'Antes de la primera lumbre del año. La ceniza, siempre fría y en un cubo metálico.'},
-  {key:'canaletas',zone:'terraza',kind:'year',month:10,mday:20,window:[10,11],title:'Terraza: limpiar canaletas y desagües antes de las lluvias'},
-  {key:'burletes',zone:'ventanas',kind:'year',month:11,mday:25,window:[11,12],title:'Revisar burletes de puertas y ventanas antes del frío'},
-  {key:'aire-invierno',zone:'aire',kind:'year',month:11,mday:5,window:[11,11],title:'Aire acondicionado: limpiar los filtros antes del invierno (si calienta con él)'},
-  {key:'cortinas',zone:'ventanas',kind:'year',month:3,mday:15,window:[3,4],title:'Lavar las cortinas'},
-  {key:'terraza-primavera',zone:'terraza',kind:'year',month:4,mday:10,window:[3,4],title:'Terraza: limpieza general tras el invierno'},
-  {key:'aire-exterior',zone:'aire',kind:'year',month:4,mday:25,window:[4,5],title:'Aire acondicionado: limpiar la unidad exterior'},
-  {key:'persianas-revision',zone:'ventanas',kind:'year',month:5,mday:5,window:[5,5],title:'Persianas y toldos: revisar antes del verano'},
-  {key:'aire-verano',zone:'aire',kind:'year',month:5,mday:15,window:[5,6],title:'Aire acondicionado: limpiar los filtros antes del verano',notes:'Desenchúfalo, saca los filtros, lávalos con agua tibia y déjalos secar a la sombra.'},
-  {key:'aire-mitad',zone:'aire',kind:'year',month:7,mday:20,window:[7,8],title:'Aire acondicionado: limpiar los filtros a mitad del verano'}
+  {key:'radiadores-purgar',zone:'radiadores',kind:'year',month:10,mday:15,window:[10,11],tip:'radiadores',title:'Purgar los radiadores antes de encender la calefacción',notes:'Con la calefacción apagada y fría, abre la llave de purga con un trapo debajo hasta que salga agua sin aire. Después comprueba la presión de la caldera.'},
+  {key:'caldera',zone:'radiadores',kind:'year',month:10,mday:1,window:[9,11],tip:'caldera',title:'Caldera: comprobar la presión y pedir la revisión anual',notes:'La presión en frío suele ir entre 1 y 1,5 bar. Mira la de tu caldera en el manual.'},
+  {key:'chimenea',zone:'chimenea',kind:'year',month:9,mday:20,window:[9,11],tip:'chimenea',title:'Chimenea: deshollinar y revisar el tiro',notes:'Antes de la primera lumbre del año. La ceniza, siempre fría y en un cubo metálico.'},
+  {key:'canaletas',zone:'terraza',kind:'year',month:10,mday:20,window:[10,11],tip:'canaletas',title:'Terraza: limpiar canaletas y desagües antes de las lluvias'},
+  {key:'burletes',zone:'ventanas',kind:'year',month:11,mday:25,window:[11,12],tip:'burletes',title:'Revisar burletes de puertas y ventanas antes del frío'},
+  {key:'aire-invierno',zone:'aire',kind:'year',month:11,mday:5,window:[11,11],tip:'aire',title:'Aire acondicionado: limpiar los filtros antes del invierno (si calienta con él)'},
+  {key:'cortinas',zone:'ventanas',kind:'year',month:3,mday:15,window:[3,4],tip:'cortinas',title:'Lavar las cortinas'},
+  {key:'terraza-primavera',zone:'terraza',kind:'year',month:4,mday:10,window:[3,4],tip:'terraza',title:'Terraza: limpieza general tras el invierno'},
+  {key:'aire-exterior',zone:'aire',kind:'year',month:4,mday:25,window:[4,5],tip:'aireExterior',title:'Aire acondicionado: limpiar la unidad exterior'},
+  {key:'persianas-revision',zone:'ventanas',kind:'year',month:5,mday:5,window:[5,5],tip:'persianas',title:'Persianas y toldos: revisar antes del verano'},
+  {key:'aire-verano',zone:'aire',kind:'year',month:5,mday:15,window:[5,6],tip:'aire',title:'Aire acondicionado: limpiar los filtros antes del verano',notes:'Desenchúfalo, saca los filtros, lávalos con agua tibia y déjalos secar a la sombra.'},
+  {key:'aire-mitad',zone:'aire',kind:'year',month:7,mday:20,window:[7,8],tip:'aire',title:'Aire acondicionado: limpiar los filtros a mitad del verano'}
  ];
+
+ // Consejo de una tarea: el de su plantilla o, si es una tarea propia, por su título
+ function tipFor(task){
+  const item=task&&task.planKey&&ITEMS.find(i=>i.key===task.planKey);if(item)return item.tip?{key:item.tip,...TIPS[item.tip]}:null;
+  const title=norm(task&&task.title),hit=TIP_MATCH.find(([re])=>re.test(title));return hit?{key:hit[1],...TIPS[hit[1]]}:null;
+ }
 
  // Primera fecha del ciclo a partir de hoy, alineada con el día de la semana y la semana del ciclo
  function cycleDate(today,day,week,period){let d=plus(plus(today,-weekday(today)),7*(week||0)+day);while(d<today)d=plus(d,7*period);return d}
@@ -106,6 +159,25 @@
   });
   return {tasks,skipped};
  }
+ // Zonas marcadas por defecto: las que se eligieron la última vez y las que se han añadido después
+ function defaultZones(saved){if(!saved||!Array.isArray(saved.chosen)||!Array.isArray(saved.known))return ZONES.map(z=>z[0]);const known=new Set(saved.known),chosen=new Set(saved.chosen);return ZONES.map(z=>z[0]).filter(id=>chosen.has(id)||!known.has(id))}
+
+ /* ---------- calendario de temporada ---------- */
+ const isSeasonal=t=>t.planKind==='temporada'||t.repeat==='yearly';
+ // Lo que toca en un mes (aaaa-mm): pendiente en su fecha o ya hecho ese mes
+ function monthItems(state,ym){
+  const out=[];
+  for(const t of state.tasks||[]){
+   if(!isSeasonal(t))continue;
+   const doneDay=t.done?t.doneAt:t.lastDone;
+   if(validDate(doneDay)&&doneDay.slice(0,7)===ym){out.push({task:t,date:doneDay,done:true});continue}
+   if(t.done||!validDate(t.date))continue;
+   if(t.date.slice(0,7)===ym){out.push({task:t,date:t.date,done:false});continue}
+   if(t.repeat==='yearly'&&t.date.slice(5,7)===ym.slice(5,7)&&ym>t.date.slice(0,7)){const d=ym+t.date.slice(7);if(validDate(d))out.push({task:t,date:d,done:false})}
+  }
+  return out.sort((a,b)=>a.date.localeCompare(b.date)||a.task.title.localeCompare(b.task.title,'es'));
+ }
+ function nextMonths(today,n){const y=Number(today.slice(0,4)),m=Number(today.slice(5,7))-1;return Array.from({length:n},(_,i)=>{const k=m+i;return (y+Math.floor(k/12))+'-'+pad(k%12+1)})}
 
  /* ---------- tiempo ---------- */
  const num=v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?null:Number(v);
@@ -114,47 +186,52 @@
  function sky(c){if(c===0)return['☀️','Despejado'];if(c===1||c===2)return['🌤️','Poco nuboso'];if(c===3)return['☁️','Nublado'];if(c===45||c===48)return['🌫️','Niebla'];if(c>=51&&c<=57)return['🌦️','Llovizna'];if(c>=61&&c<=67||c>=80&&c<=82)return['🌧️','Lluvia'];if(c>=71&&c<=77||c===85||c===86)return['🌨️','Nieve'];if(c>=95)return['⛈️','Tormenta'];return['🌡️','Previsión']}
  const OUTDOOR=/\b(tender|terraza|patio|por fuera|exterior|toldos?|canaletas?|jardin|balcon|fachada)\b/;
  const isOutdoor=t=>OUTDOOR.test(norm(t.title));
+ const isWash=t=>/\blavadora\b/.test(norm(t.title))&&/\bponer\b/.test(norm(t.title));
  const deg=v=>Math.round(v)+' °C';
  function findTask(state,key,re){const all=(state.tasks||[]).filter(t=>t.planKey===key||re.test(norm(t.title)));return all.find(t=>!t.done)||all[0]||null}
 
- // Recomendaciones del día: texto + acciones opcionales para mover una tarea a otra fecha
+ // Recomendaciones del día: texto, acciones opcionales para mover una tarea y, si hay, su consejo (tip = id de tarea)
  function recommendations(state,days,today,h){
   const fmt=d=>h.relDate(d).toLowerCase(),recs=[],tasks=(state.tasks||[]).filter(t=>!t.done&&validDate(t.date));
   const i0=days.findIndex(d=>d.date===today);if(i0<0)return recs;
   const d0=days[i0],soon=days.slice(i0,i0+3),wetDays=new Set(days.filter(isWet).map(d=>d.date)),nextDry=days.slice(i0+1).find(d=>!isWet(d));
   const used=new Set(),act=(t,date,label)=>{used.add(t.id);return {id:t.id,date,label}};
+  const wash=tasks.find(t=>t.date<=today&&isWash(t)),rainSoon=isWet(d0)?null:days.slice(i0+1,i0+3).find(isWet);
   if(isWet(d0)){
    recs.push({icon:'🌧️',text:`Hoy hay un ${d0.rain??0} % de probabilidad de lluvia: no tiendas fuera. Usa la secadora y vacía el filtro al terminar.`,actions:[]});
+   if(wash)recs.push({icon:'🧺',text:`Hoy toca «${wash.title}» y llueve: sécala en la secadora o tiéndela dentro, junto a una ventana abierta.`,actions:[],tip:wash.id});
    for(const t of tasks.filter(t=>t.date<=today&&isOutdoor(t)).sort(byDate).slice(0,3))recs.push({icon:'↪️',text:`«${t.title}» mejor en un día seco.`,actions:nextDry?[act(t,nextDry.date,'Pasar a '+fmt(nextDry.date))]:[]});
   }else{
-   const rainSoon=days.slice(i0+1,i0+3).find(isWet);
    if(rainSoon){
-    recs.push({icon:'🧺',text:`Llueve ${fmt(rainSoon.date)} (${rainSoon.rain??0} %): aprovecha hoy para tender fuera.`,actions:[]});
+    recs.push({icon:'🧺',text:`Llueve ${fmt(rainSoon.date)} (${rainSoon.rain??0} %): ${wash?`hoy toca «${wash.title}», así que tiende fuera en cuanto termine.`:'aprovecha hoy para tender fuera.'}`,actions:[],tip:wash?.id});
     for(const t of tasks.filter(t=>isOutdoor(t)&&t.date>today&&wetDays.has(t.date)).sort(byDate).slice(0,3))recs.push({icon:'☀️',text:`«${t.title}» cae en día de lluvia (${fmt(t.date)}): mejor hoy.`,actions:[act(t,today,'Hacer hoy')]});
-   }else if(d0.max!==null&&d0.max>=12&&d0.max<=30&&(d0.wind??0)<30)recs.push({icon:'🪟',text:'Buen día para ventanas por fuera, la terraza y tender la ropa.',actions:[]});
+   }else{
+    if(wash)recs.push({icon:'🧺',text:d0.max!==null&&d0.max<10?`Hoy toca «${wash.title}» y hace frío: mejor la secadora o tender dentro.`:`Hoy toca «${wash.title}» y no llueve: tiéndela fuera en cuanto termine.`,actions:[],tip:wash.id});
+    if(d0.max!==null&&d0.max>=12&&d0.max<=30&&(d0.wind??0)<30)recs.push({icon:'🪟',text:'Buen día para ventanas por fuera, la terraza y tender la ropa.',actions:[]});
+   }
   }
   const cold=soon.filter(d=>d.min!==null).sort((a,b)=>a.min-b.min)[0];
   if(cold&&(cold.min<=6||(cold.max!==null&&cold.max<=14))){
    const t=findTask(state,'radiadores-purgar',/purgar.*radiador/),purged=t&&(t.done||(t.lastDone&&t.lastDone>=plus(today,-150)));
    const when=`Entra el frío (mínima de ${deg(cold.min)} ${fmt(cold.date)})`;
    if(purged)recs.push({icon:'🔥',text:`${when}: radiadores purgados ✓. Comprueba que la caldera marca su presión habitual antes de encenderla.`,actions:[]});
-   else recs.push({icon:'🔥',text:`${when}: ¿has puesto ya la calefacción? Antes, purga los radiadores y revisa la presión de la caldera.`,actions:t&&!t.done&&t.date>today?[act(t,today,'Hacer hoy')]:[]});
+   else recs.push({icon:'🔥',text:`${when}: ¿has puesto ya la calefacción? Antes, purga los radiadores y revisa la presión de la caldera.`,actions:t&&!t.done&&t.date>today?[act(t,today,'Hacer hoy')]:[],tip:t?.id});
   }
   const frost=soon.find(d=>d.min!==null&&d.min<=0);
   if(frost)recs.push({icon:'❄️',text:`Riesgo de helada ${fmt(frost.date)} (${deg(frost.min)}): protege las plantas del patio y la terraza y no friegues fuera.`,actions:[]});
   const hot=soon.find(d=>d.max!==null&&d.max>=32);
-  if(hot){const t=findTask(state,'aire-verano',/filtros? del aire/),clean=t&&t.lastDone&&t.lastDone>=plus(today,-60);recs.push({icon:'🥵',text:`Calor ${fmt(hot.date)} (${deg(hot.max)}): ventila temprano y baja las persianas al mediodía.${clean?'':' ¿Están limpios los filtros del aire acondicionado?'}`,actions:t&&!clean&&!t.done&&t.date>today?[act(t,today,'Hacer hoy')]:[]})}
+  if(hot){const t=findTask(state,'aire-verano',/filtros? del aire/),clean=t&&t.lastDone&&t.lastDone>=plus(today,-60);recs.push({icon:'🥵',text:`Calor ${fmt(hot.date)} (${deg(hot.max)}): ventila temprano y baja las persianas al mediodía.${clean?'':' ¿Están limpios los filtros del aire acondicionado?'}`,actions:t&&!clean&&!t.done&&t.date>today?[act(t,today,'Hacer hoy')]:[],tip:clean?undefined:t?.id})}
   const windy=days.slice(i0,i0+2).find(d=>(d.wind??0)>=40);
   if(windy)recs.push({icon:'💨',text:`Viento fuerte ${fmt(windy.date)} (${Math.round(windy.wind)} km/h): recoge lo suelto de la terraza y no tiendas sábanas fuera.`,actions:[]});
   // Un «rincón» al día para que no se acumule la limpieza a fondo
   const corner=tasks.find(t=>t.planKind==='rincon'&&t.date===today);
-  if(corner)recs.push({icon:'✨',text:`Rincón de hoy: «${corner.title}».`,actions:[]});
+  if(corner)recs.push({icon:'✨',text:`Rincón de hoy: «${corner.title}».`,actions:[],tip:corner.id});
   else{
    const next=tasks.filter(t=>t.planKind==='rincon'&&t.date>today&&t.date<=plus(today,7)&&!used.has(t.id)&&!(isOutdoor(t)&&isWet(d0))).sort(byDate)[0];
-   if(next)recs.push({icon:'✨',text:isWet(d0)?`Día de interior: puedes adelantar «${next.title}» (toca ${fmt(next.date)}).`:`Si te sobran 10 minutos: «${next.title}» (toca ${fmt(next.date)}).`,actions:[act(next,today,'Hacer hoy')]});
+   if(next)recs.push({icon:'✨',text:isWet(d0)?`Día de interior: puedes adelantar «${next.title}» (toca ${fmt(next.date)}).`:`Si te sobran 10 minutos: «${next.title}» (toca ${fmt(next.date)}).`,actions:[act(next,today,'Hacer hoy')],tip:next.id});
   }
   return recs.slice(0,7);
  }
 
- const api={norm,ZONES,ITEMS,buildPlan,forecastDays,isWet,isOutdoor,sky,recommendations};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
+ const api={norm,ZONES,ITEMS,TIPS,tipFor,buildPlan,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

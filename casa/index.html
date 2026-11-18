@@ -198,6 +198,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .reorg{margin-top:4px}.reorg>.hint{margin:8px 0 0}.reorg-bar{display:grid;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin:10px 0 6px}.reorg-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.84rem;color:var(--muted)}.reorg-top .link{min-height:40px}.reorg-actions{display:flex;gap:8px;flex-wrap:wrap}.reorg-actions .btn{flex:1 1 130px}.reorg-date{display:flex;gap:8px;flex-wrap:wrap}.reorg-date .field{flex:1 1 150px;width:auto;min-width:0}.reorg-date .btn{flex:1 1 150px}.reorg-bar .btn:disabled{opacity:.45}.reorg-row .row-main{cursor:pointer}.reorg-row.is-picked{box-shadow:inset 3px 0 0 var(--c-tareas)}
 /* Tiempo y recomendaciones · plan de limpieza */
 .wx{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin:12px 0}.wx-h{display:flex;justify-content:space-between;align-items:center;gap:10px}.wx-h b{font-size:.95rem;min-width:0;overflow-wrap:anywhere}.wx-h .link{min-height:40px;flex:none}.wx-days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0}.wx-day{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:12px;background:var(--bg);font-size:.8rem;text-align:center;min-width:0}.wx-day.wet{box-shadow:inset 0 0 0 1.5px var(--c-semana)}.wx-day span{font-size:1.25rem;line-height:1.3}.wx-day small{color:var(--muted);font-size:.66rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.wx-recs{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}.wx-recs li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;line-height:1.4}.wx-recs li>span{flex:none;font-size:1.1rem}.wx-recs li>div{min-width:0}.wx-recs p{margin:0;overflow-wrap:anywhere}.wx-recs .btn{margin-top:6px;padding:7px 12px;font-size:.8rem;min-height:36px}.wx-src{margin:10px 0 0;font-size:.72rem;color:var(--muted)}.wx-src a{color:inherit}.wx-results{display:grid;gap:8px;margin-top:10px}.wx-pick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left;min-height:48px}.wx-pick small{color:var(--muted)}.plan-count{font-weight:600;margin-top:12px}
+/* Consejos y calendario de temporada */
+.tipbtn{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:1rem;background:var(--accent-soft,color-mix(in srgb,var(--accent) 14%,transparent))}.tip-steps{margin:8px 0 4px;padding-left:22px;display:grid;gap:8px;font-size:.9rem;line-height:1.45}.tip-steps li{overflow-wrap:anywhere}.tipbox{margin:14px 0 4px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}.tipbox summary{font-weight:600;font-size:.88rem;cursor:pointer;min-height:28px}.tips-lib details{border-bottom:1px solid var(--line);padding:4px 0}.tips-lib summary{font-weight:600;font-size:.92rem;min-height:44px;display:flex;align-items:center;cursor:pointer}.season{margin-top:26px}.season-m{font-size:.86rem;margin:14px 0 6px;color:var(--muted);font-weight:700}.season-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.season-list li{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 6px 4px 4px}.season-list li>button:first-child{flex:1;display:flex;gap:10px;align-items:flex-start;text-align:left;padding:8px;min-height:44px;color:var(--ink);min-width:0}.season-list li>button:first-child>span:first-child{flex:none;color:var(--accent);font-weight:700}.season-list b{display:block;font-size:.88rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}.season-list small{display:block;color:var(--muted);font-size:.74rem;margin-top:2px}.season-list li.is-done b{color:var(--muted);text-decoration:line-through}
 /* Hoy: diseño destacado */
 .hoy-hero{position:relative;overflow:hidden;border-radius:30px;padding:18px 20px 16px;color:#fff;background:linear-gradient(135deg,#FF6A2B 0%,#F0306F 55%,#7B3FF2 100%);box-shadow:0 14px 34px rgba(240,48,111,.30);margin-bottom:16px}
 .hoy-hero::before,.hoy-hero::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none}
@@ -673,26 +675,26 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=104"></script>
-<script src="sync.js?v=104"></script>
-<script src="receipts.js?v=104"></script>
-<script src="receipt-image.js?v=104"></script>
-<script src="receipt-layout.js?v=104"></script>
-<script src="receipt-ocr.js?v=104"></script>
-<script src="product-photo.js?v=104"></script>
-<script src="product-photo-ui.js?v=104"></script>
-<script src="shopping-recommendations.js?v=104"></script>
-<script src="household-insights.js?v=104"></script>
-<script src="document-files.js?v=104"></script>
-<script src="document-photo.js?v=104"></script>
-<script src="cleaning-links.js?v=104"></script>
-<script src="home-model.js?v=104"></script>
-<script src="cocina.js?v=104"></script>
-<script src="home-ui.js?v=104"></script>
-<script src="household-ui.js?v=104"></script>
-<script src="receipt-extras.js?v=104"></script>
-<script src="house-plan.js?v=104"></script>
-<script src="house-plan-ui.js?v=104"></script>
+<script src="push.js?v=105"></script>
+<script src="sync.js?v=105"></script>
+<script src="receipts.js?v=105"></script>
+<script src="receipt-image.js?v=105"></script>
+<script src="receipt-layout.js?v=105"></script>
+<script src="receipt-ocr.js?v=105"></script>
+<script src="product-photo.js?v=105"></script>
+<script src="product-photo-ui.js?v=105"></script>
+<script src="shopping-recommendations.js?v=105"></script>
+<script src="household-insights.js?v=105"></script>
+<script src="document-files.js?v=105"></script>
+<script src="document-photo.js?v=105"></script>
+<script src="cleaning-links.js?v=105"></script>
+<script src="home-model.js?v=105"></script>
+<script src="cocina.js?v=105"></script>
+<script src="home-ui.js?v=105"></script>
+<script src="household-ui.js?v=105"></script>
+<script src="receipt-extras.js?v=105"></script>
+<script src="house-plan.js?v=105"></script>
+<script src="house-plan-ui.js?v=105"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -747,7 +749,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=104;
+const APP_VERSION=105;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -930,7 +932,7 @@ function taskRow(t,occ){
   ].join('');
   return`<li class="row ${t.done?'is-done':''} ${preview?'ghost':''}">
     <button class="check round ${t.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleTask" data-id="${t.id}" aria-label="Completar ${esc(t.title)}"`}></button>
-    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${responseButton('task',t,preview)}${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
+    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${!preview&&CasaHousePlan.tipFor(t)?`<button class="tipbtn" data-act="taskTip" data-id="${t.id}" aria-label="Cómo hacer ${esc(t.title)}">💡</button>`:''}${responseButton('task',t,preview)}${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
 }
 function eventRow(e,occ,label){
   if(typeof occ!=='string')occ=undefined;
@@ -1058,7 +1060,7 @@ function vTareas(){
   h+=`<div class="chips home-task-modes"><button class="chip on" data-act="taskMode" data-v="tasks">Tareas</button><button class="chip" data-act="taskMode" data-v="routines">🧹 Rutinas de limpieza</button></div>`;
   if(reorgSel===null)h+=`<div class="chips">${[['pend','Pendientes'],['done','Hechas'],['all','Todas']].map(([k,l])=>`<button class="chip ${ui.taskFilter===k?'on':''}" data-act="tFilter" data-v="${k}">${l}</button>`).join('')}</div>`;
   h+=`<div class="chips" style="margin-top:6px"><button class="chip ${ui.personFilter==='all'?'on':''}" data-act="pFilter" data-v="all">Todos</button>${[...S.people,BOTH].map(p=>`<button class="chip ${ui.personFilter===p.id?'on':''}" data-act="pFilter" data-v="${p.id}">${esc(p.name)}</button>`).join('')}<button class="chip add" data-act="people">Personas</button></div>`;
-  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${reorgSel!==null?'on':''}" data-act="reorgStart">${reorgSel!==null?'Cerrar reorganización':'↕ Reorganizar pendientes'}</button>${reorgSel===null?'<button class="chip" data-act="housePlan">🧽 Plan de limpieza</button>':''}</div>`;
+  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${reorgSel!==null?'on':''}" data-act="reorgStart">${reorgSel!==null?'Cerrar reorganización':'↕ Reorganizar pendientes'}</button>${reorgSel===null?'<button class="chip" data-act="housePlan">🧽 Plan de limpieza</button><button class="chip" data-act="tipsLibrary">💡 Consejos</button>':''}</div>`;
   if(reorgSel!==null)return h+reorgPanel(pend);
   h+=houseWxCard();
   h+=`<div class="quick"><input class="field" id="qNoDate" placeholder="Añadir algo para tener en cuenta (sin fecha)" enterkeyhint="done"><button class="btn" data-act="quickNoDate">Añadir</button></div>`;
@@ -1068,7 +1070,7 @@ function vTareas(){
   const shown=groups.filter(g=>g[1].length);
   if(!shown.length)h+=`<div class="empty" style="margin-top:16px">${ui.taskFilter==='done'?'Todavía no has completado ninguna tarea.':'No hay tareas. Pulsa + para crear la primera.'}</div>`;
   shown.forEach(([n,a])=>{h+=`<h2>${n}</h2>`+ul(a.map(x=>taskRow(x)))});
-  return h;
+  return h+houseSeasonSection();
 }
 
 function stapleCard(s){
@@ -1112,7 +1114,8 @@ function maintenanceDone(id){
 
 function dayData(d,imp){
   return{
-    ts:imp?[]:S.tasks.filter(x=>occursOn(x,d)&&forPerson(x)),
+    // En la vista de mes solo entran las tareas de temporada (radiadores, aire acondicionado…)
+    ts:S.tasks.filter(x=>(!imp||CasaHousePlan.isSeasonal(x))&&occursOn(x,d)&&forPerson(x)),
     rs:[...S.reminders.filter(r=>(r.done?r.date===d:occursOn(r,d))&&!(imp&&isRep(r)&&r.kind!=='maintenance')&&!(r.kind==='maintenance'&&r.done)),...S.reminders.filter(r=>r.kind==='maintenance'&&(r.maintenanceLog||[]).includes(d)).map(r=>({...r,historyDate:d})),...homeCalendarItems(d)],
     ps:S.pet.filter(x=>petDue(x)===d),
     es:S.events.filter(e=>occursOn(e,d)&&forPerson(e))
@@ -1155,10 +1158,10 @@ function vMes(){
     const n=o.es.length+o.ts.length+o.rs.length+o.ps.length;
     h+=`<button class="mcell ${d===t?'today':''} ${d===ui.calDay?'sel':''}" data-act="calDay" data-v="${d}" aria-label="${parse(d).toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}: ${n} elemento${n===1?'':'s'}">${dd}<span class="dots">${dots.map(c=>`<i style="background:${c}"></i>`).join('')}</span></button>`;
   }
-  h+=`</div><div class="mlegend"><span><i style="background:var(--c-evento)"></i>Eventos</span><span><i style="background:var(--c-recordar)"></i>Recordatorios</span><span><i style="background:var(--c-ringo)"></i>Ringo</span></div><p class="hint">Se muestran los eventos, los recordatorios con fecha concreta, los mantenimientos, las rutinas de limpieza, garantías y documentos con fecha y los cuidados de Ringo. Las tareas están en su pestaña.</p>`;
+  h+=`</div><div class="mlegend"><span><i style="background:var(--c-evento)"></i>Eventos</span><span><i style="background:var(--c-recordar)"></i>Recordatorios</span><span><i style="background:var(--c-ringo)"></i>Ringo</span><span><i style="background:var(--c-tareas)"></i>Temporada</span></div><p class="hint">Se muestran los eventos, los recordatorios con fecha concreta, los mantenimientos, las tareas de temporada, las rutinas de limpieza, garantías y documentos con fecha y los cuidados de Ringo. El resto de tareas está en su pestaña.</p>`;
   const sd=parse(ui.calDay),rows=dayRows(ui.calDay,true);
   h+=`<section class="day ${ui.calDay===t?'is-today':''}"><div class="day-h"><b>${sd.toLocaleDateString('es-ES',{weekday:'long'})}</b><span>${sd.getDate()} de ${sd.toLocaleDateString('es-ES',{month:'long'})}</span><button class="link plus" data-act="newEvent" data-date="${ui.calDay}">+ Evento</button></div>${rows.length?ul(rows):`<div class="empty">Libre</div>`}</section>`;
-  return h+`<button class="btn sec home-entry" data-act="homeHub">🗂️ Electrodomésticos y documentos</button>`+maintenanceSection();
+  return h+houseMonthSection(mStart.slice(0,7))+`<button class="btn sec home-entry" data-act="homeHub">🗂️ Electrodomésticos y documentos</button>`+maintenanceSection();
 }
 
 function vRecordar(){
@@ -1550,6 +1553,7 @@ function taskSheet(t,date){
     <label for="f_r">Repetir</label><select class="field" id="f_r">${opt(Object.entries(REP),t.repeat||'none')}</select>
     <div id="f_cw" style="display:none;gap:6px;margin-top:8px;align-items:center"><span>Cada</span><input class="field" type="number" min="1" inputmode="numeric" id="f_ce" value="${t.every||''}" style="width:72px;flex:none"><select class="field" id="f_cu">${opt(Object.entries(UNITS),t.unit||'m')}</select></div>
     <div id="calcRep" class="summary" style="margin-top:10px;display:none"></div>
+    ${(tip=>tip?`<details class="tipbox"><summary>💡 Cómo hacerlo: ${esc(tip.title)}</summary>${houseTipSteps(tip)}</details>`:'')(CasaHousePlan.tipFor(t))}
     <label for="f_n">Notas</label><textarea class="field" id="f_n">${esc(t.notes)}</textarea>`,
   {onSave:ov=>{
     const title=val(ov,'f_t');if(!title){toast('Escribe el nombre de la tarea');return false}

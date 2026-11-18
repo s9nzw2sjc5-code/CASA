@@ -78,7 +78,8 @@ const { chromium } = require("playwright"),
 
     const sections = () =>
         p.evaluate(() =>
-          [...document.querySelectorAll("#app h2")].map((h) => ({
+          // Solo las secciones de tareas (no el calendario de temporada ni la tarjeta del tiempo)
+          [...document.querySelectorAll("#app h2")].filter((h) => !h.closest(".season, .wx")).map((h) => ({
             h: h.textContent.trim(),
             t: [...(h.nextElementSibling?.querySelectorAll(".row-title") || [])].map((x) => x.textContent.trim()),
           })),

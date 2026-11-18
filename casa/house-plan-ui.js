@@ -1,4 +1,4 @@
-/* Pestaña Tareas: plan de limpieza de la casa y tiempo con recomendaciones.
+/* Pestaña Tareas: plan de limpieza de la casa, consejos, calendario de temporada y tiempo con recomendaciones.
    La previsión viene de Open-Meteo (eltiempo.es no ofrece datos que la app pueda leer);
    la ubicación se guarda en los datos privados de la casa y la previsión, solo en este móvil. */
 const HOUSE_WX_CACHE='casa-weather-v1';
@@ -22,6 +22,7 @@ function houseWxRefresh(force){
   .finally(()=>{houseWx.busy=false;if(ui.view==='tareas'&&ui.taskMode!=='routines')render()});
 }
 const houseWxLink=place=>'https://www.eltiempo.es/'+(CasaHousePlan.norm(place.name).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'')+'.html';
+const houseTipButton=(id,label='💡 Cómo hacerlo')=>`<button class="btn sec" data-act="taskTip" data-id="${esc(id)}">${esc(label)}</button>`;
 function houseWxCard(){
  const place=houseWxPlace();
  if(!place)return`<section class="wx"><div class="wx-h"><b>🌦️ Tiempo y recomendaciones</b></div><p class="hint">Indica dónde está la casa para ver la previsión y qué conviene hacer cada día: no tender si va a llover, preparar la calefacción cuando llega el frío…</p><button class="btn sec" data-act="wxPlace">Añadir ubicación</button></section>`;
@@ -32,7 +33,7 @@ function houseWxCard(){
  else{
   h+=`<div class="wx-days">${days.map(d=>{const[ic,label]=CasaHousePlan.sky(d.code);return`<div class="wx-day${CasaHousePlan.isWet(d)?' wet':''}"><small>${d.date===t?'Hoy':esc(parse(d.date).toLocaleDateString('es-ES',{weekday:'short'}))}</small><span role="img" aria-label="${esc(label)}">${ic}</span><b>${temp(d.max)}</b><small>${temp(d.min)} · ${d.rain??0}%</small></div>`}).join('')}</div>`;
   const recs=CasaHousePlan.recommendations(S,c.days,t,{relDate});
-  if(recs.length)h+=`<ul class="wx-recs">${recs.map(r=>`<li><span aria-hidden="true">${r.icon}</span><div><p>${esc(r.text)}</p>${r.actions.map(a=>`<button class="btn sec" data-act="wxMove" data-id="${esc(a.id)}" data-date="${esc(a.date)}">${esc(a.label)}</button>`).join('')}</div></li>`).join('')}</ul>`;
+  if(recs.length)h+=`<ul class="wx-recs">${recs.map(r=>{const tipTask=r.tip&&S.tasks.find(x=>x.id===r.tip);return`<li><span aria-hidden="true">${r.icon}</span><div><p>${esc(r.text)}</p>${r.actions.map(a=>`<button class="btn sec" data-act="wxMove" data-id="${esc(a.id)}" data-date="${esc(a.date)}">${esc(a.label)}</button>`).join('')}${tipTask&&CasaHousePlan.tipFor(tipTask)?houseTipButton(tipTask.id):''}</div></li>`}).join('')}</ul>`;
   if(houseWx.error)h+=`<p class="hint">${esc(houseWx.error)}</p>`;
  }
  return h+`<p class="wx-src">Previsión de <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="${esc(houseWxLink(place))}" target="_blank" rel="noopener">Ver en eltiempo.es</a></p></section>`;
@@ -59,17 +60,49 @@ function houseWxPlaceSheet(){
  return ov;
 }
 function housePlanSheet(){
- const who=[...S.people.map(p=>[p.id,p.name]),[BOTH.id,BOTH.name],['alternar','Repartir entre personas por días']],existing=S.tasks.filter(t=>t.plan==='casa').length;
- const ov=sheet('Plan de limpieza de la casa',`<p class="hint">Crea tareas repetidas para que la casa se limpie poco a poco: algo breve cada día, un «rincón» que rota cada semana (rieles, cintas de las persianas, campana…) y los mantenimientos de cada temporada (radiadores, aire acondicionado, secadora, canaletas…). Después puedes editarlas o moverlas como cualquier tarea.</p>${existing?`<p class="hint">Ya tienes ${existing} tareas del plan: solo se añadirán las que falten.</p>`:''}<label>Zonas que tiene la casa</label><div class="home-checklist plan-zones">${CasaHousePlan.ZONES.map(([id,l])=>`<label><input type="checkbox" data-plan-zone="${id}" checked><span>${esc(l)}</span></label>`).join('')}</div><label for="planWho">Responsable</label><select class="field" id="planWho">${opt(who,S.people[0]?.id||'yo')}</select><p class="plan-count" data-plan-count role="status" aria-live="polite"></p>`,{saveLabel:'Crear tareas',autoFocus:false,onSave:o=>{
-  const plan=build();if(!plan.tasks.length){toast('No hay tareas nuevas que crear');return false}
+ const who=[...S.people.map(p=>[p.id,p.name]),[BOTH.id,BOTH.name],['alternar','Repartir entre personas por días']],existing=S.tasks.filter(t=>t.plan==='casa').length,on=new Set(CasaHousePlan.defaultZones(S.cook?.housePlanZones));
+ const ov=sheet('Plan de limpieza de la casa',`<p class="hint">Crea tareas repetidas para que la casa se limpie poco a poco: algo breve cada día, dos lavadoras y dos días de doblar ropa entre semana, un «rincón» que rota cada semana (rieles, cintas de las persianas, campana…) y los mantenimientos de cada temporada (radiadores, aire acondicionado, secadora, canaletas…). Cada una trae su consejo 💡. Después puedes editarlas o moverlas como cualquier tarea.</p>${existing?`<p class="hint">Ya tienes ${existing} tareas del plan: solo se añadirán las que falten.</p>`:''}<label>Zonas que tiene la casa</label><div class="home-checklist plan-zones">${CasaHousePlan.ZONES.map(([id,l])=>`<label><input type="checkbox" data-plan-zone="${id}" ${on.has(id)?'checked':''}><span>${esc(l)}</span></label>`).join('')}</div><label for="planWho">Responsable</label><select class="field" id="planWho">${opt(who,S.people[0]?.id||'yo')}</select><p class="plan-count" data-plan-count role="status" aria-live="polite"></p>`,{saveLabel:'Crear tareas',autoFocus:false,onSave:o=>{
+  const plan=build(),zones=checked();
+  // Recuerda las zonas para que, al volver a abrir el plan, solo se propongan las nuevas
+  S.cook={...(S.cook||{}),housePlanZones:{chosen:zones,known:CasaHousePlan.ZONES.map(z=>z[0])}};
+  if(!plan.tasks.length){save();toast('No hay tareas nuevas que crear');return}
   S.tasks.push(...plan.tasks);save();toastUndo(plan.tasks.length+' tareas del plan creadas',6000);
  }});
- function build(){return CasaHousePlan.buildPlan(S,{zones:[...ov.querySelectorAll('[data-plan-zone]:checked')].map(x=>x.dataset.planZone),who:val(ov,'planWho'),people:S.people.map(p=>p.id),today:today(),uid})}
+ const checked=()=>[...ov.querySelectorAll('[data-plan-zone]:checked')].map(x=>x.dataset.planZone);
+ function build(){return CasaHousePlan.buildPlan(S,{zones:checked(),who:val(ov,'planWho'),people:S.people.map(p=>p.id),today:today(),uid})}
  function draw(){const p=build(),n=k=>p.tasks.filter(t=>t.planKind===k).length;ov.querySelector('[data-plan-count]').textContent=p.tasks.length?`Se crearán ${p.tasks.length} tareas: ${n('semanal')} de cada semana, ${n('rincon')} rincones que rotan y ${n('temporada')} de temporada.`:'No hay tareas nuevas que crear con estas zonas.'}
  ov.addEventListener('change',draw);draw();return ov;
 }
+/* ---------- consejos ---------- */
+const houseTipSteps=tip=>`<ol class="tip-steps">${tip.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`;
+function houseTipSheet(task){const tip=CasaHousePlan.tipFor(task);if(!tip)return;const ov=sheet('💡 '+tip.title,`<p class="hint">${esc(task.title)}</p>${houseTipSteps(tip)}<button type="button" class="link" data-tips-all>Ver todos los consejos</button>`,{autoFocus:false});ov.querySelector('[data-s=cancel]').textContent='Cerrar';ov.querySelector('[data-tips-all]').onclick=()=>{ov.remove();houseTipsLibrary()};return ov}
+function houseTipsLibrary(){
+ const tips=Object.entries(CasaHousePlan.TIPS).sort((a,b)=>a[1].title.localeCompare(b[1].title,'es'));
+ const ov=sheet('💡 Consejos de limpieza',`<p class="hint">Cómo hacer cada tarea sin esfuerzo de más. Toca una para verla.</p><div class="tips-lib">${tips.map(([k,tip])=>`<details data-tip="${esc(k)}"><summary>${esc(tip.title)}</summary>${houseTipSteps(tip)}</details>`).join('')}</div>`,{autoFocus:false});
+ ov.querySelector('[data-s=cancel]').textContent='Cerrar';return ov;
+}
+/* ---------- calendario de temporada ---------- */
+const houseMonthName=ym=>{const s=new Date(Number(ym.slice(0,4)),Number(ym.slice(5,7))-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});return s.charAt(0).toUpperCase()+s.slice(1)};
+function houseMonthList(ym){
+ const items=CasaHousePlan.monthItems(S,ym).filter(x=>forPerson(x.task));
+ return items.length?`<ul class="season-list">${items.map(x=>{const p=person(x.task.who);return`<li class="${x.done?'is-done':''}"><button type="button" data-act="editTask" data-id="${esc(x.task.id)}"><span>${x.done?'✓':'○'}</span><span><b>${esc(x.task.title)}</b><small>${x.done?'Hecho el '+esc(parse(x.date).toLocaleDateString('es-ES',{day:'numeric',month:'long'})):esc(relDate(x.date))}${p?' · '+esc(p.name):''}</small></span></button>${CasaHousePlan.tipFor(x.task)?`<button type="button" class="tipbtn" data-act="taskTip" data-id="${esc(x.task.id)}" aria-label="Cómo hacer ${esc(x.task.title)}">💡</button>`:''}</li>`}).join('')}</ul>`:'<p class="hint">Este mes no hay mantenimientos de temporada.</p>';
+}
+// Tareas: resumen por meses, como una guía del año (las tareas siguen en su sección por fecha)
+function houseSeasonSection(){
+ if(!S.tasks.some(CasaHousePlan.isSeasonal))return`<section class="season"><div class="head-row"><h2>🗓️ Calendario de temporada</h2></div><p class="hint">Crea el plan de limpieza para ver aquí lo que toca cada mes: radiadores antes del frío, filtros del aire antes del verano…</p><button class="btn sec" data-act="housePlan">🧽 Crear el plan de limpieza</button></section>`;
+ const months=CasaHousePlan.nextMonths(today(),ui.seasonAll?12:3);
+ return`<section class="season"><div class="head-row"><h2>🗓️ Calendario de temporada</h2><button class="link" data-act="seasonAll">${ui.seasonAll?'Ver menos':'Todo el año'}</button></div><p class="hint">Lo que toca cada mes. También aparece en el Calendario.</p>${months.map((ym,i)=>`<h3 class="season-m">${i===0?'Este mes · ':''}${esc(houseMonthName(ym))}</h3>${houseMonthList(ym)}`).join('')}</section>`;
+}
+// Calendario (vista de mes): lo que toca en el mes que se está viendo
+function houseMonthSection(ym){
+ if(!S.tasks.some(CasaHousePlan.isSeasonal))return'';
+ return`<section class="season"><div class="head-row"><h2>🗓️ En ${esc(houseMonthName(ym).toLowerCase())} toca</h2></div>${houseMonthList(ym)}</section>`;
+}
 const HOUSE_ACT={
  housePlan:()=>housePlanSheet(),
+ tipsLibrary:()=>houseTipsLibrary(),
+ taskTip:d=>{const t=S.tasks.find(x=>x.id===d.id);if(t)houseTipSheet(t)},
+ seasonAll:()=>{ui.seasonAll=!ui.seasonAll;render()},
  wxPlace:()=>houseWxPlaceSheet(),
  wxRetry:()=>{houseWx.failedAt=0;houseWxRefresh(true);render()},
  wxMove:d=>{const t=S.tasks.find(x=>x.id===d.id);if(!t||!shiftTasks([d.id],d.date))return;save();toastUndo(`«${t.title}» pasada a ${relDate(d.date).toLowerCase()}`)}
