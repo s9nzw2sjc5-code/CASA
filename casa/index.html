@@ -237,7 +237,7 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-org{display:grid;gap:8px}
 .task-sheet #calcRep{display:none!important}
 .ts-title{font-size:1.05rem;font-weight:600;margin-bottom:4px}
-.ts-grid{gap:8px 10px}.ts-grid label{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.ts-grid{gap:8px 10px}.ts-full{grid-column:1/-1}.ts-grid label{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
 .ts-clr{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;color:var(--muted);font-size:.85rem;padding:0}
 .ts-flags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 8px}.ts-flags .urgent-check{margin:0!important}.ts-flags .imp-check{margin-left:0}.ts-tip{width:44px;height:44px;font-size:1.2rem}
 
@@ -784,29 +784,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=146"></script>
-<script src="sync.js?v=146"></script>
-<script src="receipts.js?v=146"></script>
-<script src="receipt-image.js?v=146"></script>
-<script src="receipt-layout.js?v=146"></script>
-<script src="receipt-ocr.js?v=146"></script>
-<script src="product-photo.js?v=146"></script>
-<script src="product-photo-ui.js?v=146"></script>
-<script src="shopping-recommendations.js?v=146"></script>
-<script src="household-insights.js?v=146"></script>
-<script src="document-files.js?v=146"></script>
-<script src="document-photo.js?v=146"></script>
-<script src="cleaning-links.js?v=146"></script>
-<script src="home-model.js?v=146"></script>
-<script src="cocina.js?v=146"></script>
-<script src="cleaning-view.js?v=146"></script>
-<script src="home-ui.js?v=146"></script>
-<script src="household-ui.js?v=146"></script>
-<script src="receipt-extras.js?v=146"></script>
-<script src="house-plan.js?v=146"></script>
-<script src="house-plan-ui.js?v=146"></script>
-<script src="lidl-ui.js?v=146"></script>
-<script src="tasks-ui.js?v=146"></script>
+<script src="push.js?v=147"></script>
+<script src="sync.js?v=147"></script>
+<script src="receipts.js?v=147"></script>
+<script src="receipt-image.js?v=147"></script>
+<script src="receipt-layout.js?v=147"></script>
+<script src="receipt-ocr.js?v=147"></script>
+<script src="product-photo.js?v=147"></script>
+<script src="product-photo-ui.js?v=147"></script>
+<script src="shopping-recommendations.js?v=147"></script>
+<script src="household-insights.js?v=147"></script>
+<script src="document-files.js?v=147"></script>
+<script src="document-photo.js?v=147"></script>
+<script src="cleaning-links.js?v=147"></script>
+<script src="home-model.js?v=147"></script>
+<script src="cocina.js?v=147"></script>
+<script src="cleaning-view.js?v=147"></script>
+<script src="home-ui.js?v=147"></script>
+<script src="household-ui.js?v=147"></script>
+<script src="receipt-extras.js?v=147"></script>
+<script src="house-plan.js?v=147"></script>
+<script src="house-plan-ui.js?v=147"></script>
+<script src="lidl-ui.js?v=147"></script>
+<script src="tasks-ui.js?v=147"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -861,7 +861,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=146;
+const APP_VERSION=147;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1658,8 +1658,7 @@ function taskSheet(t,date,extra){
     <input class="field ts-title" id="f_t" value="${esc(t.title)}" placeholder="Nombre de la tarea" aria-label="Tarea">
     <div class="grid2 ts-grid"><div><label for="f_d">Fecha ${clr('f_d')}</label><input class="field" type="date" id="f_d" value="${t.date}"></div>
     <div><label for="f_h">Hora ${clr('f_h')}</label><input class="field" type="time" id="f_h" value="${t.time||''}"></div>
-    <div><label for="f_r">Repetir</label><select class="field" id="f_r">${opt(Object.entries(REP),t.repeat||'none')}</select></div>
-    <div><label for="f_w">Para</label><select class="field" id="f_w">${opt([...S.people,BOTH].map(p=>[p.id,p.name]),t.who||'yo')}</select></div></div>
+    <div class="ts-full"><label for="f_r">Repetir</label><select class="field" id="f_r">${opt(Object.entries(REP),t.repeat||'none')}</select></div></div>
     <div id="f_cw" style="display:none;gap:6px;margin-top:8px;align-items:center"><span>Cada</span><input class="field" type="number" min="1" inputmode="numeric" id="f_ce" value="${t.every||''}" style="width:72px;flex:none"><select class="field" id="f_cu">${opt(Object.entries(UNITS),t.unit||'m')}</select></div>
     <div id="calcRep" class="summary" style="display:none"></div>
     <div class="ts-flags"><label class="urgent-check" title="Urgente"><input type="checkbox" id="f_u" aria-label="Urgente" ${t.urgent?'checked':''}><span aria-hidden="true">❗</span></label>
@@ -1673,7 +1672,7 @@ function taskSheet(t,date,extra){
     const urgent=ov.querySelector('#f_u').checked;
     // Si sigue siendo urgente, no se puede posponer (quitar la fecha también sería posponerla)
     if(!n&&urgent&&t.urgent&&t.date&&(!d||CasaHousePlan.blocksPostpone(t,d,today()))){toast('Es urgente ❗: no se puede posponer. Desmarca «Urgente» si de verdad hay que cambiarla.');return false}
-    const o={title,date:d,time:d?val(ov,'f_h'):'',who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,...cus};
+    const o={title,date:d,time:d?val(ov,'f_h'):'',who:n?'ambos':(t.who||'ambos'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,...cus};
     if(n)S.tasks.push({id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o});else{const x=find(S.tasks,t.id);if(x)Object.assign(x,o)}
     save();toast(n?'Tarea creada':'Tarea guardada');
   },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});

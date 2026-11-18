@@ -98,7 +98,7 @@ const { chromium } = require("playwright"),
     await p.locator("#fab").click();
     await p.locator("#f_t").fill("Limpieza periódica de auditoría");
     await p.locator("#f_d").fill(await p.evaluate(() => addDays(today(), -2)));
-    await p.locator("#f_w").selectOption("juanma");
+    assert.equal(await p.locator("#f_w").count(), 0, "la ficha de la tarea ya no pregunta para quién");
     await p.locator("#f_r").selectOption("custom");
     await p.locator("#f_ce").fill("0");
     await ok();
