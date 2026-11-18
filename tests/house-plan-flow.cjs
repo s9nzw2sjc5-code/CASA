@@ -171,6 +171,17 @@ const P = require("../casa/house-plan.js");
     assert.equal(await p.evaluate((d) => S.tasks.find((t) => t.id === "nev").date === addDays(d, 1), nev), true, "lo movido a mano se respeta");
     await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.personFilter = "all"; ui.taskFilter = "pend"; render(); });
     assert.match(await p.locator("#app").innerText(), /⏱ 40 min/);
+    // Calendario de temporada: se puede marcar como hecho desde la propia lista
+    await p.evaluate(() => {
+      const t = today();
+      S.tasks.push({ id: "temp1", title: "Burletes de prueba", date: addDays(t, 2), repeat: "none", who: "yo", notes: "", done: false, plan: "casa", planKey: "burletes", planKind: "temporada" });
+      ui.view = "tareas"; ui.taskMode = "tasks"; ui.personFilter = "all"; render();
+    });
+    await p.locator('section.season [data-act=toggleTask][data-id="temp1"]').click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "temp1").done), true);
+    assert.match(await p.locator("section.season li.is-done", { hasText: "Burletes de prueba" }).innerText(), /Hecho el/);
+    await p.locator('section.season [data-act=toggleTask][data-id="temp1"]').click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "temp1").done), false, "y desmarcarlo");
     assert.deepEqual(errors, [], "errores de página");
     console.log("house-plan-flow: OK");
   } finally {
