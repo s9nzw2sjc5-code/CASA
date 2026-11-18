@@ -143,6 +143,17 @@ const fixture = {
     assert.equal(await p.locator('[data-act=pickList][data-v="lidl"]').count(), 0, "la lista Lidl también se oculta");
     assert.equal(await p.evaluate(() => S.lists.some((l) => l.id === "lidl") && S.items.some((i) => i.listId === "lidl")), true, "pero no se borra nada");
     assert.equal(await p.evaluate(() => curList().id), "super", "si estaba abierta la de Lidl, se ve la de Mercadona");
+    // Novedades: al tocar una categoría, la fila de categorías se queda donde estaba (no vuelve a la primera)
+    await p.evaluate(() => { ui.view = "compras"; ui.ckTab = "novedades"; ui.novCat = null; render(); });
+    const novChip = p.locator(".ck-subs .chip").last();
+    if (await p.locator(".ck-subs .chip").count() > 3) {
+      await novChip.scrollIntoViewIfNeeded();
+      const left = await p.evaluate(() => document.querySelector(".ck-subs").scrollLeft);
+      await novChip.click();
+      assert.ok(left > 0);
+      assert.equal(await p.evaluate(() => document.querySelector(".ck-subs").scrollLeft), left, "la fila sigue en su sitio");
+    }
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("lidl-flow: OK");
   } finally {
