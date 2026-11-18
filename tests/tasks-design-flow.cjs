@@ -143,6 +143,24 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => getComputedStyle(document.querySelector("#app .tomorrow-ic")).backgroundColor), "rgba(0, 0, 0, 0)", "⏭️ solo el icono");
     await p.emulateMedia({ colorScheme: "light" });
 
+    // Datos de versiones antiguas (fechas en otro formato, campos que faltan): ninguna vista falla
+    const odd = await p.evaluate(() => {
+      const t = today();
+      S.tasks.push({ id: "o1", title: "Fecha número", date: 1731900000000 }, { id: "o2", title: null, date: addDays(t, -2) }, { id: "o3", title: "Hecha sin fecha", done: true, doneAt: Date.now() }, { id: "o4", title: "Plan raro", plan: "casa", planKey: 5, date: t });
+      const bad = [];
+      ui.view = "tareas"; ui.taskMode = "tasks";
+      for (const tv of ["hoy", "zonas", "todas"]) { ui.taskView = tv; ui.taskZone = null; render(); if (document.querySelector(".tz-error")) bad.push(tv); }
+      for (const z of TASK_ZONES) { ui.taskZone = z.id; render(); if (!document.querySelector(".tz-page")) bad.push(z.id); }
+      ui.taskZone = null; S.tasks = S.tasks.filter((x) => !/^o\d$/.test(x.id)); render();
+      return bad;
+    });
+    assert.deepEqual(odd, [], "vistas que fallan con datos antiguos");
+    // Y si algo fallara, Tareas no se queda en blanco: enseña la vista completa y el detalle
+    await p.evaluate(() => { window._z = vTaskZonePage; vTaskZonePage = () => { throw Error("prueba"); }; ui.view = "tareas"; ui.taskZone = "banos"; render(); });
+    assert.match(await p.locator(".tz-error").innerText(), /Te enseño todas las tareas\. Detalle: prueba/);
+    assert.ok(await p.locator("#qNoDate").count());
+    await p.evaluate(() => { vTaskZonePage = window._z; ui.taskZone = null; render(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

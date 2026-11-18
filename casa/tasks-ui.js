@@ -37,10 +37,12 @@ function taskZone(t){
  const title=taskNorm(t&&t.title);
  return TASK_ZONES.find(z=>z.re&&z.re.test(title))||TASK_ZONES[TASK_ZONES.length-1];
 }
-const taskDoneDay=t=>t.done?t.doneAt:t.lastDone;
+// Solo fechas «AAAA-MM-DD» válidas: lo guardado en otros formatos (versiones antiguas) cuenta como sin fecha
+const tzDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(Date.parse(d+'T12:00:00Z'))?d:'';
+const taskDoneDay=t=>tzDate(t.done?t.doneAt:t.lastDone);
 const taskWeekday=d=>(new Date(d+'T12:00:00').getDay()+6)%7;
 function taskWeek(){const t=today(),start=addDays(t,-taskWeekday(t));return{t,start,end:addDays(start,6)}}
-const taskMine=()=>S.tasks.filter(forPerson);
+const taskMine=()=>(S.tasks||[]).filter(x=>x&&forPerson(x)).map(x=>x.date&&!tzDate(x.date)?{...x,date:''}:x);
 // «Mañana», «Sábado»… para lo de esta semana y la próxima; si no, la fecha
 const tzDay=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(today()+'T12:00:00'))/864e5);if(n===0)return'Hoy';if(n===1)return'Mañana';if(n>1&&n<7){const w=new Date(d+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long'});return w.charAt(0).toUpperCase()+w.slice(1)}return relDate(d)};
 const plural=(n,a,b)=>n+' '+(n===1?a:b);
@@ -111,6 +113,10 @@ function vTaskZonePage(id){
 function vTareas(){
  if(ui.taskMode==='routines')return vCleaning();
  if(reorgSel!==null)return vTareasAll();
+ // Si algo de la vista nueva fallara con los datos de casa, Tareas sigue funcionando con la vista completa de siempre
+ try{return vTareasNew()}catch(e){console.error(e);ui.taskZone=null;return`<h1>Limpieza</h1><p class="sub">Paso a paso, a tu ritmo</p><p class="hint tz-error">No se ha podido mostrar «${esc(ui.taskView==='zonas'?'Por zonas':'Para hoy')}». Te enseño todas las tareas. Detalle: ${esc(String(e&&e.message||e).slice(0,140))}</p>`+vTareasAll(true)}
+}
+function vTareasNew(){
  if(ui.taskZone)return vTaskZonePage(ui.taskZone);
  const view=['hoy','zonas','todas'].includes(ui.taskView)?ui.taskView:'hoy';
  const head=`<h1>Limpieza</h1><p class="sub">Paso a paso, a tu ritmo</p><div class="tz-seg" role="tablist">${[['hoy','Para hoy'],['zonas','Por zonas'],['todas','Todas']].map(([k,l])=>`<button role="tab" aria-selected="${view===k}" class="${view===k?'on':''}" data-act="taskView" data-v="${k}">${l}</button>`).join('')}</div>`;
