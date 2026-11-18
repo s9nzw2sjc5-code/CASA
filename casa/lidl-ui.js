@@ -34,7 +34,7 @@ function vCkLidl(){
  let list=q?all.filter(x=>norm(x.n+' '+(x.s||'')).includes(q)):all.filter(x=>lidlMatch(x,f));
  list=list.slice().sort(LIDL_PERIODS.has(f)&&!q?(a,b)=>(b.d||0)-(a.d||0)||a.n.localeCompare(b.n,'es'):(a,b)=>(a.s||'').localeCompare(b.s||'','es')||a.n.localeCompare(b.n,'es'));
  const updated=LIDL.at?relDate(LIDL.at.slice(0,10)).toLowerCase():'';
- let h=`<p class="hint">Ofertas y precios de las tiendas Lidl${LIDL.region?' de '+esc(LIDL.region):''}, con el precio Lidl Plus cuando es distinto${updated?` · actualizado ${esc(updated)}`:''}.</p>`;
+ let h=`<p class="hint">Ofertas y precios de las tiendas Lidl${LIDL.region?' de '+esc(LIDL.region):''}, con el precio Lidl Plus cuando es distinto${updated?` · actualizado ${esc(updated)}`:''}.</p><p class="hint lidl-only-offers">ℹ️ Solo salen los productos en oferta del folleto: Lidl no publica en su web el resto (arroz, pasta, legumbres de siempre…). Esos escríbelos en la lista Lidl y márcalos con ☆ para tenerlos en Habituales.</p>`;
  h+=`<input class="field" id="qLidl" type="search" autocomplete="off" placeholder="Buscar comida o limpieza (yogur, aceite, detergente…)" value="${esc(ui.lidlQ||'')}">`;
  h+=`<div class="chips lidl-filters">${LIDL_FILTERS.map(([k,l])=>`<button class="chip ${!q&&f===k?'on':''}" data-act="lidlFilter" data-v="${k}">${l} <small>${all.filter(x=>lidlMatch(x,k)).length}</small></button>`).join('')}</div>`;
  // En «Comida», botones para ver una sola sección

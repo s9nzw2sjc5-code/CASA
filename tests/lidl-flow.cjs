@@ -126,6 +126,8 @@ const fixture = {
     assert.deepEqual(chips.slice(0, 2), ["Mercadona", "Lidl"]);
     await p.evaluate(() => { S.lists = S.lists.filter((l) => l.id !== "lidl"); lidlList(); });
     assert.deepEqual(await p.evaluate(() => S.lists.map((l) => l.id).slice(0, 2)), ["super", "lidl"], "Lidl nueva va justo detrás");
+    await p.evaluate(() => { ui.ckTab = "lidl"; render(); });
+    assert.match(await p.locator(".lidl-only-offers").innerText(), /Solo salen los productos en oferta del folleto/);
     assert.deepEqual(errors, [], "errores de página");
     console.log("lidl-flow: OK");
   } finally {
