@@ -200,6 +200,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .wx{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin:12px 0}.wx-h{display:flex;justify-content:space-between;align-items:center;gap:10px}.wx-h b{font-size:.95rem;min-width:0;overflow-wrap:anywhere}.wx-h .link{min-height:40px;flex:none}.wx-days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0}.wx-day{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:12px;background:var(--bg);font-size:.8rem;text-align:center;min-width:0}.wx-day.wet{box-shadow:inset 0 0 0 1.5px var(--c-semana)}.wx-day span{font-size:1.25rem;line-height:1.3}.wx-day small{color:var(--muted);font-size:.66rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.wx-recs{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}.wx-recs li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;line-height:1.4}.wx-recs li>span{flex:none;font-size:1.1rem}.wx-recs li>div{min-width:0}.wx-recs p{margin:0;overflow-wrap:anywhere}.wx-recs .btn{margin-top:6px;padding:7px 12px;font-size:.8rem;min-height:36px}.wx-src{margin:10px 0 0;font-size:.72rem;color:var(--muted)}.wx-src a{color:inherit}.wx-results{display:grid;gap:8px;margin-top:10px}.wx-pick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left;min-height:48px}.wx-pick small{color:var(--muted)}.plan-count{font-weight:600;margin-top:12px}
 /* Consejos y calendario de temporada */
 .tipbtn{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:1rem;background:var(--accent-soft,color-mix(in srgb,var(--accent) 14%,transparent))}.tip-steps{margin:8px 0 4px;padding-left:22px;display:grid;gap:8px;font-size:.9rem;line-height:1.45}.tip-steps li{overflow-wrap:anywhere}.tipbox{margin:14px 0 4px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}.tipbox summary{font-weight:600;font-size:.88rem;cursor:pointer;min-height:28px}.tips-lib details{border-bottom:1px solid var(--line);padding:4px 0}.tips-lib summary{font-weight:600;font-size:.92rem;min-height:44px;display:flex;align-items:center;cursor:pointer}.season{margin-top:26px}.season-m{font-size:.86rem;margin:14px 0 6px;color:var(--muted);font-weight:700}.season-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.season-list li{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 6px 4px 4px}.season-list li>button:first-child{flex:1;display:flex;gap:10px;align-items:flex-start;text-align:left;padding:8px;min-height:44px;color:var(--ink);min-width:0}.season-list li>button:first-child>span:first-child{flex:none;color:var(--accent);font-weight:700}.season-list b{display:block;font-size:.88rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}.season-list small{display:block;color:var(--muted);font-size:.74rem;margin-top:2px}.season-list li.is-done b{color:var(--muted);text-decoration:line-through}
+/* Urgentes (❗) y unir tareas propias al plan */
+.row.is-urgent{box-shadow:inset 4px 0 0 var(--danger);background:color-mix(in srgb,var(--danger) 7%,var(--surface))}.urgent-tag{color:var(--danger);font-weight:700}.urgent-check{display:flex;gap:12px;align-items:flex-start;margin:16px 0 4px;padding:12px;border-radius:14px;border:1.5px solid color-mix(in srgb,var(--danger) 45%,var(--line));color:var(--ink)}.urgent-check input{width:22px;height:22px;flex:none;margin-top:2px;accent-color:var(--danger)}.urgent-check b{display:block;font-size:.9rem}.urgent-check small{display:block;color:var(--muted);font-size:.76rem;margin-top:3px;font-weight:400;line-height:1.4}.plan-zones small{display:block;color:var(--muted);font-size:.72rem;margin-top:3px}.plan-join{margin:12px 0;padding:12px;border-radius:14px;background:color-mix(in srgb,var(--accent) 10%,var(--surface))}.plan-join p{margin:0 0 10px;font-size:.88rem;line-height:1.4}.join-list{display:grid;gap:10px;margin-top:10px}.join-row{display:grid;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.join-row b{font-size:.9rem;overflow-wrap:anywhere}.join-row small{color:var(--muted);font-size:.74rem}.join-row .join-to{color:var(--accent);font-weight:600}.join-row select{margin-top:4px}.task-row{flex-wrap:wrap;row-gap:8px}.task-row>.row-main{flex:1 1 150px}.task-row>.row-main~.btn{margin-left:auto}.task-row>.row-main~.btn~.btn{margin-left:0}.tip-inline{display:inline-flex;align-items:center;min-height:26px;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 /* Hoy: diseño destacado */
 .hoy-hero{position:relative;overflow:hidden;border-radius:30px;padding:18px 20px 16px;color:#fff;background:linear-gradient(135deg,#FF6A2B 0%,#F0306F 55%,#7B3FF2 100%);box-shadow:0 14px 34px rgba(240,48,111,.30);margin-bottom:16px}
 .hoy-hero::before,.hoy-hero::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none}
@@ -675,26 +677,26 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=105"></script>
-<script src="sync.js?v=105"></script>
-<script src="receipts.js?v=105"></script>
-<script src="receipt-image.js?v=105"></script>
-<script src="receipt-layout.js?v=105"></script>
-<script src="receipt-ocr.js?v=105"></script>
-<script src="product-photo.js?v=105"></script>
-<script src="product-photo-ui.js?v=105"></script>
-<script src="shopping-recommendations.js?v=105"></script>
-<script src="household-insights.js?v=105"></script>
-<script src="document-files.js?v=105"></script>
-<script src="document-photo.js?v=105"></script>
-<script src="cleaning-links.js?v=105"></script>
-<script src="home-model.js?v=105"></script>
-<script src="cocina.js?v=105"></script>
-<script src="home-ui.js?v=105"></script>
-<script src="household-ui.js?v=105"></script>
-<script src="receipt-extras.js?v=105"></script>
-<script src="house-plan.js?v=105"></script>
-<script src="house-plan-ui.js?v=105"></script>
+<script src="push.js?v=106"></script>
+<script src="sync.js?v=106"></script>
+<script src="receipts.js?v=106"></script>
+<script src="receipt-image.js?v=106"></script>
+<script src="receipt-layout.js?v=106"></script>
+<script src="receipt-ocr.js?v=106"></script>
+<script src="product-photo.js?v=106"></script>
+<script src="product-photo-ui.js?v=106"></script>
+<script src="shopping-recommendations.js?v=106"></script>
+<script src="household-insights.js?v=106"></script>
+<script src="document-files.js?v=106"></script>
+<script src="document-photo.js?v=106"></script>
+<script src="cleaning-links.js?v=106"></script>
+<script src="home-model.js?v=106"></script>
+<script src="cocina.js?v=106"></script>
+<script src="home-ui.js?v=106"></script>
+<script src="household-ui.js?v=106"></script>
+<script src="receipt-extras.js?v=106"></script>
+<script src="house-plan.js?v=106"></script>
+<script src="house-plan-ui.js?v=106"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -749,7 +751,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=105;
+const APP_VERSION=106;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -925,14 +927,18 @@ function taskRow(t,occ){
   const p=person(t.who);
   const preview=occ&&occ!==t.date; // repetición futura
   const late=t.date&&t.date<today()&&!t.done;
+  const urgent=t.urgent&&!t.done&&!preview;
   const meta=[
+    urgent?'<span class="urgent-tag">❗ Urgente</span>':'',
     t.date&&!occ?`<span class="${late?'late':''}">${late?'Atrasada · ':''}${relDate(t.date)}${t.time?' a las '+t.time:''}</span>`:(t.time&&t.date?`<span>${t.time}</span>`:''),
     t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:'',
-    p?`<span class="who">${esc(p.name)}</span>`:''
+    p?`<span class="who">${esc(p.name)}</span>`:'',
+    // El consejo va en la línea de detalles para no quitarle ancho al título
+    !preview&&CasaHousePlan.tipFor(t)?`<button class="tip-inline" data-act="taskTip" data-id="${t.id}" aria-label="Cómo hacer ${esc(t.title)}">💡 Cómo</button>`:''
   ].join('');
-  return`<li class="row ${t.done?'is-done':''} ${preview?'ghost':''}">
+  return`<li class="row task-row ${t.done?'is-done':''} ${preview?'ghost':''} ${urgent?'is-urgent':''}">
     <button class="check round ${t.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleTask" data-id="${t.id}" aria-label="Completar ${esc(t.title)}"`}></button>
-    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${!preview&&CasaHousePlan.tipFor(t)?`<button class="tipbtn" data-act="taskTip" data-id="${t.id}" aria-label="Cómo hacer ${esc(t.title)}">💡</button>`:''}${responseButton('task',t,preview)}${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
+    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${responseButton('task',t,preview)}${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&!t.urgent&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
 }
 function eventRow(e,occ,label){
   if(typeof occ!=='string')occ=undefined;
@@ -974,7 +980,9 @@ function vHoy(){
   const tmRows=[...S.reminders.filter(r=>!r.done&&!isRep(r)&&r.date===tm).map(r=>[r.time||'99:99',remRow(r)]),
     ...S.events.filter(e=>e.repeat!=='daily'&&occursOn(e,tm)).map(e=>[e.time||'00:00',eventRow(e,tm,'Mañana')])]
     .sort((a,b)=>a[0].localeCompare(b[0])).map(x=>x[1]);
-  const impN=imp.length+tmRows.length;
+  // Lo urgente (❗) que toca hoy o está atrasado va arriba, en Importante, y no se repite más abajo
+  const urgentTasks=S.tasks.filter(x=>x.urgent&&!x.done&&x.date&&x.date<=t).sort((a,b)=>a.date.localeCompare(b.date)),urgentPets=S.pet.filter(x=>{const dd=petDue(x);return x.urgent&&dd&&dd<=t});
+  const impN=imp.length+tmRows.length+urgentTasks.length+urgentPets.length;
   const low=S.staples.filter(s=>stapleLow(s)&&!stapleInList(s));
   const pend=S.items.filter(i=>!i.done).length;
   const evs=S.events.filter(e=>occursOn(e,t)).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
@@ -989,18 +997,19 @@ function vHoy(){
     <div class="hoy-stats">${stat(now.length+late.length,'tareas','tareas')}${stat(evs.length,'eventos','semana')}${stat(rems.length,'avisos','recordar')}${stat(pend,'compras','compras')}</div>
     <p class="hoy-msg">${msg}</p></div>`;
   h+=noteBox();
-  if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${impN}</span></div>${ul([...imp.map(remRow),...tmRows])}</section>`;
+  if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${impN}</span></div>${ul([...urgentTasks.map(x=>taskRow(x)),...urgentPets.map(petRow),...imp.map(remRow),...tmRows])}</section>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;
   const sec=(ic,title,color,body,extra)=>`<section class="hsec" style="--sc:${color}"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">${ic}</span><h2>${title}</h2>${extra||''}</div>${body}</section>`;
   const nextEv=evs.find(e=>!e.time||(e.end||e.time)>=nowHM);
   if(nextEv)h+=`<button class="next-ev" data-act="editEvent" data-id="${nextEv.id}"><span class="ne-k">${nextEv.time?'Próximo evento · '+nextEv.time+(nextEv.end?'–'+nextEv.end:''):'Hoy · todo el día'}</span><b>${esc(nextEv.title)}</b>${nextEv.place?`<span>📍 ${esc(nextEv.place)}</span>`:''}</button>`;
   const otherEv=evs.filter(e=>e!==nextEv);
   if(otherEv.length)h+=sec('📅',nextEv?'Más eventos hoy':'Eventos de hoy','var(--c-evento)',ul(otherEv.map(e=>eventRow(e,t))));
-  if(late.length)h+=sec('⚠️','Atrasadas','var(--danger)',ul(late.map(x=>taskRow(x))),late.length>1?'<button class="link" data-act="allToToday">Pasar todas</button>':'');
-  h+=sec('✅','Para hoy','var(--c-tareas)',total?ul([...now,...doneToday].map(x=>taskRow(x,x.done?null:t))):`<div class="empty">Nada pendiente para hoy.</div>`);
+  const lateRows=late.filter(x=>!x.urgent),nowRows=[...now.filter(x=>!x.urgent),...doneToday];
+  if(lateRows.length)h+=sec('⚠️','Atrasadas','var(--danger)',ul(lateRows.map(x=>taskRow(x))),lateRows.length>1?'<button class="link" data-act="allToToday">Pasar todas</button>':'');
+  h+=sec('✅','Para hoy','var(--c-tareas)',nowRows.length?ul(nowRows.map(x=>taskRow(x,x.done?null:t))):`<div class="empty">${total?'Lo de hoy está arriba, en Importante.':'Nada pendiente para hoy.'}</div>`);
   h+=cleaningSection(true);
   if(repRems.length)h+=sec('⏰','Recordatorios','var(--c-recordar)',ul(repRems.map(remRow)));
-  const petSoon=S.pet.filter(x=>{const dd=petDue(x);return dd&&dd<=addDays(t,3)}).sort((a,b)=>petDue(a).localeCompare(petDue(b)));
+  const petSoon=S.pet.filter(x=>{const dd=petDue(x);return dd&&dd<=addDays(t,3)&&!(x.urgent&&dd<=t)}).sort((a,b)=>petDue(a).localeCompare(petDue(b)));
   if(petSoon.length)h+=sec('🐶','Ringo','var(--c-ringo)',ul(petSoon.map(petRow)),'<button class="link" data-act="tab" data-v="ringo">Ver todo</button>');
   const nd=S.tasks.filter(x=>!x.done&&!x.date),pnd=S.pet.filter(x=>!petDue(x));
   if(nd.length||pnd.length)h+=sec('📌','Para tener en cuenta','var(--c-hoy)',ul([...nd.slice(0,5).map(x=>taskRow(x)),...pnd.map(petRow)]),nd.length>5?`<button class="link" data-act="tab" data-v="tareas">Ver las ${nd.length}</button>`:'');
@@ -1013,14 +1022,15 @@ let reorgSel=null;
 const byDateTime=(a,b)=>(a.date||'9').localeCompare(b.date||'9')||(a.time||'99:99').localeCompare(b.time||'99:99');
 // Cada tarea pendiente cae en una sola sección: atrasadas, hoy, mañana, próximos días o sin fecha
 function taskSections(pend,t){
-  const tm=addDays(t,1),pm=addDays(t,2),by=f=>pend.filter(f).sort(byDateTime);
+  // Lo urgente (❗), primero dentro de cada sección
+  const tm=addDays(t,1),pm=addDays(t,2),by=f=>pend.filter(f).sort((a,b)=>(b.urgent?1:0)-(a.urgent?1:0)||byDateTime(a,b));
   return [['Atrasadas',by(x=>x.date&&x.date<t)],['Hoy',by(x=>x.date===t)],['Mañana',by(x=>x.date===tm)],['Próximos días',by(x=>x.date&&x.date>=pm)],['Sin fecha',by(x=>!x.date)]];
 }
 function reorgRow(t){
   const on=reorgSel.has(t.id),p=person(t.who),late=!!t.date&&t.date<today(),linked=(S.routines||[]).some(r=>r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(t.id));
   const when=t.date?`${late?'Atrasada · ':''}${relDate(t.date)}${t.time?' a las '+t.time:''}`:'Sin fecha';
   return`<li class="row reorg-row ${on?'is-picked':''}"><button class="check round ${on?'on':''}" data-act="reorgPick" data-id="${t.id}" role="checkbox" aria-checked="${on}" aria-label="Seleccionar ${esc(t.title)}"></button>
-    <div class="row-main" data-act="reorgPick" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta"><span class="${late?'late':''}">${esc(when)}</span>${p?`<span class="who">${esc(p.name)}</span>`:''}${t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:''}${linked?'<span>🧹 Rutina</span>':''}</div></div></li>`;
+    <div class="row-main" data-act="reorgPick" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${t.urgent?'<span class="urgent-tag">❗ No se puede posponer</span>':''}<span class="${late?'late':''}">${esc(when)}</span>${p?`<span class="who">${esc(p.name)}</span>`:''}${t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:''}${linked?'<span>🧹 Rutina</span>':''}</div></div></li>`;
 }
 function reorgPanel(pend){
   const rows=pend.slice().sort(byDateTime),picked=rows.filter(x=>reorgSel.has(x.id)).length,all=!!rows.length&&picked===rows.length,dis=picked?'':' disabled';
@@ -1035,20 +1045,23 @@ function reorgPanel(pend){
   </section>`;
 }
 // Un solo guardado para todo el lote: «Deshacer» revierte el cambio completo
-// Cambia la fecha de tareas pendientes (sin guardar) y devuelve cuántas se movieron
+// Cambia la fecha de tareas pendientes (sin guardar). Las urgentes (❗) no se posponen: solo se adelantan o pasan a hoy.
 function shiftTasks(ids,date){
-  const moved=S.tasks.filter(x=>ids.includes(x.id)&&!x.done);if(!moved.length)return 0;
+  const picked=S.tasks.filter(x=>ids.includes(x.id)&&!x.done),blocked=picked.filter(x=>CasaHousePlan.blocksPostpone(x,date,today())),moved=picked.filter(x=>!blocked.includes(x));
+  if(!moved.length)return{moved:0,blocked:blocked.length};
   const movedIds=new Set(moved.map(x=>x.id));
   moved.forEach(x=>{x.date=date});
   // Las rutinas vinculadas toman la fecha de su tarea pendiente más próxima (como en Rutinas de limpieza)
   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>movedIds.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)});
-  return moved.length;
+  return{moved:moved.length,blocked:blocked.length};
 }
 function moveTasks(ids,date){
-  const n=shiftTasks(ids,date);if(!n)return;
+  const{moved:n,blocked}=shiftTasks(ids,date);
+  const note=blocked?` · ${blocked} urgente${blocked===1?'':'s'} ❗ sin posponer`:'';
+  if(!n){if(blocked)toast(`${blocked===1?'Es urgente':'Son urgentes'} ❗: no se ${blocked===1?'puede':'pueden'} posponer`);return}
   reorgSel=new Set();
   save();
-  toastUndo(`${n} ${n===1?'tarea movida':'tareas movidas'} a ${relDate(date).toLowerCase()}`,6000);
+  toastUndo(`${n} ${n===1?'tarea movida':'tareas movidas'} a ${relDate(date).toLowerCase()}${note}`,6000);
 }
 function vTareas(){
   if(ui.taskMode==='routines')return vCleaning();
@@ -1203,8 +1216,8 @@ function petWhen(d){
 }
 function petRow(x){
   const d=petDue(x),k=PET_KINDS[x.kind]||PET_KINDS.otro;
-  const meta=[d?petWhen(d)+(x.time&&x.next?`<span>a las ${x.time}</span>`:''):'<span>Sin fecha: añádela cuando la tengas</span>',x.every>0?`<span>Cada ${x.every} ${x.every===1?{d:'día',w:'semana',m:'mes'}[x.unit]:UNITS[x.unit]}</span>`:''].join('');
-  return`<li class="row"><span style="font-size:1.5rem;flex:none" aria-hidden="true">${k[0]}</span>
+  const meta=[x.urgent?'<span class="urgent-tag">❗ Urgente</span>':'',d?petWhen(d)+(x.time&&x.next?`<span>a las ${x.time}</span>`:''):'<span>Sin fecha: añádela cuando la tengas</span>',x.every>0?`<span>Cada ${x.every} ${x.every===1?{d:'día',w:'semana',m:'mes'}[x.unit]:UNITS[x.unit]}</span>`:''].join('');
+  return`<li class="row ${x.urgent?'is-urgent':''}"><span style="font-size:1.5rem;flex:none" aria-hidden="true">${k[0]}</span>
     <div class="row-main" data-act="editPet" data-id="${x.id}"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${meta}</div></div>
     <button class="btn" style="padding:8px 12px;font-size:.88rem" data-act="petDone" data-id="${x.id}">Hecho</button></li>`;
 }
@@ -1304,14 +1317,17 @@ function petSheet(x,preset){
     <div class="grid2"><div><label for="f_nx">Próxima fecha (opcional)</label><input class="field" type="date" id="f_nx" value="${x.next||''}"><button type="button" class="link" style="margin-top:6px" data-clear="f_nx,f_nxh">Quitar fecha</button></div>
     <div><label for="f_nxh">Hora</label><input class="field" type="time" id="f_nxh" value="${x.time||''}"><button type="button" class="link" style="margin-top:6px" data-clear="f_nxh">Quitar hora</button></div></div>
     <p class="hint">Si la rellenas, manda sobre el cálculo (útil para una cita en el veterinario). Si no, se calcula con «Última vez» + «Repetir cada».</p>
+    <label class="urgent-check"><input type="checkbox" id="f_urg" ${x.urgent?'checked':''}><span><b>❗ Urgente: no se puede posponer</b><small>Sale arriba en Hoy cuando toca y no se puede retrasar su fecha.</small></span></label>
     <label for="f_n">Notas</label><textarea class="field" id="f_n" placeholder="Ej.: dosis, marca, clínica">${esc(x.notes)}</textarea>
     ${due?`<label>Exportar</label><a class="btn sec" style="display:block;text-align:center;text-decoration:none" href="${esc(gcalUrl({title:'Ringo: '+x.name,date:due,time:x.next?x.time||'':'',notes:x.notes,repeat:'none'}))}" target="_blank" rel="noopener">Añadir la próxima fecha a Google Calendar</a>`:''}
     ${hist?`<label>Historial</label>${ul([hist])}`:''}`,
   {onSave:ov=>{
     const name=val(ov,'f_t');if(!name){toast('Escribe el cuidado');return false}
     const ev=parseInt(val(ov,'f_e'),10);
-    const o={name,kind:val(ov,'f_k'),last:val(ov,'f_last'),every:ev>0?ev:0,unit:val(ov,'f_u'),next:val(ov,'f_nx'),time:val(ov,'f_nx')?val(ov,'f_nxh'):'',notes:val(ov,'f_n')};
+    const o={name,kind:val(ov,'f_k'),last:val(ov,'f_last'),every:ev>0?ev:0,unit:val(ov,'f_u'),next:val(ov,'f_nx'),time:val(ov,'f_nx')?val(ov,'f_nxh'):'',notes:val(ov,'f_n'),urgent:ov.querySelector('#f_urg').checked};
     if(o.last&&o.last>today()){toast('La última vez debe ser hoy o una fecha pasada. Para una cita, usa Próxima fecha.');return false}
+    // Un cuidado urgente no se puede retrasar: su próxima fecha no puede pasar de la que tenía (salvo marcarlo como hecho)
+    if(!n&&o.urgent&&x.urgent&&due){const nd=petDue(o);if(o.last===(x.last||'')&&(!nd||nd>(due>today()?due:today()))){toast('Es urgente ❗: no se puede posponer. Desmarca «Urgente» si de verdad hay que cambiarlo.');return false}}
     if(o.every>0&&!o.last&&!o.next)o.next=addInterval(today(),o.every,o.unit);
     if(n)S.pet.push({id:uid(),log:o.last?[o.last]:[],...o});else{const y=find(S.pet,x.id);if(y){Object.assign(y,o);if(o.last)y.log=[...new Set([...(y.log||[]),o.last])].sort()}}
     save();toast(n?'Cuidado añadido':'Cuidado guardado');
@@ -1554,12 +1570,16 @@ function taskSheet(t,date){
     <div id="f_cw" style="display:none;gap:6px;margin-top:8px;align-items:center"><span>Cada</span><input class="field" type="number" min="1" inputmode="numeric" id="f_ce" value="${t.every||''}" style="width:72px;flex:none"><select class="field" id="f_cu">${opt(Object.entries(UNITS),t.unit||'m')}</select></div>
     <div id="calcRep" class="summary" style="margin-top:10px;display:none"></div>
     ${(tip=>tip?`<details class="tipbox"><summary>💡 Cómo hacerlo: ${esc(tip.title)}</summary>${houseTipSteps(tip)}</details>`:'')(CasaHousePlan.tipFor(t))}
+    <label class="urgent-check"><input type="checkbox" id="f_u" ${t.urgent?'checked':''}><span><b>❗ Urgente: no se puede posponer</b><small>Sale arriba en Hoy y nunca se pasa a otro día sin hacerla. Para cosas que no se pueden olvidar, como la fuente de Ringo.</small></span></label>
     <label for="f_n">Notas</label><textarea class="field" id="f_n">${esc(t.notes)}</textarea>`,
   {onSave:ov=>{
     const title=val(ov,'f_t');if(!title){toast('Escribe el nombre de la tarea');return false}
     const rep=val(ov,'f_r');let d=val(ov,'f_d');if(rep!=='none'&&!d)d=today();
     const cus=customOf(ov,rep);if(cus===false)return false;
-    const o={title,date:d,time:d?val(ov,'f_h'):'',who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),...cus};
+    const urgent=ov.querySelector('#f_u').checked;
+    // Si sigue siendo urgente, no se puede posponer (quitar la fecha también sería posponerla)
+    if(!n&&urgent&&t.urgent&&t.date&&(!d||CasaHousePlan.blocksPostpone(t,d,today()))){toast('Es urgente ❗: no se puede posponer. Desmarca «Urgente» si de verdad hay que cambiarla.');return false}
+    const o={title,date:d,time:d?val(ov,'f_h'):'',who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),urgent,...cus};
     if(n)S.tasks.push({id:uid(),done:false,...o});else{const x=find(S.tasks,t.id);if(x)Object.assign(x,o)}
     save();toast(n?'Tarea creada':'Tarea guardada');
   },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')}});
@@ -1714,8 +1734,8 @@ function responseButton(kind,x,preview){
 }
 function answerNotice(d){
   const collection=d.kind==='task'?S.tasks:S.reminders,x=find(collection,d.id);if(!x||x.done)return;
-  const expected=x.date||'';
-  const ov=sheet('Responder al aviso',`<p>${esc(x.title)}</p><div class="ck-actions"><button class="btn" data-response="done">Hecho</button><button class="btn sec" data-response="tomorrow">Mañana</button></div><p class="hint">Mañana cambia la fecha de este pendiente.</p>`,{});
+  const expected=x.date||'',locked=d.kind==='task'&&x.urgent;
+  const ov=sheet('Responder al aviso',`<p>${esc(x.title)}</p><div class="ck-actions"><button class="btn" data-response="done">Hecho</button>${locked?'':'<button class="btn sec" data-response="tomorrow">Mañana</button>'}</div><p class="hint">${locked?'❗ Es urgente: no se puede posponer.':'Mañana cambia la fecha de este pendiente.'}</p>`,{});
   ov.addEventListener('click',e=>{
     const action=e.target.closest('[data-response]')?.dataset.response;if(!['done','tomorrow'].includes(action))return;
     const current=find(d.kind==='task'?S.tasks:S.reminders,d.id);
@@ -1726,6 +1746,8 @@ function answerNotice(d){
       ACT[d.kind==='task'?'toggleTask':'toggleRem']({id:current.id});return;
     }
     const next=addDays(today(),1);
+    // Una tarea urgente no se pasa a mañana (solo si estaba prevista más tarde, porque eso sería adelantarla)
+    if(d.kind==='task'&&current.urgent&&!(current.date&&current.date>next)){toast('Es urgente ❗: no se puede posponer');return}
     if(current.date===next){toast('Ya está previsto para mañana');return}
     current.noticePostponements=[...(current.noticePostponements||[]),{from:current.date||'',to:next,at:Date.now()}];
     current.date=next;save();toastUndo('Pospuesto hasta mañana');
@@ -1794,7 +1816,7 @@ const ACT={
   editHist:d=>{const e=petHistory().find(x=>x.id===d.id);if(e)histSheet(e)},
   newEvent:d=>eventSheet(null,d.date),
   editEvent:d=>eventSheet(find(S.events,d.id)),
-  toTomorrow:d=>{const t=find(S.tasks,d.id);if(!t)return;t.date=addDays(today(),1);save();toastUndo('Pasada a mañana')},
+  toTomorrow:d=>{const t=find(S.tasks,d.id);if(!t)return;if(CasaHousePlan.blocksPostpone(t,addDays(today(),1),today())){toast('Es urgente ❗: no se puede posponer');return}t.date=addDays(today(),1);save();toastUndo('Pasada a mañana')},
   toToday:d=>{const t=find(S.tasks,d.id);if(!t)return;t.date=today();save();toastUndo('Pasada a hoy')},
   allToToday:()=>{const t0=today();let n=0;S.tasks.forEach(t=>{if(!t.done&&t.date&&t.date<t0){t.date=t0;n++}});if(!n)return;save();toastUndo(n+' tareas pasadas a hoy')},
   backups:()=>backupsSheet(),

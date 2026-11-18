@@ -169,3 +169,86 @@ test('el día de lavadora recomienda secadora si llueve y tender fuera si no', (
   assert.ok(before.some(r => /Llueve mañana .*Poner una lavadora.*tiende fuera/.test(r.text)));
   assert.equal(before.filter(r => /lavadora/.test(r.text)).length, 1, 'un solo aviso de colada');
 });
+
+test('tus tareas programadas encuentran su sitio en el plan', () => {
+  const k = title => P.suggestKey({ title });
+  assert.equal(k('Revisar plantas'), 'patio');
+  assert.equal(k('Limpiar baño'), 'bano-principal');
+  assert.equal(k('Limpiar baño de invitados'), 'bano-invitados');
+  assert.equal(k('Cuarto: barrer'), 'dormitorio');
+  assert.equal(k('Entrada limpiar'), 'entrada');
+  assert.equal(k('Cocina'), 'cocina-semanal');
+  assert.equal(k('Limpiar la fuente de Ringo'), 'fuente-limpiar');
+  assert.equal(k('Cambiar filtro fuente Ringo'), 'fuente-filtro');
+  assert.equal(k('Barrer'), '', 'si no está claro, eliges tú');
+});
+
+test('unir una tarea propia: toma el día y la frecuencia del plan y conserva lo suyo', () => {
+  const state = {
+    tasks: [
+      { id: 'mia', title: 'Limpiar baño', date: plus(TODAY, 2), repeat: 'daily', who: 'juanma', time: '10:00', notes: 'Con guantes', lastDone: plus(TODAY, -1), done: false },
+      { id: 'mia2', title: 'Baño: espejo', date: plus(TODAY, 5), repeat: 'custom', every: 3, unit: 'd', who: 'yo', done: false },
+      { id: 'plan', title: 'Baño principal: inodoro, lavabo, ducha y espejo', planKey: 'bano-principal', plan: 'casa', planKind: 'semanal', date: plus(TODAY, 6), repeat: 'weekly', who: 'yo', done: false },
+      { id: 'fuente', title: 'Limpiar la fuente de Ringo', date: plus(TODAY, 1), repeat: 'weekly', who: 'yo', done: false },
+      { id: 'enrutina', title: 'Cocina: encimera, frente de los muebles y fregadero', planKey: 'cocina-semanal', plan: 'casa', date: TODAY, repeat: 'weekly', done: false },
+      { id: 'cocina', title: 'Cocina', date: plus(TODAY, 3), repeat: 'weekly', who: 'yo', done: false },
+    ],
+    routines: [{ id: 'r', linkedTasks: true, taskIds: ['enrutina'] }],
+  };
+  const res = P.integrate(state, [{ id: 'mia', key: 'bano-principal' }, { id: 'mia2', key: 'bano-principal' }, { id: 'fuente', key: 'fuente-limpiar' }, { id: 'cocina', key: 'cocina-semanal' }], TODAY);
+  const by = id => res.tasks.find(t => t.id === id);
+  assert.deepEqual(res.removed, ['plan'], 'la del plan se quita para no tener dos; la que está en una rutina, no');
+  assert.ok(by('enrutina'));
+  const mia = by('mia');
+  assert.deepEqual([mia.title, mia.who, mia.time, mia.notes, mia.lastDone], ['Limpiar baño', 'juanma', '10:00', 'Con guantes', plus(TODAY, -1)]);
+  assert.deepEqual([mia.date, mia.repeat, mia.planKey, mia.planJoined, 'every' in mia], [plus(TODAY, 6), 'weekly', 'bano-principal', true, false]);
+  assert.deepEqual([by('mia2').date, by('mia2').repeat, 'unit' in by('mia2')], [plus(TODAY, 6), 'weekly', false]);
+  assert.equal(by('fuente').urgent, true, 'la fuente de Ringo pasa a urgente');
+  assert.equal(wd(by('fuente').date), 6);
+  assert.equal(by('cocina').date, TODAY, 'toma la fecha de la del plan aunque no se pueda quitar');
+  const due = P.integrate({ tasks: [{ id: 'f', title: 'Limpiar la fuente de Ringo', date: TODAY, repeat: 'weekly', done: false }] }, [{ id: 'f', key: 'fuente-limpiar' }], TODAY).tasks[0];
+  assert.deepEqual([due.date, due.urgent, due.planKey], [TODAY, true, 'fuente-limpiar'], 'una urgente que ya toca no se aplaza al unirla');
+  assert.equal(P.integrate({ tasks: res.tasks }, [{ id: 'mia', key: 'salon' }], TODAY).changed.length, 0, 'una tarea ya unida no se vuelve a unir');
+  assert.deepEqual(P.joinCandidates({ tasks: res.tasks }).map(t => t.id), []);
+});
+
+test('el plan trae la fuente de Ringo como urgente y renombra la colada antigua', () => {
+  const { tasks } = P.buildPlan({ tasks: [] }, { zones: ['mascota', 'entrada'], who: 'yo', today: TODAY, uid });
+  assert.deepEqual(tasks.filter(t => t.urgent).map(t => t.planKey).sort(), ['fuente-filtro', 'fuente-limpiar']);
+  assert.ok(tasks.some(t => t.planKey === 'entrada'));
+  assert.equal(P.tipFor({ title: 'Limpiar la fuente de Ringo' }).key, 'fuente');
+  const old = { tasks: [{ id: 'a', title: 'Poner una lavadora', plan: 'casa', planKey: 'lavadora-1' }, { id: 'b', title: 'Mi colada', plan: 'casa', planKey: 'lavadora-2' }] };
+  assert.deepEqual(P.legacyTitles(old), [{ id: 'a', title: 'Día de colada: poner lavadoras' }]);
+  assert.equal(P.buildPlan(old, { zones: ['ropa'], who: 'yo', today: TODAY, uid }).tasks.some(t => t.planKey === 'lavadora-1'), false);
+});
+
+test('lo urgente no se puede posponer y sale primero', () => {
+  const t = { id: 'u', title: 'Fuente de Ringo: cambiar el filtro', urgent: true, date: TODAY, done: false };
+  assert.equal(P.blocksPostpone(t, plus(TODAY, 1), TODAY), true);
+  assert.equal(P.blocksPostpone(t, TODAY, TODAY), false);
+  assert.equal(P.blocksPostpone({ ...t, date: plus(TODAY, -3) }, TODAY, TODAY), false, 'pasar a hoy una atrasada sí');
+  assert.equal(P.blocksPostpone({ ...t, date: plus(TODAY, 5) }, plus(TODAY, 2), TODAY), false, 'adelantar sí');
+  assert.equal(P.blocksPostpone({ ...t, urgent: false }, plus(TODAY, 1), TODAY), false);
+  const out = { id: 'o', title: 'Terraza: barrer', urgent: true, date: TODAY, done: false };
+  const recs = P.recommendations({ tasks: [t, out] }, [day(TODAY, { rain: 90, mm: 5 }), day(plus(TODAY, 1))], TODAY, { relDate });
+  assert.equal(recs[0].icon, '❗');
+  assert.ok(!recs.some(r => r.actions.some(a => a.id === 'o')), 'no propone pasar lo urgente a otro día');
+});
+
+test('la colada se adapta a lo que hay en casa', () => {
+  const wash = { id: 'w', title: 'Día de colada: poner lavadoras', date: TODAY, done: false };
+  const L = { twoWashers: true, dryer: true, coveredLine: true, indoorLine: true };
+  const rec = (d, extra = []) => P.recommendations({ tasks: [wash, ...extra] }, d, TODAY, { relDate, laundry: L });
+  const wetCalm = rec([day(TODAY, { rain: 80, mm: 2, wind: 10 }), day(plus(TODAY, 1))]);
+  const w1 = wetCalm.find(r => r.tip === 'w').text;
+  assert.match(w1, /Pon las dos lavadoras a la vez/);
+  assert.match(w1, /tendedero cubierto sirve si no sopla viento/);
+  assert.match(w1, /tendedero de dentro/);
+  assert.match(wetCalm[0].text, /nada de tender al descubierto/);
+  assert.match(rec([day(TODAY, { rain: 80, mm: 2, wind: 45 }), day(plus(TODAY, 1))]).find(r => r.tip === 'w').text, /no uses el tendedero de fuera/);
+  assert.match(rec([day(TODAY), day(plus(TODAY, 1)), day(plus(TODAY, 2))]).find(r => r.tip === 'w').text, /tendedero de fuera .* al aire se seca antes/);
+  // Con tendedero cubierto y poco viento, tender no se manda a otro día por la lluvia
+  const tender = { id: 't', title: 'Tender la ropa', date: TODAY, done: false };
+  assert.ok(!rec([day(TODAY, { rain: 80, mm: 2, wind: 10 }), day(plus(TODAY, 1))], [tender]).some(r => r.actions.some(a => a.id === 't')));
+  assert.ok(P.recommendations({ tasks: [tender] }, [day(TODAY, { rain: 80, mm: 2 }), day(plus(TODAY, 1))], TODAY, { relDate }).some(r => r.actions.some(a => a.id === 't')), 'sin tendedero cubierto, sí');
+});

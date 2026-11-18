@@ -15,8 +15,11 @@
   ['dormitorio','Dormitorio principal'],['invitados','Cuarto de invitados'],['salon','Salón'],['estarSotano','Zona de estar del sótano'],
   ['patio','Patio'],['terraza','Terraza'],['gimnasio','Gimnasio'],['escaleras','Escaleras'],['taller','Taller'],
   ['ropa','Colada: lavadoras y ropa limpia'],['lavadero','Lavadero'],['secadora','Secadora'],['garaje','Garaje'],['almacen','Almacén'],
-  ['ventanas','Ventanas y persianas'],['radiadores','Radiadores y caldera'],['aire','Aire acondicionado'],['chimenea','Chimenea']
+  ['ventanas','Ventanas y persianas'],['radiadores','Radiadores y caldera'],['aire','Aire acondicionado'],['chimenea','Chimenea'],
+  ['entrada','Entrada y recibidor'],['mascota','Fuente de agua de Ringo']
  ];
+ // Lo que hay en casa para la colada (se guarda en los datos privados de la casa)
+ const LAUNDRY=[['twoWashers','Dos lavadoras'],['dryer','Secadora'],['coveredLine','Tendedero cubierto en el exterior (patio, terraza…)'],['indoorLine','Tendedero dentro de casa (lavadero, sótano…)']];
 
  /* Consejos paso a paso. Se muestran en la tarea, en el rincón del día y en la biblioteca. */
  const TIPS={
@@ -31,7 +34,11 @@
   secadoraCondensador:{title:'Condensador y sensores de la secadora',steps:['Desenchufa la secadora.','Abre la tapa de abajo, saca el condensador (mira el manual) y acláralo con la ducha con agua templada por los dos lados.','No frotes las láminas con cepillos duros: se doblan.','Déjalo escurrir y secar antes de volver a ponerlo.','Limpia también las dos tiras metálicas del tambor (los sensores de humedad) con un paño con un poco de vinagre.']},
   secadoraGoma:{title:'Goma y desagüe de la secadora',steps:['Limpia la goma de la puerta con un paño húmedo y revisa que no esté rota.','Comprueba que el tubo de desagüe no esté doblado ni obstruido.','Si es de evacuación, revisa que el tubo de salida al exterior no tenga pelusa acumulada.']},
   lavadoraFiltro:{title:'Filtro y goma de la lavadora',steps:['Pon una toalla y una bandeja baja delante: va a salir agua.','Abre la tapa de abajo, saca el tubito de vaciado y deja salir el agua.','Desenrosca el filtro y quítale pelusas, monedas y horquillas. Acláralo y enróscalo bien.','Limpia los pliegues de la goma de la puerta con un paño con agua y jabón y sécalos.','Deja la puerta y el cajetín del detergente abiertos después de cada lavado para que no huela.','Una vez al mes, un lavado en vacío a 60 °C con limpialavadoras.']},
-  lavar:{title:'Poner una lavadora',steps:['La noche anterior, separa la ropa: blanca, color y oscura, y toallas aparte.','Vacía los bolsillos y cierra cremalleras.','Programa el inicio diferido para que termine cuando estés en casa y la ropa no se quede húmeda dentro.','Mira la tarjeta del tiempo: si llueve, usa la secadora o tiende dentro junto a una ventana abierta.','Dos lavadoras entre semana evitan llegar al sábado con la cesta llena.']},
+  lavar:{title:'Día de colada',steps:['La noche anterior, separa la ropa: blanca, color y oscura; toallas y sábanas aparte.','Con dos lavadoras, ponlas a la vez (por ejemplo, una de blanco y otra de color): en una mañana tienes hecha toda la colada.','Vacía los bolsillos y cierra cremalleras.','Programa el inicio diferido para que terminen cuando estés en casa y la ropa no se quede húmeda dentro.','Mira la tarjeta del tiempo: te dice si hoy conviene el tendedero de fuera, el de dentro o la secadora.','Dos días de colada entre semana evitan llegar al sábado con la cesta llena.']},
+  tender:{title:'Dónde tender según el tiempo',steps:['Día seco y sin mucho viento: tendedero exterior. Al aire se seca antes y huele mejor.','Con lluvia, el tendedero cubierto sirve si no sopla viento, aunque tarda más en secarse.','Con viento fuerte, mucho frío o lluvia de lado: tendedero de dentro, con la ventana un poco abierta o el deshumidificador.','Secadora para toallas y sábanas cuando corre prisa o no hay forma de secar.','Tiende la ropa en cuanto termine la lavadora y bien estirada: se arruga menos y casi no hay que planchar.']},
+  entrada:{title:'Entrada y recibidor',steps:['Sacude o aspira el felpudo: retiene casi toda la tierra que entra en casa.','Barre o aspira de dentro hacia la puerta.','Quita el polvo del mueble del recibidor, el espejo y los pomos.','Friega el suelo, sobre todo si ha llovido.']},
+  fuente:{title:'Fuente de agua de Ringo',steps:['Desenchúfala y vacía el agua.','Desmonta todas las piezas, también la bomba (mira el manual).','Lávalas con agua caliente y jabón neutro. Un cepillo pequeño o un bastoncillo para la bomba y los rincones donde se forma la capa resbaladiza.','Aclara muy bien: no puede quedar ni rastro de jabón.','Monta, llena con agua fresca y comprueba que la bomba suena y el agua corre antes de dejarla.','Entre limpiezas, rellena con agua fresca cada día.']},
+  fuenteFiltro:{title:'Filtro de la fuente de Ringo',steps:['Cámbialo cuando toque según el fabricante; si no lo dice, cada 2–4 semanas o antes si se ve sucio o el agua huele.','Aprovecha para lavar la fuente entera ese mismo día.','Aclara el filtro nuevo bajo el grifo antes de ponerlo para quitarle el polvillo del carbón.','Ten siempre uno de repuesto: así no se queda sin cambiar.']},
   doblar:{title:'Doblar y guardar la ropa limpia',steps:['Dóblala en cuanto la recojas: se arruga menos y te ahorras plancha.','Haz un montón por persona y otro de ropa de casa (toallas, sábanas).','Guárdala en el momento: si se queda en una silla, se acumula.','Las camisetas, dobladas en vertical en el cajón: se ve todo de un vistazo.']},
   campana:{title:'Filtros de la campana',steps:['Los filtros metálicos van en el lavavajillas, solos y a temperatura alta.','Sin lavavajillas: déjalos 15 minutos en agua muy caliente con lavavajillas y dos cucharadas de bicarbonato, frota con un cepillo y aclara.','Sécalos bien antes de ponerlos.','Los filtros de carbón no se lavan: se cambian cuando lo indique el manual.','Limpia también la carcasa de la campana con desengrasante.']},
   horno:{title:'Horno y microondas',steps:['Microondas: calienta 3–5 minutos un bol con agua y medio limón, espera 2 minutos sin abrir y pasa un paño: la suciedad sale sola.','Horno: con el horno frío, unta una pasta de bicarbonato y agua por dentro (no en la resistencia) y déjala toda la noche.','Al día siguiente retírala con un paño húmedo y una espátula de plástico.','Rocía un poco de vinagre para quitar los restos blancos y aclara.','Bandejas y rejillas, a remojo en agua caliente con lavavajillas.']},
@@ -58,7 +65,7 @@
   gimnasio:{title:'Gimnasio',steps:['Abre las ventanas para ventilar: si se usa poco, coge olor a cerrado.','Quita el polvo de las máquinas y limpia agarres y asientos con un paño con un poco de alcohol.','Revisa que no haya humedad en el suelo ni en las esterillas.']}
  };
  // Para tareas propias (no del plan): el primer patrón que coincide con el título
- const TIP_MATCH=[[/riel/,'rieles'],[/cinta.*persiana|persiana.*cinta/,'persianas'],[/purg.*radiador|radiador.*purg/,'radiadores'],[/radiador|rejilla/,'radiadoresPolvo'],[/caldera/,'caldera'],[/condensador/,'secadoraCondensador'],[/secadora/,'secadoraFiltro'],[/filtro.*lavadora|lavadora.*filtro/,'lavadoraFiltro'],[/lavadora|colada/,'lavar'],[/doblar|ropa limpia|guardar la ropa/,'doblar'],[/campana/,'campana'],[/horno|microondas/,'horno'],[/nevera|frigorifico/,'nevera'],[/junta|mampara|ducha/,'juntas'],[/por fuera/,'ventanasFuera'],[/cristal|ventana/,'cristales'],[/unidad exterior/,'aireExterior'],[/aire acondicionado|filtros? del aire/,'aire'],[/chimenea/,'chimenea'],[/canaleta|desague/,'canaletas'],[/terraza/,'terraza'],[/burlete/,'burletes'],[/colchon/,'colchones'],[/humedad|moho/,'humedades'],[/cubos? de (la )?basura/,'cubos'],[/interruptor|pomo/,'interruptores'],[/lampara|ventilador/,'lamparas'],[/zocalo/,'zocalos'],[/escalera/,'escaleras'],[/cortina/,'cortinas'],[/sofa/,'sofa'],[/bano|aseo|inodoro/,'bano'],[/sabana|dormitorio/,'sabanas'],[/cocina|encimera/,'cocina'],[/gimnasio/,'gimnasio']];
+ const TIP_MATCH=[[/fuente.*filtro|filtro.*fuente/,'fuenteFiltro'],[/fuente/,'fuente'],[/\btender\b|tendedero/,'tender'],[/riel/,'rieles'],[/cinta.*persiana|persiana.*cinta/,'persianas'],[/purg.*radiador|radiador.*purg/,'radiadores'],[/radiador|rejilla/,'radiadoresPolvo'],[/caldera/,'caldera'],[/condensador/,'secadoraCondensador'],[/secadora/,'secadoraFiltro'],[/filtro.*lavadora|lavadora.*filtro/,'lavadoraFiltro'],[/lavadora|colada/,'lavar'],[/doblar|ropa limpia|guardar la ropa/,'doblar'],[/campana/,'campana'],[/horno|microondas/,'horno'],[/nevera|frigorifico/,'nevera'],[/junta|mampara|ducha/,'juntas'],[/por fuera/,'ventanasFuera'],[/cristal|ventana/,'cristales'],[/unidad exterior/,'aireExterior'],[/aire acondicionado|filtros? del aire/,'aire'],[/chimenea/,'chimenea'],[/canaleta|desague/,'canaletas'],[/terraza/,'terraza'],[/burlete/,'burletes'],[/colchon/,'colchones'],[/humedad|moho/,'humedades'],[/cubos? de (la )?basura/,'cubos'],[/interruptor|pomo/,'interruptores'],[/lampara|ventilador/,'lamparas'],[/zocalo/,'zocalos'],[/escalera/,'escaleras'],[/cortina/,'cortinas'],[/sofa/,'sofa'],[/bano|aseo|inodoro/,'bano'],[/entrada|recibidor/,'entrada'],[/sabana|dormitorio/,'sabanas'],[/cocina|encimera/,'cocina'],[/gimnasio/,'gimnasio']];
 
  // kind: week = cada semana · fortnight = cada 2 semanas · month4 = cada 4 semanas (rincón que rota)
  //       every = cada N meses desde hoy · year = una vez al año, en su temporada
@@ -74,10 +81,14 @@
   {key:'escaleras',zone:'escaleras',kind:'week',day:5,tip:'escaleras',title:'Escaleras: barrer y fregar',notes:'De arriba abajo. El pasamanos, con un paño húmedo.'},
   {key:'repaso-semana',zone:null,kind:'week',day:6,title:'Repaso de la semana: mirar pendientes y reorganizar',notes:'5 minutos: en Tareas → Reorganizar pendientes, pasa lo atrasado a días con hueco.'},
   // Colada entre semana: dos lavadoras y dos días de doblar, para no llegar al fin de semana con la cesta llena
-  {key:'lavadora-1',zone:'ropa',kind:'week',day:0,tip:'lavar',title:'Poner una lavadora',notes:'Si llueve, usa la secadora o tiende dentro.'},
+  {key:'lavadora-1',zone:'ropa',kind:'week',day:0,tip:'lavar',title:'Día de colada: poner lavadoras',notes:'La tarjeta del tiempo te dice dónde tender hoy.'},
   {key:'doblar-1',zone:'ropa',kind:'week',day:1,tip:'doblar',title:'Doblar y guardar la ropa limpia'},
-  {key:'lavadora-2',zone:'ropa',kind:'week',day:3,tip:'lavar',title:'Poner otra lavadora',notes:'Si llueve, usa la secadora o tiende dentro.'},
+  {key:'lavadora-2',zone:'ropa',kind:'week',day:3,tip:'lavar',title:'Segundo día de colada: poner lavadoras',notes:'La tarjeta del tiempo te dice dónde tender hoy.'},
   {key:'doblar-2',zone:'ropa',kind:'week',day:4,tip:'doblar',title:'Doblar y guardar la ropa limpia (2.ª vez)'},
+  {key:'entrada',zone:'entrada',kind:'week',day:3,tip:'entrada',title:'Entrada: barrer y quitar el polvo del recibidor'},
+  // La fuente de Ringo no se puede olvidar: van marcadas como urgentes (no se pueden posponer)
+  {key:'fuente-limpiar',zone:'mascota',kind:'week',day:6,tip:'fuente',urgent:true,title:'Fuente de Ringo: lavarla y cambiar el agua'},
+  {key:'fuente-filtro',zone:'mascota',kind:'month4',day:6,week:0,tip:'fuenteFiltro',urgent:true,title:'Fuente de Ringo: cambiar el filtro'},
 
   {key:'bano-invitados',zone:'banoInvitados',kind:'fortnight',day:1,week:1,tip:'bano',title:'Baño de invitados: repaso, abrir grifos y tirar de la cadena',notes:'Si casi no se usa, correr el agua evita que el sifón huela.'},
   {key:'cuarto-invitados',zone:'invitados',kind:'fortnight',day:2,week:1,tip:'sabanas',title:'Cuarto de invitados: ventilar y quitar el polvo'},
@@ -142,22 +153,67 @@
  function whoFor(opt,item,i){if(opt.who!=='alternar')return opt.who||'yo';const ids=(opt.people||[]).length?opt.people:['yo'];return ids[(item.day??i)%ids.length]}
  const KIND={week:'semanal',fortnight:'semanal',month4:'rincon',every:'rincon',year:'temporada'};
 
+ // Fecha y repetición de una plantilla (n reparte las de temporada que caen ya)
+ function scheduleFor(item,today,n){
+  if(item.kind==='week')return {repeat:'weekly',date:cycleDate(today,item.day,0,1)};
+  if(item.kind==='fortnight')return {repeat:'custom',every:2,unit:'w',date:cycleDate(today,item.day,item.week,2)};
+  if(item.kind==='month4')return {repeat:'custom',every:4,unit:'w',date:cycleDate(today,item.day,item.week,4)};
+  if(item.kind==='every')return {repeat:'custom',every:item.every,unit:'m',date:plus(today,item.offset)};
+  return {repeat:'yearly',date:seasonDate(item,today,n||0)};
+ }
  function buildPlan(state,opt){
   const zones=new Set(opt.zones||[]),today=opt.today,existing=state.tasks||[];if(!validDate(today))throw Error('Fecha no válida.');
-  const has=item=>existing.some(t=>t.planKey===item.key||norm(t.title)===norm(item.title));
+  const has=item=>existing.some(t=>t.planKey===item.key||norm(t.title)===norm(item.title)||(LEGACY[item.key]||[]).some(old=>norm(t.title)===norm(old)));
   const tasks=[],skipped=[];let inSeason=0;
   ITEMS.forEach((item,i)=>{
    if(item.zone&&!zones.has(item.zone))return;
    if(has(item)){skipped.push(item.key);return}
-   const t={id:opt.uid(),title:item.title,date:'',time:'',who:whoFor(opt,item,i),repeat:'weekly',notes:item.notes||'',done:false,plan:'casa',planKey:item.key,planKind:KIND[item.kind]};
-   if(item.kind==='week')t.date=cycleDate(today,item.day,0,1);
-   else if(item.kind==='fortnight')Object.assign(t,{repeat:'custom',every:2,unit:'w',date:cycleDate(today,item.day,item.week,2)});
-   else if(item.kind==='month4')Object.assign(t,{repeat:'custom',every:4,unit:'w',date:cycleDate(today,item.day,item.week,4)});
-   else if(item.kind==='every')Object.assign(t,{repeat:'custom',every:item.every,unit:'m',date:plus(today,item.offset)});
-   else{const d=seasonDate(item,today,inSeason);if(d<plus(today,30))inSeason++;Object.assign(t,{repeat:'yearly',date:d})}
+   const s=scheduleFor(item,today,inSeason);if(item.kind==='year'&&s.date<plus(today,30))inSeason++;
+   const t={id:opt.uid(),title:item.title,time:'',who:whoFor(opt,item,i),notes:item.notes||'',done:false,plan:'casa',planKey:item.key,planKind:KIND[item.kind],...s};
+   if(item.urgent)t.urgent=true;
    tasks.push(t);
   });
   return {tasks,skipped};
+ }
+ // Títulos de versiones anteriores del plan: si la tarea no se ha renombrado, se actualiza al nuevo
+ const LEGACY={'lavadora-1':['Poner una lavadora'],'lavadora-2':['Poner otra lavadora']};
+ function legacyTitles(state){return (state.tasks||[]).filter(t=>t.plan==='casa'&&(LEGACY[t.planKey]||[]).includes(t.title)).map(t=>({id:t.id,title:ITEMS.find(i=>i.key===t.planKey).title}))}
+
+ /* ---------- unir tareas propias al plan ---------- */
+ // Tarea propia → plantilla del plan que le corresponde (el primer patrón que coincide)
+ const JOIN=[[/fuente.*filtro|filtro.*fuente/,'fuente-filtro'],[/fuente/,'fuente-limpiar'],[/riel/,'rieles'],[/persiana/,'cintas-persianas'],[/por fuera/,'ventanas-fuera'],[/cristal|ventana/,'cristales-dentro'],
+  [/(bano|aseo).*invitad|invitad.*(bano|aseo)/,'bano-invitados'],[/(bano|aseo).*entrada|entrada.*(bano|aseo)/,'aseo-entrada'],[/junta|mampara/,'juntas-bano'],[/bano|aseo|inodoro|ducha/,'bano-principal'],
+  [/invitad/,'cuarto-invitados'],[/sabana|dormitorio|cuarto|habitacion/,'dormitorio'],
+  [/nevera|frigorifico/,'nevera'],[/horno|microondas/,'horno'],[/campana/,'campana'],[/cocina|encimera|fregadero/,'cocina-semanal'],
+  [/planta|regar|patio/,'patio'],[/terraza/,'terraza'],[/escalera/,'escaleras'],[/entrada|recibidor|portal/,'entrada'],[/salon|sofa/,'salon'],
+  [/filtro.*lavadora|lavadora.*filtro/,'lavadora-filtro'],[/secadora/,'secadora-filtro'],[/doblar|ropa limpia|guardar la ropa/,'doblar-1'],[/lavadora|colada/,'lavadora-1'],[/lavadero/,'lavadero'],
+  [/garaje/,'garaje'],[/almacen|trastero/,'almacen'],[/taller/,'taller'],[/gimnasio/,'gimnasio'],[/purg.*radiador/,'radiadores-purgar'],[/radiador/,'radiadores-polvo'],[/caldera/,'caldera'],[/chimenea/,'chimenea'],
+  [/aire acondicionado/,'aire-verano'],[/basura/,'cubos-basura'],[/humedad|moho/,'humedades'],[/colchon/,'colchones'],[/cortina/,'cortinas'],[/burlete/,'burletes'],[/interruptor|pomo/,'interruptores'],[/zocalo/,'zocalos'],[/lampara|ventilador/,'lamparas']];
+ const suggestKey=t=>{const s=norm(t.title),hit=JOIN.find(([re])=>re.test(s));return hit?hit[1]:''};
+ // Tareas propias programadas que se pueden unir al plan
+ const joinCandidates=state=>(state.tasks||[]).filter(t=>!t.done&&!t.planKey&&validDate(t.date));
+ // Cada tarea propia elegida toma el día y la frecuencia de su plantilla y sustituye a la del plan, si ya existe.
+ // Conserva su id, título, responsable, hora, notas, historial y vínculos con rutinas.
+ function integrate(state,picks,today){
+  const tasks=(state.tasks||[]).map(t=>({...t})),byId=new Map(tasks.map(t=>[t.id,t])),removed=new Set(),changed=new Set(),byKey=new Map();
+  const linked=new Set((state.routines||[]).filter(r=>r.linkedTasks&&!r.archived).flatMap(r=>r.taskIds||[]));
+  for(const {id,key} of picks||[]){
+   const t=byId.get(id),item=ITEMS.find(i=>i.key===key);if(!t||!item||t.done||t.planKey||changed.has(id))continue;
+   let s=byKey.get(key);
+   if(!s){
+    const twin=tasks.find(x=>x.planKey===key&&x.plan==='casa'&&!x.planJoined&&!x.done&&!removed.has(x.id)&&!changed.has(x.id));
+    s=twin?{repeat:twin.repeat,date:twin.date,every:twin.every,unit:twin.unit}:scheduleFor(item,today,0);
+    if(twin&&!linked.has(twin.id))removed.add(twin.id);
+    byKey.set(key,s);
+   }
+   // Lo urgente que ya toca (hoy o atrasado) no se aplaza al unirlo: se queda en su fecha
+   const keepDue=(item.urgent||t.urgent)&&validDate(t.date)&&t.date<=today;
+   Object.assign(t,{date:keepDue?t.date:s.date,repeat:s.repeat,plan:'casa',planKey:key,planKind:KIND[item.kind],planJoined:true});
+   if(s.repeat==='custom')Object.assign(t,{every:s.every,unit:s.unit});else{delete t.every;delete t.unit}
+   if(item.urgent)t.urgent=true;
+   changed.add(id);
+  }
+  return {tasks:tasks.filter(t=>!removed.has(t.id)),changed:[...changed],removed:[...removed]};
  }
  // Zonas marcadas por defecto: las que se eligieron la última vez y las que se han añadido después
  function defaultZones(saved){if(!saved||!Array.isArray(saved.chosen)||!Array.isArray(saved.known))return ZONES.map(z=>z[0]);const known=new Set(saved.known),chosen=new Set(saved.chosen);return ZONES.map(z=>z[0]).filter(id=>chosen.has(id)||!known.has(id))}
@@ -186,7 +242,7 @@
  function sky(c){if(c===0)return['☀️','Despejado'];if(c===1||c===2)return['🌤️','Poco nuboso'];if(c===3)return['☁️','Nublado'];if(c===45||c===48)return['🌫️','Niebla'];if(c>=51&&c<=57)return['🌦️','Llovizna'];if(c>=61&&c<=67||c>=80&&c<=82)return['🌧️','Lluvia'];if(c>=71&&c<=77||c===85||c===86)return['🌨️','Nieve'];if(c>=95)return['⛈️','Tormenta'];return['🌡️','Previsión']}
  const OUTDOOR=/\b(tender|terraza|patio|por fuera|exterior|toldos?|canaletas?|jardin|balcon|fachada)\b/;
  const isOutdoor=t=>OUTDOOR.test(norm(t.title));
- const isWash=t=>/\blavadora\b/.test(norm(t.title))&&/\bponer\b/.test(norm(t.title));
+ const isWash=t=>/\blavadoras?\b/.test(norm(t.title))&&/\bponer\b/.test(norm(t.title));
  const deg=v=>Math.round(v)+' °C';
  function findTask(state,key,re){const all=(state.tasks||[]).filter(t=>t.planKey===key||re.test(norm(t.title)));return all.find(t=>!t.done)||all[0]||null}
 
@@ -196,17 +252,32 @@
   const i0=days.findIndex(d=>d.date===today);if(i0<0)return recs;
   const d0=days[i0],soon=days.slice(i0,i0+3),wetDays=new Set(days.filter(isWet).map(d=>d.date)),nextDry=days.slice(i0+1).find(d=>!isWet(d));
   const used=new Set(),act=(t,date,label)=>{used.add(t.id);return {id:t.id,date,label}};
-  const wash=tasks.find(t=>t.date<=today&&isWash(t)),rainSoon=isWet(d0)?null:days.slice(i0+1,i0+3).find(isWet);
-  if(isWet(d0)){
-   recs.push({icon:'🌧️',text:`Hoy hay un ${d0.rain??0} % de probabilidad de lluvia: no tiendas fuera. Usa la secadora y vacía el filtro al terminar.`,actions:[]});
-   if(wash)recs.push({icon:'🧺',text:`Hoy toca «${wash.title}» y llueve: sécala en la secadora o tiéndela dentro, junto a una ventana abierta.`,actions:[],tip:wash.id});
-   for(const t of tasks.filter(t=>t.date<=today&&isOutdoor(t)).sort(byDate).slice(0,3))recs.push({icon:'↪️',text:`«${t.title}» mejor en un día seco.`,actions:nextDry?[act(t,nextDry.date,'Pasar a '+fmt(nextDry.date))]:[]});
+  // Colada según lo que hay en casa (h.laundry); sin datos, consejos generales
+  const L=h.laundry||{},setup=LAUNDRY.some(([k])=>L[k]),wet0=isWet(d0),windy0=(d0.wind??0)>=30,cold0=d0.max!==null&&d0.max<10;
+  const wash=tasks.find(t=>t.date<=today&&isWash(t)),rainSoon=wet0?null:days.slice(i0+1,i0+3).find(isWet),two=L.twoWashers?'Pon las dos lavadoras a la vez. ':'';
+  function dryingAdvice(){
+   if(!setup)return wet0?'sécala en la secadora o tiéndela dentro, junto a una ventana abierta.':cold0?'mejor la secadora o tender dentro.':'tiéndela fuera en cuanto termine.';
+   if(!wet0&&!cold0)return L.coveredLine?'tiéndela en el tendedero de fuera en cuanto termine: al aire se seca antes.':'tiéndela fuera en cuanto termine.';
+   const parts=[];
+   if(L.coveredLine)parts.push(windy0?'Con este viento, mejor no uses el tendedero de fuera.':wet0?'El tendedero cubierto sirve si no sopla viento, aunque tardará más en secarse.':'En el tendedero cubierto tardará más con este frío.');
+   if(L.indoorLine)parts.push('El tendedero de dentro de casa es la opción segura.');
+   if(L.dryer)parts.push('La secadora, para toallas y sábanas o si corre prisa.');
+   return parts.join(' ')||'tiéndela dentro, junto a una ventana abierta.';
+  }
+  // Lo de exterior que se puede pasar a otro día (nunca lo urgente; tender bajo techo sí se puede si no hay viento fuerte)
+  const movable=t=>isOutdoor(t)&&!t.urgent&&!(L.coveredLine&&/\btender\b/.test(norm(t.title))&&(d0.wind??0)<40);
+  // Primero, lo urgente que toca hoy o está atrasado: no se puede posponer
+  for(const t of tasks.filter(t=>t.urgent&&t.date<=today).sort(byDate).slice(0,3))recs.push({icon:'❗',text:`Urgente${t.date<today?' y atrasada':''}: «${t.title}». No se puede posponer.`,actions:[],tip:t.id});
+  if(wet0){
+   recs.push({icon:'🌧️',text:!setup?`Hoy hay un ${d0.rain??0} % de probabilidad de lluvia: no tiendas fuera. Usa la secadora y vacía el filtro al terminar.`:`Hoy hay un ${d0.rain??0} % de probabilidad de lluvia: nada de tender al descubierto.${L.coveredLine?(windy0?' Con viento, tampoco en el tendedero cubierto.':' El tendedero cubierto sirve si no sopla viento.'):''}${L.dryer?' Si usas la secadora, vacía el filtro al terminar.':''}`,actions:[]});
+   if(wash)recs.push({icon:'🧺',text:`Hoy toca «${wash.title}» y llueve: ${two}${dryingAdvice()}`,actions:[],tip:wash.id});
+   for(const t of tasks.filter(t=>t.date<=today&&movable(t)).sort(byDate).slice(0,3))recs.push({icon:'↪️',text:`«${t.title}» mejor en un día seco.`,actions:nextDry?[act(t,nextDry.date,'Pasar a '+fmt(nextDry.date))]:[]});
   }else{
    if(rainSoon){
-    recs.push({icon:'🧺',text:`Llueve ${fmt(rainSoon.date)} (${rainSoon.rain??0} %): ${wash?`hoy toca «${wash.title}», así que tiende fuera en cuanto termine.`:'aprovecha hoy para tender fuera.'}`,actions:[],tip:wash?.id});
+    recs.push({icon:'🧺',text:`Llueve ${fmt(rainSoon.date)} (${rainSoon.rain??0} %): ${wash?`hoy toca «${wash.title}»${L.twoWashers?' (pon las dos lavadoras a la vez)':''}, así que tiende fuera en cuanto termine.`:'aprovecha hoy para tender fuera.'}`,actions:[],tip:wash?.id});
     for(const t of tasks.filter(t=>isOutdoor(t)&&t.date>today&&wetDays.has(t.date)).sort(byDate).slice(0,3))recs.push({icon:'☀️',text:`«${t.title}» cae en día de lluvia (${fmt(t.date)}): mejor hoy.`,actions:[act(t,today,'Hacer hoy')]});
    }else{
-    if(wash)recs.push({icon:'🧺',text:d0.max!==null&&d0.max<10?`Hoy toca «${wash.title}» y hace frío: mejor la secadora o tender dentro.`:`Hoy toca «${wash.title}» y no llueve: tiéndela fuera en cuanto termine.`,actions:[],tip:wash.id});
+    if(wash)recs.push({icon:'🧺',text:`Hoy toca «${wash.title}»${cold0?' y hace frío':' y no llueve'}: ${two}${dryingAdvice()}`,actions:[],tip:wash.id});
     if(d0.max!==null&&d0.max>=12&&d0.max<=30&&(d0.wind??0)<30)recs.push({icon:'🪟',text:'Buen día para ventanas por fuera, la terraza y tender la ropa.',actions:[]});
    }
   }
@@ -230,8 +301,10 @@
    const next=tasks.filter(t=>t.planKind==='rincon'&&t.date>today&&t.date<=plus(today,7)&&!used.has(t.id)&&!(isOutdoor(t)&&isWet(d0))).sort(byDate)[0];
    if(next)recs.push({icon:'✨',text:isWet(d0)?`Día de interior: puedes adelantar «${next.title}» (toca ${fmt(next.date)}).`:`Si te sobran 10 minutos: «${next.title}» (toca ${fmt(next.date)}).`,actions:[act(next,today,'Hacer hoy')],tip:next.id});
   }
-  return recs.slice(0,7);
+  return recs.slice(0,8);
  }
+ // No se puede posponer una tarea urgente: solo adelantarla o dejarla para hoy
+ const blocksPostpone=(t,date,today)=>!!t&&!!t.urgent&&!t.done&&!!date&&date>(validDate(t.date)&&t.date>today?t.date:today);
 
- const api={norm,ZONES,ITEMS,TIPS,tipFor,buildPlan,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
+ const api={norm,ZONES,LAUNDRY,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

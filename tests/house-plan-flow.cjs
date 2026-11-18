@@ -103,10 +103,10 @@ const P = require("../casa/house-plan.js");
     await p.locator(".overlay [data-s=cancel]").click();
     const titles = await p.evaluate(() => [...document.querySelectorAll("#app .row-title")].map((x) => x.textContent));
     assert.equal(new Set(titles).size, titles.length, "cada tarea aparece una sola vez");
-    for (const t of ["Purgar los radiadores antes de encender la calefacción", "Poner una lavadora", "Poner otra lavadora", "Doblar y guardar la ropa limpia", "Doblar y guardar la ropa limpia (2.ª vez)"]) assert.ok(titles.includes(t), t);
+    for (const t of ["Purgar los radiadores antes de encender la calefacción", "Día de colada: poner lavadoras", "Segundo día de colada: poner lavadoras", "Doblar y guardar la ropa limpia", "Doblar y guardar la ropa limpia (2.ª vez)"]) assert.ok(titles.includes(t), t);
 
     // Consejos: desde la propia tarea, en su ficha y en la biblioteca
-    await p.locator(".row", { hasText: "Rieles de las ventanas" }).locator(".tipbtn").click();
+    await p.locator(".row", { hasText: "Rieles de las ventanas" }).locator(".tip-inline").click();
     assert.match(await p.locator(".overlay").last().innerText(), /Rieles de las ventanas[\s\S]*cepillo de dientes/);
     await p.locator(".overlay [data-tips-all]").click();
     assert.equal(await p.locator(".overlay .tips-lib details").count(), Object.keys(P.TIPS).length);

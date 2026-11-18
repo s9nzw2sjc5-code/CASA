@@ -32,7 +32,7 @@ function houseWxCard(){
  if(!days.length)h+=`<p class="hint">${houseWx.busy?'Cargando la previsión…':esc(houseWx.error||'Todavía no hay previsión.')}</p>${houseWx.busy?'':'<button class="btn sec" data-act="wxRetry">Reintentar</button>'}`;
  else{
   h+=`<div class="wx-days">${days.map(d=>{const[ic,label]=CasaHousePlan.sky(d.code);return`<div class="wx-day${CasaHousePlan.isWet(d)?' wet':''}"><small>${d.date===t?'Hoy':esc(parse(d.date).toLocaleDateString('es-ES',{weekday:'short'}))}</small><span role="img" aria-label="${esc(label)}">${ic}</span><b>${temp(d.max)}</b><small>${temp(d.min)} · ${d.rain??0}%</small></div>`}).join('')}</div>`;
-  const recs=CasaHousePlan.recommendations(S,c.days,t,{relDate});
+  const recs=CasaHousePlan.recommendations(S,c.days,t,{relDate,laundry:S.cook?.houseLaundry});
   if(recs.length)h+=`<ul class="wx-recs">${recs.map(r=>{const tipTask=r.tip&&S.tasks.find(x=>x.id===r.tip);return`<li><span aria-hidden="true">${r.icon}</span><div><p>${esc(r.text)}</p>${r.actions.map(a=>`<button class="btn sec" data-act="wxMove" data-id="${esc(a.id)}" data-date="${esc(a.date)}">${esc(a.label)}</button>`).join('')}${tipTask&&CasaHousePlan.tipFor(tipTask)?houseTipButton(tipTask.id):''}</div></li>`}).join('')}</ul>`;
   if(houseWx.error)h+=`<p class="hint">${esc(houseWx.error)}</p>`;
  }
@@ -59,19 +59,57 @@ function houseWxPlaceSheet(){
  });
  return ov;
 }
+// Tareas propias que ya existen para la fuente de Ringo (en Tareas o en los cuidados de Ringo)
+const houseHasFountain=()=>[...S.tasks.filter(t=>!t.planKey).map(t=>t.title),...(S.pet||[]).map(x=>x.name)].some(s=>/fuente/.test(CasaHousePlan.norm(s)));
 function housePlanSheet(){
- const who=[...S.people.map(p=>[p.id,p.name]),[BOTH.id,BOTH.name],['alternar','Repartir entre personas por días']],existing=S.tasks.filter(t=>t.plan==='casa').length,on=new Set(CasaHousePlan.defaultZones(S.cook?.housePlanZones));
- const ov=sheet('Plan de limpieza de la casa',`<p class="hint">Crea tareas repetidas para que la casa se limpie poco a poco: algo breve cada día, dos lavadoras y dos días de doblar ropa entre semana, un «rincón» que rota cada semana (rieles, cintas de las persianas, campana…) y los mantenimientos de cada temporada (radiadores, aire acondicionado, secadora, canaletas…). Cada una trae su consejo 💡. Después puedes editarlas o moverlas como cualquier tarea.</p>${existing?`<p class="hint">Ya tienes ${existing} tareas del plan: solo se añadirán las que falten.</p>`:''}<label>Zonas que tiene la casa</label><div class="home-checklist plan-zones">${CasaHousePlan.ZONES.map(([id,l])=>`<label><input type="checkbox" data-plan-zone="${id}" ${on.has(id)?'checked':''}><span>${esc(l)}</span></label>`).join('')}</div><label for="planWho">Responsable</label><select class="field" id="planWho">${opt(who,S.people[0]?.id||'yo')}</select><p class="plan-count" data-plan-count role="status" aria-live="polite"></p>`,{saveLabel:'Crear tareas',autoFocus:false,onSave:o=>{
-  const plan=build(),zones=checked();
-  // Recuerda las zonas para que, al volver a abrir el plan, solo se propongan las nuevas
-  S.cook={...(S.cook||{}),housePlanZones:{chosen:zones,known:CasaHousePlan.ZONES.map(z=>z[0])}};
-  if(!plan.tasks.length){save();toast('No hay tareas nuevas que crear');return}
+ const who=[...S.people.map(p=>[p.id,p.name]),[BOTH.id,BOTH.name],['alternar','Repartir entre personas por días']],existing=S.tasks.filter(t=>t.plan==='casa').length,saved=S.cook?.housePlanZones,on=new Set(CasaHousePlan.defaultZones(saved));
+ // Si ya tiene la fuente de Ringo apuntada, no se propone por defecto para no duplicarla
+ if(!saved&&houseHasFountain())on.delete('mascota');
+ const joinable=CasaHousePlan.joinCandidates(S).filter(t=>CasaHousePlan.suggestKey(t)).length,laundry=S.cook?.houseLaundry||{};
+ const ov=sheet('Plan de limpieza de la casa',`<p class="hint">Crea tareas repetidas para que la casa se limpie poco a poco: algo breve cada día, dos días de colada y dos de doblar ropa entre semana, un «rincón» que rota cada semana (rieles, cintas de las persianas, campana…) y los mantenimientos de cada temporada (radiadores, aire acondicionado, secadora, canaletas…). Cada una trae su consejo 💡. Después puedes editarlas o moverlas como cualquier tarea.</p>${joinable?`<div class="plan-join"><p><b>Tienes ${joinable} tarea${joinable===1?'':'s'} tuya${joinable===1?'':'s'} que encaja${joinable===1?'':'n'} en el plan.</b> Únelas primero: se reparten como el plan y no se duplican.</p><button type="button" class="btn sec" data-plan-join>🔗 Unir mis tareas al plan</button></div>`:''}${existing?`<p class="hint">Ya tienes ${existing} tareas del plan: solo se añadirán las que falten.</p>`:''}<label>Zonas que tiene la casa</label><div class="home-checklist plan-zones">${CasaHousePlan.ZONES.map(([id,l])=>`<label><input type="checkbox" data-plan-zone="${id}" ${on.has(id)?'checked':''}><span>${esc(l)}${id==='mascota'?'<small>Limpieza semanal y filtro cada 4 semanas, marcadas como urgentes ❗</small>':''}</span></label>`).join('')}</div>${houseHasFountain()?'<p class="hint">Ya tienes apuntada la fuente de Ringo. Si no la añades aquí, márcala como urgente ❗ en su tarea o cuidado.</p>':''}<label>Para la colada tenéis</label><div class="home-checklist plan-laundry">${CasaHousePlan.LAUNDRY.map(([k,l])=>`<label><input type="checkbox" data-laundry="${k}" ${laundry[k]?'checked':''}><span>${esc(l)}</span></label>`).join('')}</div><p class="hint">Con esto, la tarjeta del tiempo te dice dónde tender cada día.</p><label for="planWho">Responsable</label><select class="field" id="planWho">${opt(who,S.people[0]?.id||'yo')}</select><p class="plan-count" data-plan-count role="status" aria-live="polite"></p>`,{saveLabel:'Crear tareas',autoFocus:false,onSave:o=>{
+  const plan=build(),zones=checked(),renamed=CasaHousePlan.legacyTitles(S);
+  // Recuerda zonas y colada para que, al volver a abrir el plan, solo se propongan las nuevas
+  S.cook={...(S.cook||{}),housePlanZones:{chosen:zones,known:CasaHousePlan.ZONES.map(z=>z[0])},houseLaundry:Object.fromEntries([...ov.querySelectorAll('[data-laundry]')].map(x=>[x.dataset.laundry,x.checked]))};
+  for(const r of renamed){const t=S.tasks.find(x=>x.id===r.id);if(t)t.title=r.title}
+  if(!plan.tasks.length){save();toast(renamed.length?'Plan actualizado':'No hay tareas nuevas que crear');return}
   S.tasks.push(...plan.tasks);save();toastUndo(plan.tasks.length+' tareas del plan creadas',6000);
  }});
+ ov.querySelector('[data-plan-join]')?.addEventListener('click',()=>{ov.remove();houseJoinSheet()});
  const checked=()=>[...ov.querySelectorAll('[data-plan-zone]:checked')].map(x=>x.dataset.planZone);
  function build(){return CasaHousePlan.buildPlan(S,{zones:checked(),who:val(ov,'planWho'),people:S.people.map(p=>p.id),today:today(),uid})}
  function draw(){const p=build(),n=k=>p.tasks.filter(t=>t.planKind===k).length;ov.querySelector('[data-plan-count]').textContent=p.tasks.length?`Se crearán ${p.tasks.length} tareas: ${n('semanal')} de cada semana, ${n('rincon')} rincones que rotan y ${n('temporada')} de temporada.`:'No hay tareas nuevas que crear con estas zonas.'}
  ov.addEventListener('change',draw);draw();return ov;
+}
+/* ---------- unir tareas propias al plan ---------- */
+const HOUSE_WD=['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+function houseItemWhen(item){
+ if(item.kind==='week')return'Cada '+HOUSE_WD[item.day];
+ if(item.kind==='fortnight')return'Cada 2 semanas, el '+HOUSE_WD[item.day];
+ if(item.kind==='month4')return'Cada 4 semanas, el '+HOUSE_WD[item.day];
+ if(item.kind==='every')return'Cada '+item.every+' meses';
+ return'Cada año, en '+new Date(2000,item.month-1,1).toLocaleDateString('es-ES',{month:'long'});
+}
+function houseJoinSheet(){
+ const all=CasaHousePlan.joinCandidates(S).sort((a,b)=>(CasaHousePlan.suggestKey(a)?0:1)-(CasaHousePlan.suggestKey(b)?0:1)||a.title.localeCompare(b.title,'es'));
+ if(!all.length){toast('No tienes tareas programadas para unir al plan');return}
+ const picks=new Map(all.map(t=>[t.id,CasaHousePlan.suggestKey(t)]));let showAll=false;
+ const groups=[['week','Cada semana'],['fortnight','Cada 2 semanas'],['month4','Rincones (cada 4 semanas)'],['every','Cada pocos meses'],['year','De temporada']];
+ const options=sel=>`<option value="">No unir: dejarla como está</option>${groups.map(([k,l])=>`<optgroup label="${esc(l)}">${CasaHousePlan.ITEMS.filter(i=>i.kind===k).map(i=>`<option value="${esc(i.key)}" ${i.key===sel?'selected':''}>${esc(i.title)}</option>`).join('')}</optgroup>`).join('')}`;
+ const ov=sheet('Unir mis tareas al plan',`<p class="hint">Cada tarea que unas pasa al día y la frecuencia del plan. Conserva su nombre, responsable, hora, notas, historial y rutinas. Si el plan ya tenía esa tarea, se quita la del plan para que no haya dos.</p><label class="home-show-all"><input type="checkbox" data-join-all> Ver también las que no encajan</label><div class="join-list" data-join-list></div><p class="plan-count" data-join-count role="status" aria-live="polite"></p>`,{saveLabel:'Unir al plan',autoFocus:false,onSave:()=>{
+  const chosen=[...picks].filter(([,k])=>k).map(([id,key])=>({id,key}));if(!chosen.length){toast('Elige al menos una tarea');return false}
+  const res=CasaHousePlan.integrate(S,chosen,today());if(!res.changed.length){toast('Las tareas han cambiado. Ábrelo de nuevo.');return false}
+  S.tasks=res.tasks;
+  // Las rutinas vinculadas siguen la nueva fecha de sus tareas
+  const ids=new Set(res.changed);(S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>ids.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)});
+  save();toastUndo(`${res.changed.length} tarea${res.changed.length===1?' unida':'s unidas'} al plan${res.removed.length?` · ${res.removed.length} repetida${res.removed.length===1?'':'s'} quitada${res.removed.length===1?'':'s'}`:''}`,6000);
+ }});
+ function draw(){
+  const rows=all.filter(t=>showAll||CasaHousePlan.suggestKey(t)||picks.get(t.id));
+  ov.querySelector('[data-join-list]').innerHTML=rows.map(t=>{const key=picks.get(t.id),item=CasaHousePlan.ITEMS.find(i=>i.key===key),p=person(t.who);return`<div class="join-row"><b>${esc(t.title)}</b><small>Ahora: ${esc(relDate(t.date))}${t.repeat&&t.repeat!=='none'?' · '+esc(repLabel(t)):''}${p?' · '+esc(p.name):''}</small><label class="sr-only" for="join-${esc(t.id)}">Unir «${esc(t.title)}» con</label><select class="field" id="join-${esc(t.id)}" data-join="${esc(t.id)}">${options(key)}</select>${item?`<small class="join-to">→ ${esc(houseItemWhen(item))}${item.urgent?' · ❗ urgente':''}${(item.urgent||t.urgent)&&t.date<=today()?' · como ya toca, se queda para '+esc(relDate(t.date).toLowerCase()):''}</small>`:''}</div>`}).join('')||'<p class="hint">Ninguna de tus tareas encaja con el plan. Marca «Ver también las que no encajan» para elegir tú.</p>';
+  const n=[...picks.values()].filter(Boolean).length;ov.querySelector('[data-join-count]').textContent=n?`Se unirán ${n} tarea${n===1?'':'s'} al plan.`:'No hay ninguna tarea elegida.';
+ }
+ ov.addEventListener('change',e=>{if(e.target.matches('[data-join]')){picks.set(e.target.dataset.join,e.target.value);draw()}else if(e.target.matches('[data-join-all]')){showAll=e.target.checked;draw()}});
+ draw();return ov;
 }
 /* ---------- consejos ---------- */
 const houseTipSteps=tip=>`<ol class="tip-steps">${tip.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`;
@@ -100,10 +138,11 @@ function houseMonthSection(ym){
 }
 const HOUSE_ACT={
  housePlan:()=>housePlanSheet(),
+ houseJoin:()=>houseJoinSheet(),
  tipsLibrary:()=>houseTipsLibrary(),
  taskTip:d=>{const t=S.tasks.find(x=>x.id===d.id);if(t)houseTipSheet(t)},
  seasonAll:()=>{ui.seasonAll=!ui.seasonAll;render()},
  wxPlace:()=>houseWxPlaceSheet(),
  wxRetry:()=>{houseWx.failedAt=0;houseWxRefresh(true);render()},
- wxMove:d=>{const t=S.tasks.find(x=>x.id===d.id);if(!t||!shiftTasks([d.id],d.date))return;save();toastUndo(`«${t.title}» pasada a ${relDate(d.date).toLowerCase()}`)}
+ wxMove:d=>{const t=S.tasks.find(x=>x.id===d.id);if(!t)return;const r=shiftTasks([d.id],d.date);if(r.blocked){toast('Es urgente ❗: no se puede posponer');return}if(!r.moved)return;save();toastUndo(`«${t.title}» pasada a ${relDate(d.date).toLowerCase()}`)}
 };
