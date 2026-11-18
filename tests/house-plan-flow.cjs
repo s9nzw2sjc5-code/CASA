@@ -56,6 +56,7 @@ const P = require("../casa/house-plan.js");
     const ok = () => p.locator(".overlay [data-s=ok]").last().click();
 
     // 1) Ubicación: se busca, se elige y queda en los datos de la casa (redondeada)
+    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // el tiempo se ve en «Para hoy»
     assert.match(await p.locator(".wx").innerText(), /Indica dónde está la casa/);
     assert.equal(forecastCalls, 0);
     await p.locator("[data-act=wxPlace]").click();
@@ -78,7 +79,8 @@ const P = require("../casa/house-plan.js");
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tender").date), await p.evaluate(() => today()));
 
     // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
-    await p.locator(".chip[data-act=housePlan]").click();
+    await p.evaluate(() => { ui.taskView = "todas"; render(); });
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     assert.match(await p.locator("[data-plan-count]").innerText(), new RegExp("Se crearán " + P.ITEMS.length + " tareas"));
     await p.locator('[data-plan-zone="gimnasio"]').uncheck();
     const expected = P.ITEMS.length - P.ITEMS.filter((i) => i.zone === "gimnasio").length;
@@ -88,13 +90,13 @@ const P = require("../casa/house-plan.js");
     assert.equal(await planCount(), expected);
     await p.locator(".toast-undo").click();
     assert.equal(await planCount(), 0);
-    await p.locator(".chip[data-act=housePlan]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     await p.locator('[data-plan-zone="gimnasio"]').uncheck();
     await p.locator("#planWho").selectOption("alternar");
     await ok();
     assert.equal(await planCount(), expected);
     assert.deepEqual(await p.evaluate(() => [...new Set(S.tasks.filter((t) => t.plan === "casa").map((t) => t.who))].sort()), ["juanma", "yo"]);
-    await p.locator(".chip[data-act=housePlan]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     assert.match(await p.locator(".overlay").innerText(), new RegExp("Ya tienes " + expected + " tareas del plan"));
     // Recuerda las zonas elegidas: el gimnasio sigue desmarcado y no hay nada nuevo que crear
     assert.equal(await p.locator('[data-plan-zone="gimnasio"]').isChecked(), false);
@@ -114,7 +116,7 @@ const P = require("../casa/house-plan.js");
     await p.locator(".row", { hasText: "Cintas de las persianas" }).locator(".row-main").click();
     assert.match(await p.locator(".overlay .tipbox summary").innerText(), /Cómo hacerlo: Cintas de las persianas/);
     await p.locator(".overlay [data-s=cancel]").click();
-    await p.locator("[data-act=tipsLibrary]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=tipsLibrary]:visible").first().click();
     assert.equal(await p.locator(".overlay .tips-lib details").count(), Object.keys(P.TIPS).length);
     await p.locator(".overlay [data-s=cancel]").click();
 
@@ -126,11 +128,13 @@ const P = require("../casa/house-plan.js");
     await p.locator("[data-act=seasonAll]").click();
 
     // 4) Frío mañana: pregunta por la calefacción y adelanta la purga de radiadores
+    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // el tiempo se ve en «Para hoy»
     const heat = p.locator(".wx-recs li", { hasText: "¿has puesto ya la calefacción?" });
     assert.equal(await heat.count(), 1);
     await heat.locator("[data-act=wxMove]").click();
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.planKey === "radiadores-purgar").date), await p.evaluate(() => today()));
     assert.match(await p.locator(".wx").innerText(), /Día de interior: puedes adelantar|Rincón de hoy/);
+    await p.evaluate(() => { ui.taskView = "todas"; render(); });
     assert.match(await p.locator(".season").innerText(), /Purgar los radiadores/);
 
     // En el Calendario (vista de mes) las tareas de temporada aparecen en su día y abajo, en «toca»
@@ -149,7 +153,7 @@ const P = require("../casa/house-plan.js");
     const callsBefore = forecastCalls;
     await p.reload({ waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined");
-    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; render(); });
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.taskView = "hoy"; render(); });
     assert.equal(await p.locator(".wx-day").count(), 5);
     assert.equal(forecastCalls, callsBefore, "la previsión reciente no se vuelve a pedir");
     assert.ok(forecastCalls <= 2, "sin bucles de peticiones: " + forecastCalls);
@@ -169,7 +173,7 @@ const P = require("../casa/house-plan.js");
     await p.evaluate(() => { const t = S.tasks.find((t) => t.id === "nev"); t.date = addDays(t.date, 1); save(); });
     await p.evaluate(() => render());
     assert.equal(await p.evaluate((d) => S.tasks.find((t) => t.id === "nev").date === addDays(d, 1), nev), true, "lo movido a mano se respeta");
-    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.personFilter = "all"; ui.taskFilter = "pend"; render(); });
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.taskView = "todas"; ui.personFilter = "all"; ui.taskFilter = "pend"; render(); });
     assert.match(await p.locator("#app").innerText(), /⏱ 40 min/);
     // Calendario de temporada: se puede marcar como hecho desde la propia lista
     await p.evaluate(() => {

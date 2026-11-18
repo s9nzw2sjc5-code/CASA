@@ -708,6 +708,54 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 .home-contacts{margin:12px 0 22px}.home-contacts>.head-row{gap:8px}.home-contacts h2{font-size:1rem;margin:8px 0}.home-contacts>.head-row .link{font-size:.8rem;min-height:44px;white-space:nowrap}.home-contact-rows{background:var(--surface);border-radius:16px;padding:0 12px}.home-contact-row{display:flex;align-items:center;gap:10px;min-height:72px;padding:9px 0;border-bottom:1px solid var(--line)}.home-contact-row:last-child{border-bottom:0}.home-contact-row>span{font-size:1.3rem;flex:none}.home-contact-main{min-width:0;flex:1;text-align:left;min-height:44px;padding:4px 0}.home-contact-main strong{display:block;font-size:.88rem;overflow-wrap:anywhere}.home-contact-main small{display:block;color:var(--muted);font-size:.74rem;margin-top:5px;overflow-wrap:anywhere}.home-phone-call{color:var(--accent);display:grid;place-items:center;flex:none;width:44px;height:44px;background:var(--accent-soft);border-radius:50%;font-size:1.15rem;text-decoration:none}.home-phone-call svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.home-contacts-all{min-height:44px;margin-top:5px;font-size:.83rem}.home-contact-number{font-size:1.4rem;font-weight:700;overflow-wrap:anywhere}.home-contact-dial{display:block;text-align:center;text-decoration:none;margin:14px 0}.tab[data-v="recordar"]{font-size:.6rem}
 
 .home-document-picker{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}.home-document-picker .btn{display:flex;align-items:center;justify-content:center;text-align:center;font-size:.85rem;padding:12px 8px;min-height:44px}.home-document-picker .home-document-pdf-option{grid-column:1/-1}.home-document-picker[aria-busy="true"]{opacity:.6;pointer-events:none}.home-document-selection{padding:10px 12px;background:var(--accent-soft);border-radius:12px;margin:12px 0}.home-document-selection p{font-size:.8rem;overflow-wrap:anywhere;margin:0 0 8px}.home-document-preview{display:block;max-width:100%;max-height:190px;object-fit:contain;margin:0 auto;border-radius:8px}.home-document-image{display:block;margin:12px 0}.home-document-image img{display:block;width:100%;height:auto;border-radius:10px}
+
+.cleaning-organize{margin-top:24px}
+.cleaning-organize>summary{min-height:44px;padding:12px 0;cursor:pointer;font-weight:600}
+.cleaning-tools{display:flex;flex-wrap:wrap;gap:10px}.cleaning-tools button{min-height:44px}
+.cleaning-views{margin:12px 0}.cleaning-views .chip{min-height:44px}
+
+.cleaning-views{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cleaning-progress{width:100%;height:7px;accent-color:var(--accent);margin:0 0 16px}
+.cleaning-group{margin:10px 0;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:0 12px}
+.cleaning-group>summary{display:flex;justify-content:space-between;align-items:center;min-height:58px;padding:12px 0;cursor:pointer;gap:8px;list-style:none}
+.cleaning-group>summary small{display:block;color:var(--muted);font-size:.76rem;margin-top:5px}
+.cleaning-task-list .row-title{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.cleaning-task-list .row{flex-wrap:wrap}.cleaning-task-list .row-main{min-width:120px}
+/* Presentación compacta: conserva los filtros y las vistas originales. */
+body[data-view="tareas"] .chips{gap:5px;margin-bottom:8px}
+body[data-view="tareas"] .chips .chip{font-size:.78rem;padding:8px 11px;min-height:40px;box-shadow:none}
+body[data-view="tareas"] .home-task-modes{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:12px}
+body[data-view="tareas"] .home-task-modes .chip{font-size:.85rem;font-weight:600}
+body[data-view="tareas"] .row{padding-top:9px;padding-bottom:9px}
+body[data-view="tareas"] .hero{padding:18px;margin-bottom:14px}
+
+/* Estética de la maqueta: superficies sencillas y controles agrupados. */
+body[data-view="tareas"] .hero{background:transparent;color:var(--ink);box-shadow:none;border:0;border-radius:0;padding:8px 0 12px;margin:0}
+body[data-view="tareas"] .hero::before,body[data-view="tareas"] .hero::after{display:none}
+body[data-view="tareas"] .hero h1,body[data-view="tareas"] .hero .sub{padding-right:0;color:var(--ink)}
+body[data-view="tareas"] .hero h1{font-size:1.85rem}
+body[data-view="tareas"] .hero .sub{color:var(--muted);font-size:.9rem}
+body[data-view="tareas"] .hero-stats{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+body[data-view="tareas"] .hero-stats>*{background:none;color:var(--muted);border:0;box-shadow:none;padding:0;border-radius:0}
+body[data-view="tareas"] .home-task-modes{display:flex;background:#eeebf7;border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;margin:8px 0}
+body[data-view="tareas"] .home-task-modes .chip{flex:1;border:0;border-radius:7px;background:none;min-height:44px;font-size:.85rem;padding:8px 10px}
+body[data-view="tareas"] .home-task-modes .chip.on{background:var(--accent);color:white;box-shadow:none}
+.task-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:6px 0}
+.task-toolbar small{color:var(--muted)}.task-toolbar button{min-height:44px}
+.task-options{border:1px solid var(--line);border-radius:10px;background:white;margin:8px 0 16px;padding:0 12px}
+.task-options>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:.87rem;font-weight:600}
+.task-options>summary::after{content:'⌄';margin-left:auto}
+.task-options-list{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding-bottom:10px}
+.task-options-list button{min-height:44px;text-align:left;padding:8px;font-size:.85rem;color:var(--accent);border-radius:6px;background:#f6f5fb}
+body[data-view="tareas"] .list{background:white;border:1px solid var(--line);border-radius:12px;box-shadow:none}
+body[data-view="tareas"] .row{background:transparent;box-shadow:none;min-height:64px;border-radius:0;padding:10px 12px}
+body[data-view="tareas"] .row-title{white-space:normal;overflow-wrap:anywhere;font-size:.93rem}
+body[data-view="tareas"] h2{font-size:1.05rem;margin:20px 0 10px}
+body[data-view="tareas"] .quick .btn{border-radius:9px;box-shadow:none;font-size:.85rem}
+body[data-view="tareas"] .cleaning-group{border-radius:12px;box-shadow:none;background:white}
+body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;font-size:.9rem}
+.cleaning-view-select{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;font-size:.85rem}
+.cleaning-view-select select{max-width:65%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);min-height:44px}
 </style>
 </head>
 <body>
@@ -719,28 +767,29 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=127"></script>
-<script src="sync.js?v=127"></script>
-<script src="receipts.js?v=127"></script>
-<script src="receipt-image.js?v=127"></script>
-<script src="receipt-layout.js?v=127"></script>
-<script src="receipt-ocr.js?v=127"></script>
-<script src="product-photo.js?v=127"></script>
-<script src="product-photo-ui.js?v=127"></script>
-<script src="shopping-recommendations.js?v=127"></script>
-<script src="household-insights.js?v=127"></script>
-<script src="document-files.js?v=127"></script>
-<script src="document-photo.js?v=127"></script>
-<script src="cleaning-links.js?v=127"></script>
-<script src="home-model.js?v=127"></script>
-<script src="cocina.js?v=127"></script>
-<script src="home-ui.js?v=127"></script>
-<script src="household-ui.js?v=127"></script>
-<script src="receipt-extras.js?v=127"></script>
-<script src="house-plan.js?v=127"></script>
-<script src="house-plan-ui.js?v=127"></script>
-<script src="lidl-ui.js?v=127"></script>
-<script src="tasks-ui.js?v=127"></script>
+<script src="push.js?v=131"></script>
+<script src="sync.js?v=131"></script>
+<script src="receipts.js?v=131"></script>
+<script src="receipt-image.js?v=131"></script>
+<script src="receipt-layout.js?v=131"></script>
+<script src="receipt-ocr.js?v=131"></script>
+<script src="product-photo.js?v=131"></script>
+<script src="product-photo-ui.js?v=131"></script>
+<script src="shopping-recommendations.js?v=131"></script>
+<script src="household-insights.js?v=131"></script>
+<script src="document-files.js?v=131"></script>
+<script src="document-photo.js?v=131"></script>
+<script src="cleaning-links.js?v=131"></script>
+<script src="home-model.js?v=131"></script>
+<script src="cocina.js?v=131"></script>
+<script src="cleaning-view.js?v=131"></script>
+<script src="home-ui.js?v=131"></script>
+<script src="household-ui.js?v=131"></script>
+<script src="receipt-extras.js?v=131"></script>
+<script src="house-plan.js?v=131"></script>
+<script src="house-plan-ui.js?v=131"></script>
+<script src="lidl-ui.js?v=131"></script>
+<script src="tasks-ui.js?v=131"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -795,7 +844,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=127;
+const APP_VERSION=131;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1132,11 +1181,10 @@ function vTareasAll(inTabs){
   let h=inTabs?'':`<h1>Tareas</h1><p class="sub">${pend.length} pendiente${pend.length===1?'':'s'}</p>`;
   if(!inTabs)h+=`${heroStats([[pend.filter(x=>x.date===t).length,'hoy'],[pend.filter(x=>x.date&&x.date<t).length,'atrasadas'],[pend.filter(x=>!x.date).length,'sin fecha'],[done.length,'hechas']])}`;
   h+=`<div class="chips home-task-modes"><button class="chip on" data-act="taskMode" data-v="tasks">Tareas</button><button class="chip" data-act="taskMode" data-v="routines">🧹 Rutinas de limpieza</button></div>`;
-  if(reorgSel===null)h+=`<div class="chips">${[['pend','Pendientes'],['done','Hechas'],['all','Todas']].map(([k,l])=>`<button class="chip ${ui.taskFilter===k?'on':''}" data-act="tFilter" data-v="${k}">${l}</button>`).join('')}</div>`;
-  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${ui.personFilter==='all'?'on':''}" data-act="pFilter" data-v="all">Todos</button>${[...S.people,BOTH].map(p=>`<button class="chip ${ui.personFilter===p.id?'on':''}" data-act="pFilter" data-v="${p.id}">${esc(p.name)}</button>`).join('')}<button class="chip add" data-act="people">Personas</button></div>`;
-  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${reorgSel!==null?'on':''}" data-act="reorgStart">${reorgSel!==null?'Cerrar reorganización':'↕ Reorganizar pendientes'}</button>${reorgSel===null?'<button class="chip" data-act="housePlan">🧽 Plan de limpieza</button><button class="chip" data-act="tipsLibrary">💡 Consejos</button>':''}</div>`;
+  h+=`<div class="task-toolbar"><small>${esc({pend:'Pendientes',done:'Hechas',all:'Todas'}[ui.taskFilter]||'Pendientes')} · ${ui.personFilter==='all'?'Todos':esc(person(ui.personFilter)?.name||'Conjunto')}</small><button class="link" data-act="taskFilters">Filtrar</button></div>`;
+  if(reorgSel!==null)h+=`<button class="link" data-act="reorgStart">Cerrar reorganización</button>`;
+  else h+=`<details class="task-options"><summary>Más opciones</summary><div class="task-options-list"><button data-act="reorgStart">Reorganizar pendientes</button><button data-act="housePlan">Plan de limpieza</button><button data-act="tipsLibrary">Consejos</button><button data-act="people">Personas</button></div>${houseWxCard()}</details>`;
   if(reorgSel!==null)return h+reorgPanel(pend);
-  h+=houseWxCard();
   h+=`<div class="quick"><input class="field" id="qNoDate" placeholder="Añadir algo sin fecha" enterkeyhint="done"><button class="btn" data-act="quickNoDate">Añadir</button></div>`;
   const groups=[];
   if(ui.taskFilter!=='done')groups.push(...taskSections(pend,t));
@@ -1772,6 +1820,8 @@ const find=(arr,id)=>arr.find(x=>x.id===id);
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Sin fecha»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  taskFilters:()=>taskFilters(),
+  cleaningView:d=>{if(!['today','frequency','zone','all'].includes(d.v))return;ui.cleaningView=d.v;render()},
   homeContacts:()=>contactsHub(), newHomeContact:()=>contactEdit(),
   homeHub:()=>homeHub(), homeAppliance:d=>applianceDetail(d.id),homeDocument:d=>documentDetail(d.id),
   cleaningArchiveFilter:()=>{ui.cleaningArchived=!ui.cleaningArchived;render()},

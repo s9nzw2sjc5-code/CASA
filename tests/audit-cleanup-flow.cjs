@@ -154,7 +154,7 @@ const { chromium } = require("playwright"),
     assert.match(await p.locator("#toast").innerText(), /Rutinas de limpieza agrupadas: 1 repetida unida/);
     await tab("tareas");
     await p.locator('[data-act=taskMode][data-v="routines"]').click();
-    const sug = await p.evaluate(() => [...document.querySelectorAll(".home-routine-suggestions .home-routine-card strong")].map((x) => x.textContent));
+    const sug = await p.evaluate(() => CasaCleaningLinks.groups(S).map((g) => g.title));
     assert.deepEqual(sug.filter((t) => t === "Limpieza semanal").length, 1, "una sola sugerencia semanal");
 
     assert.deepEqual(errors, [], "errores de página");

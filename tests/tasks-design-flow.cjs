@@ -99,13 +99,13 @@ const { chromium } = require("playwright"),
 
     // 4) Organizar limpieza reúne Reorganizar (con «Estoy fuera»), plan, rutinas, consejos y personas
     await p.locator("[data-act=taskOrganize]").click();
-    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll(".tz-org b")].map((b) => b.textContent)), ["Reorganizar pendientes", "Plan de limpieza", "Rutinas de limpieza", "Consejos de limpieza", "Personas"]);
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll(".tz-org b")].map((b) => b.textContent)), ["Reorganizar pendientes", "Plan de limpieza", "Limpieza por frecuencia", "Consejos de limpieza", "Personas"]);
     await p.locator('[data-org="reorg"]').click();
     assert.equal(await p.locator(".reorg-away").count(), 1);
     await p.locator("[data-act=reorgStart]").click();
     await p.locator("[data-act=taskOrganize]").click();
     await p.locator('[data-org="routines"]').click();
-    assert.match(await p.locator("#app h1").first().innerText(), /Rutinas de limpieza/);
+    assert.match(await p.locator("#app h1").first().innerText(), /Limpieza/);
     await p.locator('[data-act=taskMode][data-v=tasks]').click();
 
     // 5) Todas: la vista de siempre, con Sin fecha y el calendario de temporada
@@ -114,7 +114,7 @@ const { chromium } = require("playwright"),
     assert.equal(await p.locator("#qNoDate").count(), 1);
 
     // Filtro de persona: se aplica también en Para hoy y avisa
-    await p.locator('[data-act=pFilter][data-v="juanma"]').click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskPerson").selectOption("juanma"); await p.locator(".overlay [data-s=ok]").last().click();
     await p.locator('[data-act=taskView][data-v=hoy]').click();
     assert.deepEqual(await rows(), ["Limpiar el espejo"]);
     assert.match(await p.locator(".tz-person").innerText(), /Viendo solo lo de Juanma/);

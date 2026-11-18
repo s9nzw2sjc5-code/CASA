@@ -145,9 +145,9 @@ const { chromium } = require("playwright"),
       ),
       await p.evaluate(() => addDays(today(), 5)),
     );
-    await p.locator("[data-act=pFilter][data-v=juanma]").click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskPerson").selectOption("juanma"); await p.locator(".overlay [data-s=ok]").last().click();
     assert.equal(await p.locator("#app [data-act=toggleTask]").count(), 1);
-    await p.locator("[data-act=pFilter][data-v=all]").click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskPerson").selectOption("all"); await p.locator(".overlay [data-s=ok]").last().click();
     await p
       .locator('[data-act=editTask][data-id="' + repeating.id + '"]')
       .click();

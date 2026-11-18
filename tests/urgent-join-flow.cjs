@@ -57,7 +57,7 @@ const { chromium } = require("playwright"),
       today = () => p.evaluate(() => today());
 
     // 1) Unir mis tareas al plan: propone las que encajan, se puede elegir y deshacer
-    await p.locator(".chip[data-act=housePlan]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     assert.match(await p.locator(".plan-join").innerText(), /Tienes 4 tareas tuyas que encajan/);
     assert.equal(await p.locator('[data-plan-zone="mascota"]').isChecked(), false, "ya tiene la fuente apuntada: no se duplica");
     await p.locator("[data-plan-join]").click();
@@ -79,13 +79,13 @@ const { chromium } = require("playwright"),
     await p.locator(".toast-undo").click();
     assert.equal((await task("bano")).planKey, undefined, "Deshacer devuelve todo como estaba");
     assert.equal((await task("fuente")).urgent, undefined);
-    await p.locator(".chip[data-act=housePlan]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     await p.locator("[data-plan-join]").click();
     await ok();
     assert.equal((await task("fuente")).date, await today(), "la urgente no se aplaza al unirla: hoy está entre lo que toca");
 
     // 2) Crear el plan después: no duplica lo unido y guarda lo que hay para la colada
-    await p.locator(".chip[data-act=housePlan]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     assert.equal(await p.locator(".plan-join").count(), 0, "ya no quedan tareas por unir");
     assert.equal(await p.locator("[data-washer-names]").isVisible(), false);
     for (const k of ["twoWashers", "dryer", "coveredLine", "indoorLine"]) await p.locator(`[data-laundry="${k}"]`).check();
@@ -97,6 +97,7 @@ const { chromium } = require("playwright"),
     assert.deepEqual(await p.evaluate(() => S.cook.houseLaundry), { twoWashers: true, dryer: true, coveredLine: true, indoorLine: true, names: ["Lavadora de arriba", "Lavadora de abajo"] });
     for (const key of ["bano-principal", "patio", "cocina-semanal", "escaleras"]) assert.equal(await p.evaluate((k) => S.tasks.filter((t) => t.planKey === k).length, key), 1, key);
     assert.equal(await p.evaluate(() => S.tasks.filter((t) => /fuente/i.test(t.title)).length), 1, "la fuente no se duplica");
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true)));
     assert.match(await p.locator(".wx").innerText(), /nada de tender al descubierto[\s\S]*tendedero cubierto sirve si no sopla viento/);
     assert.match(await p.locator(".wx-recs li").first().innerText(), /❗[\s\S]*Urgente: «Limpiar la fuente de Ringo»/);
 
@@ -107,7 +108,7 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => [...document.querySelectorAll("#app h2")].find((h) => h.textContent === "Hoy").nextElementSibling.querySelector(".row-title").textContent), "Limpiar la fuente de Ringo", "primera en Hoy");
     await p.evaluate(() => ACT.toTomorrow({ id: "fuente" }));
     assert.equal((await task("fuente")).date, await today());
-    await p.locator("[data-act=reorgStart]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
     await p.locator(".reorg-row", { hasText: "Limpiar la fuente" }).locator(".row-main").click();
     await p.locator(".reorg-row", { hasText: "Limpiar baño" }).locator(".row-main").click();
     const banoBefore = (await task("bano")).date;
@@ -117,7 +118,7 @@ const { chromium } = require("playwright"),
     assert.equal((await task("bano")).date, await p.evaluate(() => addDays(today(), 1)), "las demás sí se mueven");
     assert.match(await p.locator("#toast").innerText(), /1 urgente ❗ sin posponer/);
     await p.locator(".toast-undo").click();
-    await p.locator("[data-act=reorgStart]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
     await p.locator("#app .row.is-urgent .row-main").first().click();
     assert.equal(await p.locator("#f_u").isChecked(), true);
     await p.locator("#f_d").fill(await p.evaluate(() => addDays(today(), 2)));

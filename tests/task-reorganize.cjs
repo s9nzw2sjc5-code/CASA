@@ -105,15 +105,15 @@ const { chromium } = require("playwright"),
     assert.equal(allRows.length, 7);
     assert.equal(new Set(allRows).size, 7);
 
-    await p.locator('[data-act=pFilter][data-v="juanma"]').click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskPerson").selectOption("juanma"); await p.locator(".overlay [data-s=ok]").last().click();
     assert.deepEqual((await sections()).flatMap((s) => s.t).sort(), ["Limpiar baño", "Limpiar ducha", "Poner la lavadora"]);
-    await p.locator('[data-act=pFilter][data-v="all"]').click();
-    await p.locator('[data-act=tFilter][data-v="done"]').click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskPerson").selectOption("all"); await p.locator(".overlay [data-s=ok]").last().click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskStatus").selectOption("done"); await p.locator(".overlay [data-s=ok]").last().click();
     assert.ok((await sections()).some((s) => s.h === "Hechas" && s.t.includes("Tarea ya hecha")));
-    await p.locator('[data-act=tFilter][data-v="pend"]').click();
+    await p.locator("[data-act=taskFilters]").click(); await p.locator("#taskStatus").selectOption("pend"); await p.locator(".overlay [data-s=ok]").last().click();
 
     // 2) Reorganizar pendientes: selección, mover en bloque y deshacer de una vez.
-    await p.locator("[data-act=reorgStart]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
     assert.equal(await p.locator(".reorg-row").count(), 7);
     assert.equal(await p.locator("#fab").isHidden(), true);
     const lavadora = await p.locator(".reorg-row", { hasText: "Poner la lavadora" }).innerText();
@@ -176,7 +176,7 @@ const { chromium } = require("playwright"),
     assert.deepEqual(await snap(), before);
 
     // Salir del modo: vuelven los filtros, el botón de tarea nueva y la vista normal.
-    await p.locator("[data-act=reorgStart]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
     assert.equal(await p.locator(".reorg").count(), 0);
     assert.equal(await p.locator("#fab").isHidden(), false);
     assert.ok((await sections()).some((s) => s.h === "Atrasadas"));
@@ -202,7 +202,7 @@ const { chromium } = require("playwright"),
       S.routines = []; save(); render();
     });
     const awayBefore = await p.evaluate(() => JSON.stringify(S.tasks));
-    await p.locator("[data-act=reorgStart]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
     await p.locator("#reorgAway").fill("5");
     await p.locator("[data-act=reorgAway]").click();
     const away = await p.evaluate(() => Object.fromEntries(S.tasks.map((x) => [x.id, x.date])));
@@ -213,7 +213,7 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => JSON.stringify(S.tasks)), awayBefore);
     assert.equal(await p.evaluate(() => document.body.scrollWidth <= innerWidth + 2), true, "sin desbordar");
     if (process.env.SHOT) { await p.locator(".reorg-away").scrollIntoViewIfNeeded(); await p.screenshot({ path: process.env.SHOT }); }
-    await p.locator("[data-act=reorgStart]").click();
+    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("task-reorganize: OK");
