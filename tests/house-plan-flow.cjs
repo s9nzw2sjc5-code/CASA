@@ -87,12 +87,9 @@ const P = require("../casa/house-plan.js");
     assert.match(await p.locator("#app .wx-tips").innerText(), /Consejos según el tiempo[\s\S]*no tiendas fuera/);
     await p.evaluate(() => { ui.taskView = "todas"; render(); });
 
-    // 🔄 al lado del lugar: actualiza la previsión al momento y dice cuándo se actualizó
+    // Al lado del lugar dice cuándo se actualizó (se renueva sola cada hora; sin botón)
     assert.match(await p.locator(".wx-age").first().innerText(), /ahora|hace/);
-    const before = forecastCalls;
-    await p.locator(".wx-sync").first().click();
-    await p.waitForFunction(() => /Tiempo actualizado/.test(document.querySelector("#toast").textContent));
-    assert.equal(forecastCalls, before + 1);
+    assert.equal(await p.locator(".wx-sync").count(), 0);
     // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
     await p.evaluate(() => { ui.taskView = "todas"; render(); });
     await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
