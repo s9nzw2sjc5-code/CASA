@@ -5,15 +5,15 @@ await p.evaluate(()=>{S=fresh();S.tasks=[{id:'a',title:'Baño principal: inodoro
 assert.equal(await p.locator('[data-act=taskMode]').count(),2);
 assert.equal(await p.locator('[data-act=cleaningView]').count(),0);
 assert(await p.getByText('Una tarea sin clasificación',{exact:true}).isVisible());
-assert(await p.locator('[data-act=tFilter][data-v=done]').isVisible());
-assert(await p.locator('[data-act=pFilter][data-v=juanma]').isVisible());
+assert.equal(await p.locator('[data-act=tFilter]').count(),0);assert.equal(await p.locator('[data-act=pFilter]').count(),0);await p.locator('[data-act=taskFilters]').click();await p.locator('#taskStatus').selectOption('done');await p.locator('.overlay [data-s=ok]').click();assert(await p.getByText('Todavía no has completado ninguna tarea.',{exact:true}).isVisible());await p.locator('[data-act=taskFilters]').click();await p.locator('#taskStatus').selectOption('pend');await p.locator('#taskPerson').selectOption('all');await p.locator('.overlay [data-s=ok]').click();await p.screenshot({path:'/tmp/casa-tasks-130.png'});
+assert.equal(await p.locator('[data-act=reorgStart]').isVisible(),false);
 assert(await p.evaluate(()=>JSON.stringify(S.tasks)===window.originalTasks));
 await p.locator('[data-act=taskMode][data-v=routines]').click();
 assert.equal(await p.locator('[data-act=toggleTask]').count(),1);assert.equal(await p.locator('.cleaning-organize').getAttribute('open'),null);
-await p.locator('[data-act=cleaningView][data-v=frequency]').click();assert(await p.getByText('Semanales',{exact:true}).isVisible());assert(await p.getByText('Por estación · Otoño',{exact:true}).isVisible());
-await p.locator('[data-act=cleaningView][data-v=zone]').click();assert(await p.getByText('Taller',{exact:true}).isVisible());await p.locator('[data-cleaning-group="Baño principal"] summary').click();assert(await p.getByText('Baño principal: inodoro, lavabo, ducha y espejo',{exact:true}).isVisible());
-await p.locator('[data-act=cleaningView][data-v=all]').click();assert.equal(await p.locator('[data-act=toggleTask]').count(),3);assert(await p.evaluate(()=>JSON.stringify(S.tasks)===window.originalTasks));
+await p.locator('.cleaning-view-select select').selectOption('frequency');assert(await p.getByText('Semanales',{exact:true}).isVisible());assert(await p.getByText('Por estación · Otoño',{exact:true}).isVisible());
+await p.locator('.cleaning-view-select select').selectOption('zone');assert(await p.getByText('Taller',{exact:true}).isVisible());await p.locator('[data-cleaning-group="Baño principal"] summary').click();assert(await p.getByText('Baño principal: inodoro, lavabo, ducha y espejo',{exact:true}).isVisible());
+await p.locator('.cleaning-view-select select').selectOption('all');assert.equal(await p.locator('[data-act=toggleTask]').count(),3);assert(await p.evaluate(()=>JSON.stringify(S.tasks)===window.originalTasks));
 await p.locator('[data-act=toggleTask][data-id=a]').click();assert(await p.evaluate(()=>S.tasks[0].lastDone===today()&&S.tasks[0].notes==='Conservar literalmente este consejo.'&&S.tasks.length===3));
 for(const width of [320,390]){await p.setViewportSize({width,height:844});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
-await p.locator('[data-act=cleaningView][data-v=zone]').click();
+await p.locator('.cleaning-view-select select').selectOption('zone');
 await p.screenshot({path:'/tmp/casa-cleaning-overview.png',fullPage:true});assert.deepEqual(errors,[]);console.log('Correcto: filtros, tareas conservadas, casillas y vista móvil a 320 y 390 px.');}finally{await browser?.close();server.close()}})().catch(e=>{console.error(e);process.exitCode=1});
