@@ -9,13 +9,13 @@ const fixture = {
   at: "2026-11-18T05:43:00Z",
   region: "Granada",
   items: [
-    { c: "1", n: "MILBONA Yogur bífidus", g: "super", s: "Alimentación", w: "semana", p: 1.15, o: 1.45, d: 20, k: "4x150 g", b: "En tienda", f: "2026-11-16", e: "2026-11-22", u: "/p/yogur/p1" },
-    { c: "2", n: "ALESTO Cacahuetes fritos", g: "super", s: "Alimentación", p: 0.75, k: "250 g", b: "En tienda", u: "/p/cacahuetes/p2" },
+    { c: "1", n: "MILBONA Yogur bífidus", g: "super", s: "Postres y yogures", w: "semana", p: 1.15, o: 1.45, d: 20, k: "4x150 g", b: "En tienda", f: "2026-11-16", e: "2026-11-22", u: "/p/yogur/p1" },
+    { c: "2", n: "ALESTO Cacahuetes fritos", g: "super", s: "Aperitivos", p: 0.75, k: "250 g", b: "En tienda", u: "/p/cacahuetes/p2" },
     { c: "3", n: "Naranja mesa", g: "fruta", s: "Fruta y verdura", w: "finde", p: 1.29, o: 1.89, d: 31, k: "A granel", f: "2026-11-20", e: "2026-11-22", u: "/p/naranja/p3" },
-    { c: "4", n: "FORMIL Detergente Marsella", g: "limpieza", s: "Limpieza", w: "semana", p: 3.49, o: 4.29, d: 19, k: "40 lavados", u: "/p/detergente/p4" },
-    { c: "6", n: "Caracola con uvas pasas", g: "super", s: "Alimentación", b: "En tienda", u: "/p/caracola/p6" },
-    { c: "7", n: "Realvalle Pechuga de pollo fileteada", g: "super", s: "Alimentación", w: "proxima", p: 5.69, o: 7.2, d: 20, l: 5.29, k: "Aprox. 950 g", f: "2026-11-23", e: "2026-11-30", u: "/p/pollo/p7" },
-    { c: "8", n: "Pan de pueblo", g: "super", s: "Alimentación", w: "finde-proxima", p: 0.99, f: "2026-11-27", e: "2026-11-29", u: "/p/pan/p8" },
+    { c: "4", n: "FORMIL Detergente Marsella", g: "limpieza", s: "Limpieza y hogar", w: "semana", p: 3.49, o: 4.29, d: 19, k: "40 lavados", u: "/p/detergente/p4" },
+    { c: "6", n: "Caracola con uvas pasas", g: "super", s: "Panadería y pastelería", b: "En tienda", u: "/p/caracola/p6" },
+    { c: "7", n: "Realvalle Pechuga de pollo fileteada", g: "super", s: "Carne", w: "proxima", p: 5.69, o: 7.2, d: 20, l: 5.29, k: "Aprox. 950 g", f: "2026-11-23", e: "2026-11-30", u: "/p/pollo/p7" },
+    { c: "8", n: "Pan de pueblo", g: "super", s: "Panadería y pastelería", w: "finde-proxima", p: 0.99, f: "2026-11-27", e: "2026-11-29", u: "/p/pan/p8" },
   ],
 };
 (async () => {
@@ -48,7 +48,9 @@ const fixture = {
 
     // Esta semana (por defecto), de mayor a menor descuento, con fechas y precios de Granada
     const names = () => p.evaluate(() => [...document.querySelectorAll(".lidl-card .lidl-name")].map((x) => x.textContent));
-    assert.deepEqual(await names(), ["MILBONA Yogur bífidus", "FORMIL Detergente Marsella"]);
+    // Agrupado por secciones (en orden alfabético, como Mercadona)
+    assert.deepEqual(await names(), ["FORMIL Detergente Marsella", "MILBONA Yogur bífidus"]);
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll(".lidl-sec")].map((h) => h.textContent)), ["Limpieza y hogar 1", "Postres y yogures 1"]);
     const yogur = await p.locator(".lidl-card", { hasText: "MILBONA" }).innerText();
     assert.match(yogur, /-20%[\s\S]*4x150 g[\s\S]*1,15 €[\s\S]*1,45 €[\s\S]*Esta semana del 16\/11 al 22\/11/);
     assert.match(await p.locator("#app").innerText(), /tiendas Lidl de Granada, con el precio Lidl Plus/);
@@ -62,7 +64,13 @@ const fixture = {
 
     // Comida y limpieza; sin bazar ni droguería
     await p.locator('[data-act=lidlFilter][data-v="super"]').click();
-    assert.deepEqual(await names(), ["ALESTO Cacahuetes fritos", "Caracola con uvas pasas", "MILBONA Yogur bífidus", "Pan de pueblo", "Realvalle Pechuga de pollo fileteada"]);
+    assert.deepEqual(await names(), ["ALESTO Cacahuetes fritos", "Realvalle Pechuga de pollo fileteada", "Caracola con uvas pasas", "Pan de pueblo", "MILBONA Yogur bífidus"]);
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll(".lidl-sec")].map((h) => h.textContent)), ["Aperitivos 1", "Carne 1", "Panadería y pastelería 2", "Postres y yogures 1"]);
+    // Botones de sección en «Comida»
+    await p.locator('[data-act=lidlSec][data-v="Panadería y pastelería"]').click();
+    assert.deepEqual(await names(), ["Caracola con uvas pasas", "Pan de pueblo"]);
+    await p.locator('[data-act=lidlSec][data-v=""]').click();
+    assert.equal(await p.locator(".lidl-card").count(), 5);
     assert.match(await p.locator(".lidl-card", { hasText: "Caracola" }).innerText(), /Precio en tienda/);
     await p.locator('[data-act=lidlFilter][data-v="limpieza"]').click();
     assert.deepEqual(await names(), ["FORMIL Detergente Marsella"]);
@@ -77,7 +85,7 @@ const fixture = {
     await p.locator(".lidl-card", { hasText: "MILBONA" }).locator("[data-act=lidlAdd]").click();
     // Va a su propia lista «Lidl», separada de la cesta de Mercadona (lista del súper)
     const item = await p.evaluate(() => S.items.find((i) => i.store === "Lidl"));
-    assert.deepEqual([item.name, item.qty, item.price, item.listId], ["MILBONA Yogur bífidus", "4x150 g", 1.15, "lidl"]);
+    assert.deepEqual([item.name, item.qty, item.price, item.listId, item.section], ["MILBONA Yogur bífidus", "4x150 g", 1.15, "lidl", "Frescos"]);
     assert.deepEqual(await p.evaluate(() => S.lists.filter((l) => l.id === "lidl").map((l) => l.name)), ["Lidl"]);
     assert.equal(await p.evaluate(() => cartItems().length), 0, "no entra en la cesta de Mercadona");
     assert.match(await p.locator("#toast").innerText(), /añadido a la lista Lidl/);

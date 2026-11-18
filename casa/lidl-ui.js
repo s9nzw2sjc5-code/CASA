@@ -13,7 +13,11 @@ function lidlLoad(force){
 const LIDL_FILTERS=[['semana','🏷️ Esta semana'],['finde','🎉 Fin de semana'],['proxima','⏭️ Próxima semana'],['super','🛒 Comida'],['fruta','🥬 Fruta y verdura'],['limpieza','🧴 Limpieza']];
 const LIDL_WHEN={semana:'Esta semana',finde:'Fin de semana',proxima:'Próxima semana','finde-proxima':'Fin de semana que viene'};
 const LIDL_PERIODS=new Set(['semana','finde','proxima']);
-const LIDL_SECTION={super:'Despensa',fruta:'Fruta y verdura',limpieza:'Limpieza'};
+// Sección de la lista de la compra según la sección del producto (las mismas que en Mercadona)
+const LIDL_FRESH=new Set(['Carne','Marisco y pescado','Charcutería y quesos','Huevos, leche y mantequilla','Postres y yogures','Pizzas y platos preparados','Panadería y pastelería']);
+const lidlListSection=x=>x.s==='Congelados'?'Congelados':x.g==='fruta'||x.s==='Fruta y verdura'?'Fruta y verdura':x.g==='limpieza'?'Limpieza':LIDL_FRESH.has(x.s)?'Frescos':'Despensa';
+// Orden de las secciones: como en Mercadona (alfabético) y «Otros» al final
+const lidlSecOrder=(a,b)=>(a==='Otros')-(b==='Otros')||a.localeCompare(b,'es');
 const lidlEur=v=>typeof v==='number'?v.toFixed(2).replace('.',',')+' €':'';
 const lidlDay=d=>{const x=new Date(d+'T12:00:00');return x.getDate()+'/'+(x.getMonth()+1)};
 const lidlMatch=(x,f)=>f==='proxima'?x.w==='proxima'||x.w==='finde-proxima':LIDL_PERIODS.has(f)?x.w===f:x.g===f;
@@ -33,8 +37,16 @@ function vCkLidl(){
  let h=`<p class="hint">Ofertas y precios de las tiendas Lidl${LIDL.region?' de '+esc(LIDL.region):''}, con el precio Lidl Plus cuando es distinto${updated?` · actualizado ${esc(updated)}`:''}.</p>`;
  h+=`<input class="field" id="qLidl" type="search" autocomplete="off" placeholder="Buscar comida o limpieza (yogur, aceite, detergente…)" value="${esc(ui.lidlQ||'')}">`;
  h+=`<div class="chips lidl-filters">${LIDL_FILTERS.map(([k,l])=>`<button class="chip ${!q&&f===k?'on':''}" data-act="lidlFilter" data-v="${k}">${l} <small>${all.filter(x=>lidlMatch(x,k)).length}</small></button>`).join('')}</div>`;
+ // En «Comida», botones para ver una sola sección
+ if(f==='super'&&!q){
+  const secs=[...new Set(list.map(x=>x.s||'Otros'))].sort(lidlSecOrder),sec=secs.includes(ui.lidlSec)?ui.lidlSec:'';
+  h+=`<div class="chips lidl-secs"><button class="chip ${sec?'':'on'}" data-act="lidlSec" data-v="">Todas</button>${secs.map(x=>`<button class="chip ${sec===x?'on':''}" data-act="lidlSec" data-v="${esc(x)}">${esc(x)} <small>${list.filter(y=>(y.s||'Otros')===x).length}</small></button>`).join('')}</div>`;
+  if(sec)list=list.filter(x=>(x.s||'Otros')===sec);
+ }
  if(!list.length)return h+`<div class="empty">${q?'No hay productos de Lidl con ese nombre.':'No hay productos en este apartado ahora mismo.'}</div>`;
- return h+`<ul class="lidl-grid">${list.map(lidlCard).join('')}</ul>`;
+ // Agrupado por secciones, como en Mercadona (congelados, carne, pescado…)
+ const groups=new Map();for(const x of list){const k=x.s||'Otros';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)}
+ return h+[...groups.keys()].sort(lidlSecOrder).map(k=>`<h4 class="lidl-sec">${esc(k)} <small>${groups.get(k).length}</small></h4><ul class="lidl-grid">${groups.get(k).map(lidlCard).join('')}</ul>`).join('');
 }
 // Lista propia para Lidl (id fijo: si los dos móviles la crean a la vez, es la misma)
 const LIDL_LIST={id:'lidl',name:'Lidl'};
@@ -65,11 +77,12 @@ function marketListCleanup(){
 // Buscar mientras se escribe, sin perder el cursor
 document.addEventListener('input',e=>{if(e.target.id!=='qLidl')return;ui.lidlQ=e.target.value;clearTimeout(lidlLoad.t);lidlLoad.t=setTimeout(()=>{render();const el=$('#qLidl');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},250)});
 const LIDL_ACT={
- lidlFilter:d=>{ui.lidlF=d.v;ui.lidlQ='';render()},
+ lidlFilter:d=>{ui.lidlF=d.v;ui.lidlQ='';ui.lidlSec='';render()},
+ lidlSec:d=>{ui.lidlSec=d.v;render()},
  lidlRetry:()=>{lidlLoad(true);render()},
  lidlAdd:d=>{
   const x=LIDL?.items.find(i=>i.c===d.c);if(!x)return;
   // A su propia lista «Lidl», no a la del súper (que es la cesta de Mercadona)
-  if(addToList({name:x.n,qty:x.k||'',section:LIDL_SECTION[x.g]||'Otros',...(x.p!=null?{price:x.p,uprice:x.p}:{}),store:'Lidl'},lidlList()))toast('«'+x.n+'» añadido a la lista Lidl');
+  if(addToList({name:x.n,qty:x.k||'',section:lidlListSection(x),...(x.p!=null?{price:x.p,uprice:x.p}:{}),store:'Lidl'},lidlList()))toast('«'+x.n+'» añadido a la lista Lidl');
  }
 };

@@ -59,6 +59,34 @@ class LidlTest(unittest.TestCase):
         self.assertIsNone(base('Toallitas faciales', 'Food'))
         self.assertEqual(base('W5 Toallitas de limpieza multiusos', 'Food')['g'], 'limpieza', 'las de limpieza se quedan')
 
+    def test_secciones_como_mercadona(self):
+        cases = [
+            ('Napolitana de york y queso', 'Mundos de necesidad/Comida y cerca de la comida/Panadería/Pasteles salados', 'Panadería y pastelería'),
+            ('Hamburguesa ecológica (con queso manchego)', '', 'Carne'),
+            ('Realvalle Hamburguesa de vacuno café París', 'Mundos de necesidad/Comida y cerca de la comida/Café, té y cacao', 'Carne'),
+            ('MILBONA Yogur de frutas', 'Mundos de necesidad/Comida y cerca de la comida/Quesos, productos lácteos y huevos/Yogur', 'Postres y yogures'),
+            ('FIN CARRÉ Chocolate (Chocolate con leche)', '', 'Azúcar, caramelos y chocolate'),
+            ('- Lomo curado de cerdo Duroc', '', 'Charcutería y quesos'),
+            ('Realvalle Trozo de lomo de cerdo', 'Mundos de necesidad/Comida y cerca de la comida/Presupuesto/Productos de limpieza', 'Carne'),
+            ('- Sepia limpia', 'Mundos de necesidad/Herramientas a batería', 'Marisco y pescado'),
+            ('Deluxe Cuña de queso de oveja con orégano y miel', '', 'Charcutería y quesos'),
+            ('OCEAN SEA Rabas empanadas', '', 'Congelados'),
+            ('VEMONDO Bebida almendras ecológica', '', 'Huevos, leche y mantequilla'),
+            ('FREEWAY Té sabor limón', '', 'Agua y refrescos'),
+            ('Producto sin pistas', 'Mundos de necesidad/Comida y cerca de la comida/Alimentos congelados/Otros', 'Congelados'),
+            ('Producto sin pistas', '', 'Otros'),
+        ]
+        for name, won, expected in cases:
+            self.assertEqual(lidl.section_of(name, won), expected, name)
+
+    def test_seccion_en_el_producto(self):
+        x = lidl.item(product({}, {}, fullTitle='MILBONA Yogur bífidus', category='Food', price={'price': 1.15},
+                              keyfacts={'wonCategoryPrimary': 'Mundos de necesidad/Comida y cerca de la comida/Quesos, productos lácteos y huevos/Yogur'}), 'Granada')
+        self.assertEqual((x['g'], x['s']), ('super', 'Postres y yogures'))
+        vit = product({}, {}, fullTitle='OPTISANA Gummies multivitaminas', category='Food', price={'price': 3.0},
+                      keyfacts={'wonCategoryPrimary': 'Mundos de necesidad/Productos de droguería y cuidado personal/Vitaminas'})
+        self.assertIsNone(lidl.item(vit, 'Granada'), 'vitaminas y cosmética no son comida')
+
     def test_lee_los_productos_de_la_pagina(self):
         page = '<div data-grid-data="%s"></div><div data-grid-data="no es json"></div>' % html.escape(json.dumps(product(GRANADA, PRICES)), quote=True)
         self.assertEqual([g['fullTitle'] for g in lidl.grid_items(page)], ['Naranja mesa'])

@@ -85,13 +85,73 @@ def fold(text):
     return unicodedata.normalize('NFD', text or '').encode('ascii', 'ignore').decode().lower()
 
 
+# Secciones como las de Mercadona. Manda el nombre, con reglas en orden (la primera que coincide gana);
+# la categoría de Lidl («wonCategoryPrimary») solo se usa si el nombre no lo aclara, porque a menudo
+# está mal puesta (una hamburguesa en «café», un lomo de cerdo en «limpieza»…).
+CURED = r'(curad\w*|iberic\w*|serrano|cocido|ahumad\w*|trufa)'
+NAME_SECTIONS = [(re.compile(p), sec) for p, sec in [
+    (r'congelad|patatas (gajo|prefritas)|a la romana|\brabas\b|varitas de|palitos de (mar|merluza|pescado)|\bgambon', 'Congelados'),
+    (r'\bbebida (vegetal |ecologica )?(de )?(almendras?|avena|soja|arroz|coco)', 'Huevos, leche y mantequilla'),
+    (r'\b(vino|vinos|cerveza|sidra|cava|ginebra|whisky|ron|vermut|licor|sangria|tinto de verano)\b', 'Bodega'),
+    (r'\b(zumo|zumos|nectar)\b', 'Zumos'),
+    (r'\b(agua mineral|refresco|refrescos|cola|tonica|gaseosa|isotonica|limonada|bebida energetica|ice tea)\b|\bte (sabor|al limon|frio)', 'Agua y refrescos'),
+    (r'\b(canonigos|rucula|brotes tiernos|lechuga|escarola)\b', 'Fruta y verdura'),
+    (r'\b(perro|perros|gato|gatos|mascota|mascotas|huesitos|arena aglomerante)\b', 'Mascotas'),
+    (r'\b(cafe (natural|molido|soluble|en grano|crema|descafeinado|gold)|capsulas|infusion|infusiones|cacao soluble)\b|\bte (verde|negro|rojo)', 'Cacao, café e infusiones'),
+    (r'\b(pan|panes|barra|baguette|bollo|bolleria|croissant|caracola|napolitana|magdalena|magdalenas|hojaldre|bizcocho|tarta|donut|reganas|picos|tostadas|palmera|focaccia|panettone|rosquillas|panecillo|baston|barqueta|empanada|pandoro)\b|stick de queso', 'Panadería y pastelería'),
+    (r'\b(pizza|pizzas|lasana|croqueta|croquetas|empanadilla|tortilla|ensalada|gazpacho|canelones|hummus|guacamole|rollitos de primavera)\b', 'Pizzas y platos preparados'),
+    (r'\b(yogur|yogures|bifidus|postre|postres|natillas|flan|cuajada|kefir|arroz con leche|crema de chocolate)\b|linea 0%', 'Postres y yogures'),
+    (r'^(?!.*\b(hamburguesa|burger)\b).*\b(cuna de queso|queso de oveja|queso manchego|queso curado|queso gran reserva)\b', 'Charcutería y quesos'),
+    (r'\b(chocolate|chocolates|turron|bombon|bombones|caramelo|caramelos|golosina|gominola|azucar|mazapan|polvoron|polvorones|mermelada|miel)\b', 'Azúcar, caramelos y chocolate'),
+    (r'\b(leche|huevo|huevos|mantequilla|nata)\b', 'Huevos, leche y mantequilla'),
+    (r'\b(salmon|bacalao|merluza|dorada|lubina|sepia|calamar|calamares|gamba|gambas|langostino|langostinos|mejillon|mejillones|pescado|marisco|boqueron|boquerones|pulpo|rape|emperador)\b', 'Marisco y pescado'),
+    (r'^(?!.*\b' + CURED + r'\b).*\b(pollo|pavo|cerdo|ternera|vacuno|cordero|hamburguesa|hamburguesas|burger|albondigas|costilla|costillas|solomillo|chuleta|chuletas|carne|alitas|contramuslo|muslo|secreto|presa|lomo|pechuga|san jacobos|panceta|entrecot|longaniza fresca|relleno de cerdo)\b', 'Carne'),
+    (r'\b(queso|quesos|jamon|chorizo|salchichon|fuet|embutido|embutidos|fiambre|bacon|mortadela|salami|sobrasada|cecina|salchichas|pate|foie|lomo|panceta|longaniza|paleta)\b', 'Charcutería y quesos'),
+    (r'\b(galleta|galletas|cereales|muesli|tortitas)\b', 'Cereales y galletas'),
+    (r'\b(patatas fritas|chips|frutos secos|almendra|almendras|avellana|avellanas|cacahuete|cacahuetes|nuez|nueces|pistacho|pistachos|aceituna|aceitunas|snack|palomitas|anacardo|anacardos|canicazos)\b', 'Aperitivos'),
+    (r'\b(arroz|pasta|macarron|macarrones|espagueti|espaguetis|fideo|fideos|legumbre|garbanzo|garbanzos|lenteja|lentejas|alubia|alubias|tallarin|tallarines)\b', 'Arroz, legumbres y pasta'),
+    (r'\b(conserva|conservas|caldo|caldos|sopa|crema de verduras|cremas vegetales|atun|sardinas|berberechos|confitad\w*)\b', 'Conservas, caldos y cremas'),
+    (r'\b(aceite|vinagre|mayonesa|ketchup|mostaza|salsa|salsas|pesto|especia|especias|pimienta|oregano)\b', 'Aceite, especias y salsas'),
+]]
+WON_SECTIONS = [
+    ('Alimentos congelados', 'Congelados'), ('Embutidos y fiambres', 'Charcutería y quesos'), ('Carne y aves', 'Carne'),
+    ('Pescado y marisco', 'Marisco y pescado'), ('Frutas y hortalizas', 'Fruta y verdura'), ('Panadería', 'Panadería y pastelería'),
+    ('Café, té y cacao', 'Cacao, café e infusiones'), ('Aperitivos salados', 'Aperitivos'), ('Fruta seca', 'Aperitivos'),
+    ('Encurtidos', 'Aperitivos'), ('Galletas', 'Cereales y galletas'), ('Muesli', 'Cereales y galletas'),
+    ('chocolate', 'Azúcar, caramelos y chocolate'), ('Mermeladas', 'Azúcar, caramelos y chocolate'),
+    ('Platos precocinados', 'Pizzas y platos preparados'), ('Queso', 'Charcutería y quesos'), ('Yogur', 'Postres y yogures'),
+    ('Postres', 'Postres y yogures'), ('Mantequilla', 'Huevos, leche y mantequilla'), ('Leche', 'Huevos, leche y mantequilla'),
+    ('Huevos', 'Huevos, leche y mantequilla'), ('Refrescos', 'Agua y refrescos'), ('Agua', 'Agua y refrescos'),
+    ('Zumos', 'Zumos'), ('Cerveza', 'Bodega'), ('Vino', 'Bodega'), ('Aceites, especias', 'Aceite, especias y salsas'),
+    ('Conservas', 'Conservas, caldos y cremas'), ('mascotas', 'Mascotas'), ('Presupuesto', 'Limpieza y hogar'),
+    ('Limpieza', 'Limpieza y hogar'),
+]
+
+
+def won_section(won):
+    # La parte más concreta manda («Quesos, productos lácteos y huevos/Yogur» es yogur, no queso)
+    for part in reversed([p for p in (won or '').split('/') if p]):
+        for key, sec in WON_SECTIONS:
+            if key.lower() in part.lower():
+                return sec
+    return None
+
+
+def section_of(name, won):
+    folded = fold(name)
+    for rx, sec in NAME_SECTIONS:
+        if rx.search(folded):
+            return sec
+    return won_section(won) or 'Otros'
+
+
 def kind_of(category, name):
     """(tipo, apartado) o None si no es comida ni limpieza."""
     kind, section = group(category)
     if kind == 'bazar':
         return None
     if CLEANING.search(fold(name)):
-        return 'limpieza', 'Limpieza'
+        return 'limpieza', 'Limpieza y hogar'
     if kind == 'casa' or NOT_WANTED.search(fold(name)):
         return None
     return kind, section
@@ -147,6 +207,16 @@ def item(g, region, when='', badge_default=''):
         plus = None
     discount = normal.get('discount') or {}
     kind, section = kind_section
+    if kind == 'super':
+        won = (g.get('keyfacts') or {}).get('wonCategoryPrimary') or ''
+        section = section_of(name, won)
+        # Vitaminas, cosmética y demás droguería personal: ni comida ni limpieza
+        if section == 'Otros' and re.search(r'cuidado personal|belleza', won, re.I):
+            return None
+        if section == 'Fruta y verdura':
+            kind = 'fruta'
+        elif section == 'Limpieza y hogar':
+            kind = 'limpieza'
     badges = [b.get('text') for b in ((g.get('stockAvailability') or {}).get('badgeInfo') or {}).get('badges', []) if b.get('text')]
     out = {
         'c': code_of(g, name),
