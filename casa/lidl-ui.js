@@ -36,6 +36,19 @@ function vCkLidl(){
  if(!list.length)return h+`<div class="empty">${q?'No hay productos de Lidl con ese nombre.':'No hay productos en este apartado ahora mismo.'}</div>`;
  return h+`<ul class="lidl-grid">${list.map(lidlCard).join('')}</ul>`;
 }
+// Lista propia para Lidl (id fijo: si los dos móviles la crean a la vez, es la misma)
+const LIDL_LIST={id:'lidl',name:'Lidl'};
+function lidlList(){if(!S.lists.some(l=>l.id===LIDL_LIST.id))S.lists.push({...LIDL_LIST});return LIDL_LIST.id}
+const lidlMisplaced=()=>S.items.filter(i=>i.listId!==LIDL_LIST.id&&(i.store==='Lidl'||/ \(Lidl\)$/.test(i.name||'')));
+// Lo que se añadió de Lidl a la lista del súper (antes de la 115) pasa a la lista Lidl.
+// Devuelve true si ha guardado (y, por tanto, ya se ha vuelto a pintar).
+function lidlSeparate(){
+ if(lidlSeparate.busy||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
+ const wrong=lidlMisplaced();if(!wrong.length)return false;
+ lidlSeparate.busy=true;
+ try{const id=lidlList();for(const i of wrong){i.listId=id;i.name=String(i.name).replace(/ \(Lidl\)$/,'');i.store='Lidl'}save();setTimeout(()=>toast(`${wrong.length} ${wrong.length===1?'producto de Lidl pasado':'productos de Lidl pasados'} a su lista`),0);return true}
+ finally{lidlSeparate.busy=false}
+}
 // Buscar mientras se escribe, sin perder el cursor
 document.addEventListener('input',e=>{if(e.target.id!=='qLidl')return;ui.lidlQ=e.target.value;clearTimeout(lidlLoad.t);lidlLoad.t=setTimeout(()=>{render();const el=$('#qLidl');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},250)});
 const LIDL_ACT={
@@ -43,6 +56,7 @@ const LIDL_ACT={
  lidlRetry:()=>{lidlLoad(true);render()},
  lidlAdd:d=>{
   const x=LIDL?.items.find(i=>i.c===d.c);if(!x)return;
-  if(addToList({name:x.n+' (Lidl)',qty:x.k||'',section:LIDL_SECTION[x.g]||'Otros',...(x.p!=null?{price:x.p,uprice:x.p}:{}),store:'Lidl'},cartList()))toast('«'+x.n+'» añadido a la lista');
+  // A su propia lista «Lidl», no a la del súper (que es la cesta de Mercadona)
+  if(addToList({name:x.n,qty:x.k||'',section:LIDL_SECTION[x.g]||'Otros',...(x.p!=null?{price:x.p,uprice:x.p}:{}),store:'Lidl'},lidlList()))toast('«'+x.n+'» añadido a la lista Lidl');
  }
 };

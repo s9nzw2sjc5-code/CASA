@@ -75,8 +75,24 @@ const fixture = {
 
     // Añadir a la lista con precio y envase
     await p.locator(".lidl-card", { hasText: "MILBONA" }).locator("[data-act=lidlAdd]").click();
-    const item = await p.evaluate(() => S.items.find((i) => /Lidl/.test(i.name)));
-    assert.deepEqual([item.name, item.qty, item.price, item.store, item.listId], ["MILBONA Yogur bífidus (Lidl)", "4x150 g", 1.15, "Lidl", "super"]);
+    // Va a su propia lista «Lidl», separada de la cesta de Mercadona (lista del súper)
+    const item = await p.evaluate(() => S.items.find((i) => i.store === "Lidl"));
+    assert.deepEqual([item.name, item.qty, item.price, item.listId], ["MILBONA Yogur bífidus", "4x150 g", 1.15, "lidl"]);
+    assert.deepEqual(await p.evaluate(() => S.lists.filter((l) => l.id === "lidl").map((l) => l.name)), ["Lidl"]);
+    assert.equal(await p.evaluate(() => cartItems().length), 0, "no entra en la cesta de Mercadona");
+    assert.match(await p.locator("#toast").innerText(), /añadido a la lista Lidl/);
+    // Lo que se metió antes en la lista del súper pasa solo a la lista Lidl
+    await p.evaluate(() => { S.items.push({ id: "viejo", listId: "super", name: "FORMIL Detergente Marsella (Lidl)", section: "Limpieza", qty: "", by: "", done: false, units: 1, store: "Lidl" }, { id: "merca", listId: "super", name: "Leche", section: "Frescos", qty: "", by: "", done: false, units: 1 }); save(); });
+    await p.waitForFunction(() => S.items.find((i) => i.id === "viejo").listId === "lidl");
+    assert.deepEqual(await p.evaluate(() => [S.items.find((i) => i.id === "viejo").name, S.items.find((i) => i.id === "merca").listId, S.lists.filter((l) => l.id === "lidl").length]), ["FORMIL Detergente Marsella", "super", 1]);
+    assert.match(await p.locator("#toast").innerText(), /1 producto de Lidl pasado a su lista/);
+    await p.locator('#app [data-act=ckTab][data-v="lista"]').first().click();
+    await p.locator('[data-act=pickList][data-v="lidl"]').click();
+    const lidlList = await p.locator("#app").innerText();
+    assert.match(lidlList, /MILBONA Yogur bífidus/);
+    assert.match(lidlList, /FORMIL Detergente Marsella/);
+    assert.doesNotMatch(lidlList, /\bLeche\b/);
+    await p.locator('#app [data-act=ckTab][data-v="lidl"]').first().click();
     assert.equal(await p.evaluate(() => document.body.scrollWidth <= innerWidth + 2), true, "sin desbordar a 390 px");
     await p.setViewportSize({ width: 320, height: 800 });
     assert.equal(await p.evaluate(() => document.body.scrollWidth <= innerWidth + 2), true, "sin desbordar a 320 px");
