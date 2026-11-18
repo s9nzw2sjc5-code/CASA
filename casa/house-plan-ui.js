@@ -2,7 +2,7 @@
    La previsión viene de Open-Meteo (eltiempo.es no ofrece datos que la app pueda leer);
    la ubicación se guarda en los datos privados de la casa y la previsión, solo en este móvil. */
 const HOUSE_WX_CACHE='casa-weather-v1';
-// La previsión se pide de nuevo cada hora (al abrir o volver a Hoy o Tareas)
+// La previsión se pide de nuevo cada hora (al abrir o volver a Hoy o Tareas) y al tocar 🔄
 const HOUSE_WX_EVERY=3600e3;
 const houseWx={busy:false,failedAt:0,error:''};
 function houseWxPlace(){const p=S.cook&&S.cook.homeWeather;return p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon)?p:null}
@@ -36,7 +36,7 @@ function houseWxCard(mode){
  let tipsN=0;
  const c=houseWxFor(place),t=today(),days=c?c.days.filter(d=>d.date>=t).slice(0,5):[],temp=v=>v===null?'–':Math.round(v)+'°';
  // Los consejos se pliegan y despliegan (se recuerda cómo se dejaron); abiertos de entrada
- let h=mode==='tips'?`<details class="wx wx-tips" aria-label="Consejos según el tiempo"${ui.wxTipsOpen===false?'':' open'}><summary class="wx-h"><b>🌦️ Consejos según el tiempo%%N%%</b><span class="tz-caret" aria-hidden="true">⌄</span></summary>`:`<section class="wx" aria-label="Tiempo y recomendaciones"><div class="wx-h"><b>🌦️ ${esc(place.name)}</b><small class="wx-age">${houseWx.busy?'Actualizando…':c?esc(houseWxAge(c.at)):''}</small><button class="link" data-act="wxPlace">Cambiar</button></div>`;
+ let h=mode==='tips'?`<details class="wx wx-tips" aria-label="Consejos según el tiempo"${ui.wxTipsOpen===false?'':' open'}><summary class="wx-h"><b>🌦️ Consejos según el tiempo%%N%%</b><span class="tz-caret" aria-hidden="true">⌄</span></summary>`:`<section class="wx" aria-label="Tiempo y recomendaciones"><div class="wx-h"><b>🌦️ ${esc(place.name)}</b><button class="wx-sync${houseWx.busy?' spin':''}" data-act="wxRetry" aria-label="Actualizar el tiempo" title="Actualizar el tiempo"${houseWx.busy?' disabled':''}>🔄</button><small class="wx-age">${houseWx.busy?'Actualizando…':c?esc(houseWxAge(c.at)):''}</small><button class="link" data-act="wxPlace">Cambiar</button></div>`;
  if(!days.length)h+=`<p class="hint">${houseWx.busy?'Cargando la previsión…':esc(houseWx.error||'Todavía no hay previsión.')}</p>${houseWx.busy?'':'<button class="btn sec" data-act="wxRetry">Reintentar</button>'}`;
  else{
   if(mode!=='tips')h+=`<div class="wx-days">${days.map(d=>{const[ic,label]=CasaHousePlan.sky(d.code);return`<div class="wx-day${CasaHousePlan.isWet(d)?' wet':''}"><small>${d.date===t?'Hoy':esc(parse(d.date).toLocaleDateString('es-ES',{weekday:'short'}))}</small><span role="img" aria-label="${esc(label)}">${ic}</span><b>${temp(d.max)}</b><small>${temp(d.min)} · ${d.rain??0}%</small></div>`}).join('')}</div>`;

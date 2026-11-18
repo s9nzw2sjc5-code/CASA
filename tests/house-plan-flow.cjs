@@ -101,9 +101,12 @@ const P = require("../casa/house-plan.js");
     assert.match(await p.locator("#app .wx-tips").innerText(), /Consejos según el tiempo[\s\S]*no tiendas fuera/);
     await p.evaluate(() => { ui.view = "hoy"; render(); });
 
-    // Al lado del lugar dice cuándo se actualizó (se renueva sola cada hora; sin botón)
+    // 🔄 al lado del lugar: actualiza la previsión al momento; al lado dice cuándo se actualizó
     assert.match(await p.locator(".wx-age").first().innerText(), /ahora|hace/);
-    assert.equal(await p.locator(".wx-sync").count(), 0);
+    const before = forecastCalls;
+    await p.locator(".wx-sync").first().click();
+    await p.waitForFunction(() => /Tiempo actualizado/.test(document.querySelector("#toast").textContent));
+    assert.equal(forecastCalls, before + 1);
     // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
     await p.evaluate(() => { ui.view = "tareas"; render(); });
     await p.evaluate(() => { ui.taskView = "todas"; render(); });
