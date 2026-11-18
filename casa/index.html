@@ -196,6 +196,8 @@ body[data-view="tareas"] .hero h1{font-size:1.7rem}
 body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 /* Reorganizar pendientes: casillas, acciones en bloque y fecha concreta */
 .reorg{margin-top:4px}.reorg>.hint{margin:8px 0 0}.reorg-bar{display:grid;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin:10px 0 6px}.reorg-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.84rem;color:var(--muted)}.reorg-top .link{min-height:40px}.reorg-actions{display:flex;gap:8px;flex-wrap:wrap}.reorg-actions .btn{flex:1 1 130px}.reorg-date{display:flex;gap:8px;flex-wrap:wrap}.reorg-date .field{flex:1 1 150px;width:auto;min-width:0}.reorg-date .btn{flex:1 1 150px}.reorg-bar .btn:disabled{opacity:.45}.reorg-row .row-main{cursor:pointer}.reorg-row.is-picked{box-shadow:inset 3px 0 0 var(--c-tareas)}
+/* Tiempo y recomendaciones · plan de limpieza */
+.wx{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin:12px 0}.wx-h{display:flex;justify-content:space-between;align-items:center;gap:10px}.wx-h b{font-size:.95rem;min-width:0;overflow-wrap:anywhere}.wx-h .link{min-height:40px;flex:none}.wx-days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0}.wx-day{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:12px;background:var(--bg);font-size:.8rem;text-align:center;min-width:0}.wx-day.wet{box-shadow:inset 0 0 0 1.5px var(--c-semana)}.wx-day span{font-size:1.25rem;line-height:1.3}.wx-day small{color:var(--muted);font-size:.66rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.wx-recs{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}.wx-recs li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;line-height:1.4}.wx-recs li>span{flex:none;font-size:1.1rem}.wx-recs li>div{min-width:0}.wx-recs p{margin:0;overflow-wrap:anywhere}.wx-recs .btn{margin-top:6px;padding:7px 12px;font-size:.8rem;min-height:36px}.wx-src{margin:10px 0 0;font-size:.72rem;color:var(--muted)}.wx-src a{color:inherit}.wx-results{display:grid;gap:8px;margin-top:10px}.wx-pick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left;min-height:48px}.wx-pick small{color:var(--muted)}.plan-count{font-weight:600;margin-top:12px}
 /* Hoy: diseño destacado */
 .hoy-hero{position:relative;overflow:hidden;border-radius:30px;padding:18px 20px 16px;color:#fff;background:linear-gradient(135deg,#FF6A2B 0%,#F0306F 55%,#7B3FF2 100%);box-shadow:0 14px 34px rgba(240,48,111,.30);margin-bottom:16px}
 .hoy-hero::before,.hoy-hero::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none}
@@ -671,24 +673,26 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=103"></script>
-<script src="sync.js?v=103"></script>
-<script src="receipts.js?v=103"></script>
-<script src="receipt-image.js?v=103"></script>
-<script src="receipt-layout.js?v=103"></script>
-<script src="receipt-ocr.js?v=103"></script>
-<script src="product-photo.js?v=103"></script>
-<script src="product-photo-ui.js?v=103"></script>
-<script src="shopping-recommendations.js?v=103"></script>
-<script src="household-insights.js?v=103"></script>
-<script src="document-files.js?v=103"></script>
-<script src="document-photo.js?v=103"></script>
-<script src="cleaning-links.js?v=103"></script>
-<script src="home-model.js?v=103"></script>
-<script src="cocina.js?v=103"></script>
-<script src="home-ui.js?v=103"></script>
-<script src="household-ui.js?v=103"></script>
-<script src="receipt-extras.js?v=103"></script>
+<script src="push.js?v=104"></script>
+<script src="sync.js?v=104"></script>
+<script src="receipts.js?v=104"></script>
+<script src="receipt-image.js?v=104"></script>
+<script src="receipt-layout.js?v=104"></script>
+<script src="receipt-ocr.js?v=104"></script>
+<script src="product-photo.js?v=104"></script>
+<script src="product-photo-ui.js?v=104"></script>
+<script src="shopping-recommendations.js?v=104"></script>
+<script src="household-insights.js?v=104"></script>
+<script src="document-files.js?v=104"></script>
+<script src="document-photo.js?v=104"></script>
+<script src="cleaning-links.js?v=104"></script>
+<script src="home-model.js?v=104"></script>
+<script src="cocina.js?v=104"></script>
+<script src="home-ui.js?v=104"></script>
+<script src="household-ui.js?v=104"></script>
+<script src="receipt-extras.js?v=104"></script>
+<script src="house-plan.js?v=104"></script>
+<script src="house-plan-ui.js?v=104"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -743,7 +747,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=103;
+const APP_VERSION=104;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1029,15 +1033,20 @@ function reorgPanel(pend){
   </section>`;
 }
 // Un solo guardado para todo el lote: «Deshacer» revierte el cambio completo
-function moveTasks(ids,date){
-  const moved=S.tasks.filter(x=>ids.includes(x.id)&&!x.done);if(!moved.length)return;
+// Cambia la fecha de tareas pendientes (sin guardar) y devuelve cuántas se movieron
+function shiftTasks(ids,date){
+  const moved=S.tasks.filter(x=>ids.includes(x.id)&&!x.done);if(!moved.length)return 0;
   const movedIds=new Set(moved.map(x=>x.id));
   moved.forEach(x=>{x.date=date});
   // Las rutinas vinculadas toman la fecha de su tarea pendiente más próxima (como en Rutinas de limpieza)
   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>movedIds.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)});
+  return moved.length;
+}
+function moveTasks(ids,date){
+  const n=shiftTasks(ids,date);if(!n)return;
   reorgSel=new Set();
   save();
-  toastUndo(`${moved.length} ${moved.length===1?'tarea movida':'tareas movidas'} a ${relDate(date).toLowerCase()}`,6000);
+  toastUndo(`${n} ${n===1?'tarea movida':'tareas movidas'} a ${relDate(date).toLowerCase()}`,6000);
 }
 function vTareas(){
   if(ui.taskMode==='routines')return vCleaning();
@@ -1049,8 +1058,9 @@ function vTareas(){
   h+=`<div class="chips home-task-modes"><button class="chip on" data-act="taskMode" data-v="tasks">Tareas</button><button class="chip" data-act="taskMode" data-v="routines">🧹 Rutinas de limpieza</button></div>`;
   if(reorgSel===null)h+=`<div class="chips">${[['pend','Pendientes'],['done','Hechas'],['all','Todas']].map(([k,l])=>`<button class="chip ${ui.taskFilter===k?'on':''}" data-act="tFilter" data-v="${k}">${l}</button>`).join('')}</div>`;
   h+=`<div class="chips" style="margin-top:6px"><button class="chip ${ui.personFilter==='all'?'on':''}" data-act="pFilter" data-v="all">Todos</button>${[...S.people,BOTH].map(p=>`<button class="chip ${ui.personFilter===p.id?'on':''}" data-act="pFilter" data-v="${p.id}">${esc(p.name)}</button>`).join('')}<button class="chip add" data-act="people">Personas</button></div>`;
-  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${reorgSel!==null?'on':''}" data-act="reorgStart">${reorgSel!==null?'Cerrar reorganización':'↕ Reorganizar pendientes'}</button></div>`;
+  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${reorgSel!==null?'on':''}" data-act="reorgStart">${reorgSel!==null?'Cerrar reorganización':'↕ Reorganizar pendientes'}</button>${reorgSel===null?'<button class="chip" data-act="housePlan">🧽 Plan de limpieza</button>':''}</div>`;
   if(reorgSel!==null)return h+reorgPanel(pend);
+  h+=houseWxCard();
   h+=`<div class="quick"><input class="field" id="qNoDate" placeholder="Añadir algo para tener en cuenta (sin fecha)" enterkeyhint="done"><button class="btn" data-act="quickNoDate">Añadir</button></div>`;
   const groups=[];
   if(ui.taskFilter!=='done')groups.push(...taskSections(pend,t));
@@ -1794,7 +1804,7 @@ const ACT={
   calDay:d=>{ui.calDay=d.v;render()},
   week:d=>{const v=+d.v;ui.week=v===0?0:ui.week+v;render()}
 };
-Object.assign(ACT,CK_ACT);
+Object.assign(ACT,CK_ACT,HOUSE_ACT);
 document.addEventListener('click',e=>{
   if(e.target.closest('.overlay'))return;
   const contact=e.target.closest('[data-home-contact]');if(contact){contactDetail(contact.dataset.homeContact);return}

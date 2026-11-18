@@ -1,0 +1,129 @@
+// Pestaña Tareas: ubicación, tiempo con recomendaciones y plan de limpieza.
+// Datos sintéticos; Open-Meteo se simula y no hay Firebase ni escrituras externas.
+const { chromium } = require("playwright"),
+  assert = require("node:assert/strict"),
+  http = require("node:http"),
+  fs = require("node:fs"),
+  path = require("node:path");
+const P = require("../casa/house-plan.js");
+(async () => {
+  const root = path.resolve(__dirname, ".."),
+    server = http.createServer((req, res) => {
+      const u = new URL(req.url, "http://local"),
+        file = path.resolve(root, "." + (u.pathname.endsWith("/") ? u.pathname + "index.html" : u.pathname));
+      if (!file.startsWith(root + path.sep)) return res.writeHead(403).end();
+      if (u.pathname === "/casa/config.js") {
+        res.setHeader("Content-Type", "application/javascript");
+        return res.end("window.claude={use:async()=>null}");
+      }
+      fs.readFile(file, (e, data) => {
+        res.setHeader("Content-Type", { ".html": "text/html", ".js": "application/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json", ".png": "image/png" }[path.extname(file)] || "application/octet-stream");
+        res.writeHead(e ? 404 : 200);
+        res.end(e ? "" : data);
+      });
+    });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  let browser, p, forecastCalls = 0, forecastUp = true;
+  const errors = [];
+  try {
+    browser = await chromium.launch({ args: ["--no-sandbox"] });
+    p = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: "es-ES", timezoneId: "Europe/Madrid", serviceWorkers: "block" });
+    p.on("pageerror", (e) => errors.push(e.message));
+    const base = "http://127.0.0.1:" + server.address().port + "/casa/";
+    await p.route("https://**/*", async (r) => {
+      const url = new URL(r.request().url());
+      const json = (body) => r.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(body) });
+      if (url.hostname === "geocoding-api.open-meteo.com")
+        return json({ results: [{ name: "Villa de Prueba", latitude: 40.12345, longitude: -3.6789, admin1: "Provincia de Ejemplo", country: "España" }] });
+      if (url.hostname === "api.open-meteo.com") {
+        forecastCalls++;
+        if (!forecastUp) return r.abort();
+        const t = await p.evaluate(() => today()), add = (n) => p.evaluate((n) => addDays(today(), n), n);
+        const time = [t, await add(1), await add(2), await add(3), await add(4), await add(5), await add(6)];
+        // Hoy lluvia; mañana seco y frío; después, seco y templado
+        return json({ daily: { time, weather_code: [61, 1, 0, 3, 2, 0, 1], temperature_2m_max: [16, 12, 18, 19, 20, 18, 17], temperature_2m_min: [9, 3, 6, 7, 8, 7, 6], precipitation_probability_max: [85, 5, 0, 10, 0, 0, 5], precipitation_sum: [5.2, 0, 0, 0, 0, 0, 0], wind_speed_10m_max: [15, 10, 8, 12, 9, 7, 10] } });
+      }
+      return r.abort();
+    });
+    await p.goto(base, { waitUntil: "domcontentloaded" });
+    await p.waitForFunction(() => typeof ACT !== "undefined" && typeof CasaHousePlan !== "undefined" && ACT.housePlan);
+    await p.evaluate(() => {
+      S = fresh();
+      S.tasks = [{ id: "tender", title: "Tender la ropa", date: today(), who: "yo", repeat: "none", notes: "", done: false }];
+      ui.view = "tareas"; ui.taskMode = "tasks"; ui.personFilter = "all"; ui.taskFilter = "pend";
+      save();
+    });
+    const ok = () => p.locator(".overlay [data-s=ok]").last().click();
+
+    // 1) Ubicación: se busca, se elige y queda en los datos de la casa (redondeada)
+    assert.match(await p.locator(".wx").innerText(), /Indica dónde está la casa/);
+    assert.equal(forecastCalls, 0);
+    await p.locator("[data-act=wxPlace]").click();
+    await p.locator("#wxQ").fill("Villa");
+    await p.locator("[data-wx-search]").click();
+    await p.locator("[data-wx-pick]").first().click();
+    await p.waitForFunction(() => document.querySelectorAll(".wx-day").length === 5);
+    assert.deepEqual(await p.evaluate(() => S.cook.homeWeather), { name: "Villa de Prueba", region: "Provincia de Ejemplo", lat: 40.12, lon: -3.68 });
+    const card = await p.locator(".wx").innerText();
+    assert.match(card, /Villa de Prueba/);
+    assert.match(card, /no tiendas fuera/);
+    assert.match(card, /Ver en eltiempo\.es/);
+    assert.equal(await p.locator(".wx a", { hasText: "eltiempo.es" }).getAttribute("href"), "https://www.eltiempo.es/villa-de-prueba.html");
+
+    // 2) La tarea de tender pasa al próximo día seco y se puede deshacer
+    const tomorrow = await p.evaluate(() => addDays(today(), 1));
+    await p.locator(".wx-recs li", { hasText: "Tender la ropa" }).locator("[data-act=wxMove]").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tender").date), tomorrow);
+    await p.locator(".toast-undo").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tender").date), await p.evaluate(() => today()));
+
+    // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
+    await p.locator("[data-act=housePlan]").click();
+    assert.match(await p.locator("[data-plan-count]").innerText(), new RegExp("Se crearán " + P.ITEMS.length + " tareas"));
+    await p.locator('[data-plan-zone="gimnasio"]').uncheck();
+    const expected = P.ITEMS.length - P.ITEMS.filter((i) => i.zone === "gimnasio").length;
+    assert.match(await p.locator("[data-plan-count]").innerText(), new RegExp("Se crearán " + expected + " tareas"));
+    await ok();
+    const planCount = () => p.evaluate(() => S.tasks.filter((t) => t.plan === "casa").length);
+    assert.equal(await planCount(), expected);
+    await p.locator(".toast-undo").click();
+    assert.equal(await planCount(), 0);
+    await p.locator("[data-act=housePlan]").click();
+    await p.locator('[data-plan-zone="gimnasio"]').uncheck();
+    await p.locator("#planWho").selectOption("alternar");
+    await ok();
+    assert.equal(await planCount(), expected);
+    assert.deepEqual(await p.evaluate(() => [...new Set(S.tasks.filter((t) => t.plan === "casa").map((t) => t.who))].sort()), ["juanma", "yo"]);
+    await p.locator("[data-act=housePlan]").click();
+    assert.match(await p.locator(".overlay").innerText(), new RegExp("Ya tienes " + expected + " tareas del plan"));
+    assert.match(await p.locator("[data-plan-count]").innerText(), /Se crearán 1 tareas/);
+    await p.locator(".overlay [data-s=cancel]").click();
+    const titles = await p.evaluate(() => [...document.querySelectorAll("#app .row-title")].map((x) => x.textContent));
+    assert.equal(new Set(titles).size, titles.length, "cada tarea aparece una sola vez");
+    assert.ok(titles.includes("Purgar los radiadores antes de encender la calefacción"));
+
+    // 4) Frío mañana: pregunta por la calefacción y adelanta la purga de radiadores
+    const heat = p.locator(".wx-recs li", { hasText: "¿has puesto ya la calefacción?" });
+    assert.equal(await heat.count(), 1);
+    await heat.locator("[data-act=wxMove]").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.planKey === "radiadores-purgar").date), await p.evaluate(() => today()));
+    assert.match(await p.locator(".wx").innerText(), /Día de interior: puedes adelantar|Rincón de hoy/);
+    await p.screenshot({ path: process.env.SHOT || path.join(require("node:os").tmpdir(), "casa-tareas-tiempo.png"), fullPage: false });
+
+    // 5) Sin conexión, al volver a abrir se ve la última previsión guardada sin pedirla otra vez
+    forecastUp = false;
+    const callsBefore = forecastCalls;
+    await p.reload({ waitUntil: "domcontentloaded" });
+    await p.waitForFunction(() => typeof ACT !== "undefined");
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; render(); });
+    assert.equal(await p.locator(".wx-day").count(), 5);
+    assert.equal(forecastCalls, callsBefore, "la previsión reciente no se vuelve a pedir");
+    assert.ok(forecastCalls <= 2, "sin bucles de peticiones: " + forecastCalls);
+
+    assert.deepEqual(errors, [], "errores de página");
+    console.log("house-plan-flow: OK");
+  } finally {
+    if (browser) await browser.close();
+    server.close();
+  }
+})().catch((e) => { console.error(e); process.exitCode = 1; });
