@@ -301,7 +301,7 @@ test('todo en Tareas: recordatorios, mantenimientos y rutinas antiguas, sin dupl
   };
   assert.equal(P.needsUnify(state), true);
   const r = P.unifyTasks(state, TODAY);
-  assert.deepEqual([r.reminders, r.routines.map(x => x.id), r.moved], [[], ['vinc'], { reminders: 4, steps: 2 }]);
+  assert.deepEqual([r.reminders, r.routines.map(x => x.id), r.moved], [[], ['vinc'], { reminders: 4, steps: 2, duplicates: 0 }]);
   const by = id => r.tasks.find(t => t.id === id);
   assert.deepEqual([by('rem-r1').date, by('rem-r1').time, by('rem-r1').repeat, by('rem-r1').notes, by('rem-r1').who, by('rem-r1').done], [TODAY, '09:00', 'monthly', 'Domiciliado', 'ambos', false]);
   assert.deepEqual([by('rem-r2').date, by('rem-r3').done, by('rem-r3').doneAt], ['', true, plus(TODAY, -2)]);
@@ -320,4 +320,31 @@ test('la caldera del plan solo comprueba la presión y no duplica la tarea antig
   const { tasks } = P.buildPlan({ tasks: [{ id: 'c', title: 'Caldera: comprobar la presión y pedir la revisión anual', plan: 'casa', planKey: 'caldera', done: false }] }, { zones: ['radiadores'], who: 'yo', today: TODAY, uid });
   assert.ok(!tasks.some(t => t.planKey === 'caldera'));
   assert.deepEqual(P.legacyTitles({ tasks: [{ id: 'c', title: 'Caldera: comprobar la presión y pedir la revisión anual', plan: 'casa', planKey: 'caldera' }] }), [{ id: 'c', title: 'Caldera: comprobar la presión' }]);
+});
+
+test('recordatorios duplicados o triplicados: se queda una sola tarea y no vuelve a pasar', () => {
+  // Lo que pasó: el botón de la 109 en los dos móviles (ids al azar) y luego la conversión automática de la 110
+  const reminder = { id: 'r1', title: 'Pagar la luz', date: TODAY, time: '09:00', repeat: 'monthly', notes: '', done: false };
+  const v109a = { id: 'aaa', title: 'Pagar la luz', date: TODAY, time: '09:00', repeat: 'monthly', who: 'ambos', notes: '', done: false, fromReminder: 'r1' };
+  const v109b = { ...v109a, id: 'bbb' };
+  const mine = { id: 'mia', title: 'Pagar la luz', date: TODAY, time: '09:00', repeat: 'monthly', done: false };
+  // La conversión ya no repite lo que pasó la 109, y quita la copia que hay
+  const once = P.unifyTasks({ tasks: [v109a, v109b, mine], reminders: [reminder], routines: [] }, TODAY);
+  assert.deepEqual(once.tasks.map(t => t.id).sort(), ['aaa', 'mia'], 'una del recordatorio y la creada a mano');
+  assert.equal(once.moved.duplicates, 1);
+  // Datos ya triplicados (109 en los dos móviles + 110)
+  const triple = { tasks: [v109a, v109b, { ...v109a, id: 'rem-r1', fromReminder: undefined }, mine], reminders: [], routines: [{ id: 'rt', linkedTasks: true, taskIds: ['bbb', 'mia'] }] };
+  assert.equal(P.needsUnify(triple), true);
+  const fixed = P.unifyTasks(triple, TODAY);
+  assert.deepEqual(fixed.tasks.map(t => t.id).sort(), ['mia', 'rem-r1']);
+  assert.deepEqual(fixed.routines[0].taskIds, ['rem-r1', 'mia'], 'las rutinas apuntan a la que se queda');
+  assert.equal(P.needsUnify({ ...triple, ...fixed }), false);
+  // Se queda la que tiene avance: unida al plan o hecha más tarde
+  const progressed = P.dedupeConverted({ tasks: [{ ...v109a, lastDone: plus(TODAY, -3) }, { ...v109b, planKey: 'x' }, { ...v109a, id: 'rem-r1', fromReminder: undefined }] });
+  assert.deepEqual(progressed.tasks.map(t => t.id), ['bbb']);
+  // Dos recordatorios iguales pero de días distintos de la semana no se mezclan
+  const weekly = P.dedupeConverted({ tasks: [{ id: 'rem-a', title: 'Regar', repeat: 'weekly', date: TODAY }, { id: 'rem-b', title: 'Regar', repeat: 'weekly', date: plus(TODAY, 1) }] });
+  assert.equal(weekly.removed, 0);
+  // Y los dos móviles eligen la misma
+  assert.deepEqual(P.dedupeConverted({ tasks: [v109b, v109a] }).tasks.map(t => t.id), P.dedupeConverted({ tasks: [v109a, v109b] }).tasks.map(t => t.id));
 });

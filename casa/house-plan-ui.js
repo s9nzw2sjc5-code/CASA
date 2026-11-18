@@ -125,7 +125,8 @@ function houseUnify(){
  try{
   const id='antes-de-tareas-'+Date.now(),before=clone(S);saveLocalBackup(id,before,'Antes de pasar todo a Tareas');cloudBackup(id,before,'Antes de pasar todo a Tareas');
   const r=CasaHousePlan.unifyTasks(S,today());S.tasks=r.tasks;S.reminders=r.reminders;S.routines=r.routines;save();
-  const n=r.moved.reminders+r.moved.steps;if(n)setTimeout(()=>toast(`Ahora todo está en Tareas: ${n} ${n===1?'elemento pasado':'elementos pasados'} (hay copia de seguridad)`),0);
+  const n=r.moved.reminders+r.moved.steps,d=r.moved.duplicates;
+  if(n||d)setTimeout(()=>toast([n?`Ahora todo está en Tareas: ${n} ${n===1?'elemento pasado':'elementos pasados'}`:'',d?`${d} ${d===1?'tarea repetida quitada':'tareas repetidas quitadas'}`:''].filter(Boolean).join(' · ')+' (hay copia de seguridad)'),0);
   return true;
  }finally{houseUnify.busy=false}
 }

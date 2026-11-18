@@ -126,6 +126,16 @@ const { chromium } = require("playwright"),
     assert.doesNotMatch(await p.evaluate(() => ck().stores.join(",")), /Mercadillo/);
     assert.match(await p.evaluate(() => ck().stores.join(",")), /Lidl/);
 
+    // 5) Tareas repetidas por convertir dos veces (botón de la 109 en los dos móviles + conversión de la 110): se quedan en una
+    await p.evaluate(() => {
+      const base = S.tasks.find((t) => t.id === "rem-r1");
+      S.tasks.push({ ...base, id: "dup109a", fromReminder: "r1" }, { ...base, id: "dup109b", fromReminder: "r1" });
+      save();
+    });
+    await p.waitForFunction(() => S.tasks.filter((t) => t.title === "Pagar la luz").length === 1);
+    assert.match(await p.locator("#toast").innerText(), /2 tareas repetidas quitadas \(hay copia de seguridad\)/);
+    assert.equal(await p.evaluate(() => S.tasks.some((t) => t.title === "Comprar regalo")), true);
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("audit-cleanup-flow: OK");
   } finally {
