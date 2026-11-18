@@ -669,6 +669,19 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 .home-contacts{margin:12px 0 22px}.home-contacts>.head-row{gap:8px}.home-contacts h2{font-size:1rem;margin:8px 0}.home-contacts>.head-row .link{font-size:.8rem;min-height:44px;white-space:nowrap}.home-contact-rows{background:var(--surface);border-radius:16px;padding:0 12px}.home-contact-row{display:flex;align-items:center;gap:10px;min-height:72px;padding:9px 0;border-bottom:1px solid var(--line)}.home-contact-row:last-child{border-bottom:0}.home-contact-row>span{font-size:1.3rem;flex:none}.home-contact-main{min-width:0;flex:1;text-align:left;min-height:44px;padding:4px 0}.home-contact-main strong{display:block;font-size:.88rem;overflow-wrap:anywhere}.home-contact-main small{display:block;color:var(--muted);font-size:.74rem;margin-top:5px;overflow-wrap:anywhere}.home-phone-call{color:var(--accent);display:grid;place-items:center;flex:none;width:44px;height:44px;background:var(--accent-soft);border-radius:50%;font-size:1.15rem;text-decoration:none}.home-phone-call svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.home-contacts-all{min-height:44px;margin-top:5px;font-size:.83rem}.home-contact-number{font-size:1.4rem;font-weight:700;overflow-wrap:anywhere}.home-contact-dial{display:block;text-align:center;text-decoration:none;margin:14px 0}.tab[data-v="recordar"]{font-size:.6rem}
 
 .home-document-picker{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}.home-document-picker .btn{display:flex;align-items:center;justify-content:center;text-align:center;font-size:.85rem;padding:12px 8px;min-height:44px}.home-document-picker .home-document-pdf-option{grid-column:1/-1}.home-document-picker[aria-busy="true"]{opacity:.6;pointer-events:none}.home-document-selection{padding:10px 12px;background:var(--accent-soft);border-radius:12px;margin:12px 0}.home-document-selection p{font-size:.8rem;overflow-wrap:anywhere;margin:0 0 8px}.home-document-preview{display:block;max-width:100%;max-height:190px;object-fit:contain;margin:0 auto;border-radius:8px}.home-document-image{display:block;margin:12px 0}.home-document-image img{display:block;width:100%;height:auto;border-radius:10px}
+
+.cleaning-organize{margin-top:24px}
+.cleaning-organize>summary{min-height:44px;padding:12px 0;cursor:pointer;font-weight:600}
+.cleaning-tools{display:flex;flex-wrap:wrap;gap:10px}.cleaning-tools button{min-height:44px}
+.cleaning-views{margin:12px 0}.cleaning-views .chip{min-height:44px}
+
+.cleaning-views{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cleaning-progress{width:100%;height:7px;accent-color:var(--accent);margin:0 0 16px}
+.cleaning-group{margin:10px 0;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:0 12px}
+.cleaning-group>summary{display:flex;justify-content:space-between;align-items:center;min-height:58px;padding:12px 0;cursor:pointer;gap:8px;list-style:none}
+.cleaning-group>summary small{display:block;color:var(--muted);font-size:.76rem;margin-top:5px}
+.cleaning-task-list .row-title{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.cleaning-task-list .row{flex-wrap:wrap}.cleaning-task-list .row-main{min-width:120px}
 </style>
 </head>
 <body>
@@ -680,27 +693,28 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=126"></script>
-<script src="sync.js?v=126"></script>
-<script src="receipts.js?v=126"></script>
-<script src="receipt-image.js?v=126"></script>
-<script src="receipt-layout.js?v=126"></script>
-<script src="receipt-ocr.js?v=126"></script>
-<script src="product-photo.js?v=126"></script>
-<script src="product-photo-ui.js?v=126"></script>
-<script src="shopping-recommendations.js?v=126"></script>
-<script src="household-insights.js?v=126"></script>
-<script src="document-files.js?v=126"></script>
-<script src="document-photo.js?v=126"></script>
-<script src="cleaning-links.js?v=126"></script>
-<script src="home-model.js?v=126"></script>
-<script src="cocina.js?v=126"></script>
-<script src="home-ui.js?v=126"></script>
-<script src="household-ui.js?v=126"></script>
-<script src="receipt-extras.js?v=126"></script>
-<script src="house-plan.js?v=126"></script>
-<script src="house-plan-ui.js?v=126"></script>
-<script src="lidl-ui.js?v=126"></script>
+<script src="push.js?v=127"></script>
+<script src="sync.js?v=127"></script>
+<script src="receipts.js?v=127"></script>
+<script src="receipt-image.js?v=127"></script>
+<script src="receipt-layout.js?v=127"></script>
+<script src="receipt-ocr.js?v=127"></script>
+<script src="product-photo.js?v=127"></script>
+<script src="product-photo-ui.js?v=127"></script>
+<script src="shopping-recommendations.js?v=127"></script>
+<script src="household-insights.js?v=127"></script>
+<script src="document-files.js?v=127"></script>
+<script src="document-photo.js?v=127"></script>
+<script src="cleaning-links.js?v=127"></script>
+<script src="home-model.js?v=127"></script>
+<script src="cocina.js?v=127"></script>
+<script src="cleaning-view.js?v=127"></script>
+<script src="home-ui.js?v=127"></script>
+<script src="household-ui.js?v=127"></script>
+<script src="receipt-extras.js?v=127"></script>
+<script src="house-plan.js?v=127"></script>
+<script src="house-plan-ui.js?v=127"></script>
+<script src="lidl-ui.js?v=127"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -755,7 +769,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=126;
+const APP_VERSION=127;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1731,6 +1745,7 @@ const find=(arr,id)=>arr.find(x=>x.id===id);
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Sin fecha»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  cleaningView:d=>{if(!['today','frequency','zone','all'].includes(d.v))return;ui.cleaningView=d.v;render()},
   homeContacts:()=>contactsHub(), newHomeContact:()=>contactEdit(),
   homeHub:()=>homeHub(), homeAppliance:d=>applianceDetail(d.id),homeDocument:d=>documentDetail(d.id),
   cleaningArchiveFilter:()=>{ui.cleaningArchived=!ui.cleaningArchived;render()},
