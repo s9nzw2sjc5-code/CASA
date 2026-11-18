@@ -372,13 +372,11 @@ const { chromium } = require("playwright"),
         .getByText("Nota de auditoría con acentos", { exact: true })
         .isVisible(),
     );
-    await p.locator("#qRemNoDate").fill("Recordatorio sin fecha de auditoría");
-    await p.locator("#qRemNoDate").press("Enter");
-    const reminder = await p.evaluate(() =>
-      S.reminders.find(
-        (r) => r.title === "Recordatorio sin fecha de auditoría",
-      ),
-    );
+    // Ya no se crean recordatorios: los que había se editan y se pasan a Tareas
+    assert.equal(await p.locator("#qRemNoDate").count(), 0);
+    assert.equal(await p.locator("#fab").isHidden(), true);
+    await p.evaluate(() => { S.reminders.push({ id: "rem-auditoria", title: "Recordatorio sin fecha de auditoría", date: "", time: "", repeat: "none", notes: "", done: false }); save(); });
+    const reminder = await p.evaluate(() => S.reminders.find((r) => r.title === "Recordatorio sin fecha de auditoría"));
     assert.equal(reminder.date, "");
     await p
       .locator('[data-act=editRem][data-id="' + reminder.id + '"]')
@@ -394,6 +392,11 @@ const { chromium } = require("playwright"),
       ),
       "monthly",
     );
+    await p.locator("[data-act=remindersToTasks]").first().click();
+    await ok();
+    const moved = await p.evaluate(() => S.tasks.find((t) => t.title === "Recordatorio sin fecha de auditoría"));
+    assert.deepEqual([moved.date, moved.time, moved.repeat], [await p.evaluate(() => addDays(today(), 2)), "09:00", "monthly"]);
+    assert.equal(await p.evaluate(() => S.reminders.some((r) => r.title === "Recordatorio sin fecha de auditoría")), false);
     console.log(
       "PASS Important reminders, quick notes and board message without external messaging",
     );
@@ -540,33 +543,12 @@ const { chromium } = require("playwright"),
     await p.locator("#f_a").fill("3,50");
     await ok();
     assert.equal(await p.evaluate(() => spentWeek()), 3.5);
-    const cartBeforeMarket = await p.evaluate(() => JSON.stringify(S.items));
-    await p.locator("[data-act=ckMarket]").evaluate((el) => {
-      for (let n = el.parentElement; n; n = n.parentElement)
-        if (n.tagName === "DETAILS") n.open = true;
-    });
-    await p.locator("[data-act=ckMarket]").click();
-    await p.locator("#f_a").fill("5,25");
-    await p.locator("#f_v [data-v=Tomates]").click();
-    await p.locator("#f_h").check();
-    assert.equal(
-      await p.locator(".overlay [data-s=ok]").innerText(),
-      "Guardar compra",
-    );
-    await ok();
-    assert.equal(await p.evaluate(() => spentWeek()), 8.75);
-    assert.equal(await p.evaluate(() => spentIn(monthKey())), 8.75);
-    assert.equal(
-      await p.evaluate(() => JSON.stringify(S.items)),
-      cartBeforeMarket,
-    );
-    assert.equal(
-      await p.evaluate(() => S.pantry.some((x) => x.name === "Tomates")),
-      true,
-    );
+    // El mercadillo se ha quitado de Compras
+    assert.equal(await p.locator("[data-act=ckMarket]").count(), 0);
+    assert.equal(await p.evaluate(() => ck().stores.includes("Mercadillo")), false);
     await tab("recordar");
     console.log(
-      "PASS manual expense and street-market UI, decimal commas, exact totals and optional stock without changing the cart",
+      "PASS manual expense UI with decimal commas and exact totals; no street-market entry",
     );
     // Full JSON roundtrip through the actual backup UI; production adapters are not used.
     await p.locator("[data-act=backups]").click();
@@ -592,7 +574,8 @@ const { chromium } = require("playwright"),
     const backup = await p.evaluate(() => auditDownload);
     const restored = JSON.parse(backup.data);
     assert(Array.isArray(restored.contacts));
-    assert.equal(restored.tasks.length, 2);
+    // 2 tareas más el recordatorio que se ha pasado a Tareas
+    assert.equal(restored.tasks.length, 3);
     await close();
     await p.evaluate(() => {
       S.tasks = [];
@@ -624,7 +607,7 @@ const { chromium } = require("playwright"),
       buffer: Buffer.from(backup.data),
     });
     await p.locator("#bkImpOk").click();
-    assert.equal(await p.evaluate(() => S.tasks.length), 2);
+    assert.equal(await p.evaluate(() => S.tasks.length), 3);
     assert(
       await p.evaluate(() =>
         localBackups().some(

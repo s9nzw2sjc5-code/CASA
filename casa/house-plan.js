@@ -125,7 +125,7 @@
   {key:'colchones',zone:'dormitorio',kind:'every',every:3,offset:31,tip:'colchones',title:'Colchones: aspirar y darles la vuelta'},
 
   {key:'radiadores-purgar',zone:'radiadores',kind:'year',month:10,mday:15,window:[10,11],tip:'radiadores',title:'Purgar los radiadores antes de encender la calefacción',notes:'Con la calefacción apagada y fría, abre la llave de purga con un trapo debajo hasta que salga agua sin aire. Después comprueba la presión de la caldera.'},
-  {key:'caldera',zone:'radiadores',kind:'year',month:10,mday:1,window:[9,11],tip:'caldera',title:'Caldera: comprobar la presión y pedir la revisión anual',notes:'La presión en frío suele ir entre 1 y 1,5 bar. Mira la de tu caldera en el manual.'},
+  {key:'caldera',zone:'radiadores',kind:'year',month:10,mday:1,window:[9,11],tip:'caldera',title:'Caldera: comprobar la presión',notes:'La presión en frío suele ir entre 1 y 1,5 bar. Mira la de tu caldera en el manual. La revisión del técnico, en Importantes → Mantenimiento.'},
   {key:'chimenea',zone:'chimenea',kind:'year',month:9,mday:20,window:[9,11],tip:'chimenea',title:'Chimenea: deshollinar y revisar el tiro',notes:'Antes de la primera lumbre del año. La ceniza, siempre fría y en un cubo metálico.'},
   {key:'canaletas',zone:'terraza',kind:'year',month:10,mday:20,window:[10,11],tip:'canaletas',title:'Terraza: limpiar canaletas y desagües antes de las lluvias'},
   {key:'burletes',zone:'ventanas',kind:'year',month:11,mday:25,window:[11,12],tip:'burletes',title:'Revisar burletes de puertas y ventanas antes del frío'},
@@ -210,8 +210,29 @@
   return {tasks,skipped};
  }
  // Títulos de versiones anteriores del plan: si la tarea no se ha renombrado, se actualiza al nuevo
- const LEGACY={'lavadora-1':['Poner una lavadora'],'lavadora-2':['Poner otra lavadora']};
+ const LEGACY={'lavadora-1':['Poner una lavadora'],'lavadora-2':['Poner otra lavadora'],'caldera':['Caldera: comprobar la presión y pedir la revisión anual']};
  function legacyTitles(state){return (state.tasks||[]).filter(t=>t.plan==='casa'&&(LEGACY[t.planKey]||[]).includes(t.title)).map(t=>({id:t.id,title:ITEMS.find(i=>i.key===t.planKey).title}))}
+
+ /* ---------- recordatorios y mantenimientos de limpieza → Tareas ---------- */
+ // Mantenimiento es solo para revisiones técnicas y garantías; lo que es limpiar va a Tareas (y al plan)
+ const TECH=/\b(revision|revisar|tecnico|garantia|itv|inspeccion|certificad|contador|seguro|averia)\b/;
+ const CLEAN=/\b(limpi\w*|filtros?|descalcific\w*|desinfect\w*|aspirar|lavar|fregar|purgar|desatascar|quitar el polvo)\b/;
+ const isCleaningMaintenance=r=>r.kind==='maintenance'&&!r.done&&CLEAN.test(norm(r.title))&&!TECH.test(norm(r.title));
+ // Recordatorios pendientes que se pueden pasar a Tareas (los mantenimientos técnicos se quedan)
+ const movableReminders=state=>(state.reminders||[]).filter(r=>!r.done&&(!r.kind||isCleaningMaintenance(r)));
+ // Cada recordatorio elegido pasa a ser una tarea con su fecha, hora, repetición y notas; se quita de recordatorios
+ function remindersToTasks(state,ids,opt){
+  const pick=new Set(ids||[]),moved=[],tasks=[...(state.tasks||[])],reminders=[];
+  for(const r of state.reminders||[]){
+   if(!pick.has(r.id)||r.done||(r.kind&&!isCleaningMaintenance(r))){reminders.push(r);continue}
+   const t={id:opt.uid(),title:r.title,date:validDate(r.date)?r.date:'',time:validDate(r.date)&&r.time?r.time:'',who:opt.who||'ambos',repeat:r.repeat||'none',notes:r.notes||'',done:false,fromReminder:r.id};
+   if(r.repeat==='custom'){t.every=r.every;t.unit=r.unit||'m'}
+   if(r.kind==='maintenance'&&r.last)t.lastDone=r.last;
+   if(opt.urgentDated&&t.date&&t.repeat==='none'&&!r.kind)t.urgent=true;
+   tasks.push(t);moved.push(t.id);
+  }
+  return {tasks,reminders,moved};
+ }
 
  /* ---------- unir tareas propias al plan ---------- */
  // Tarea propia → plantilla del plan que le corresponde (el primer patrón que coincide)
@@ -345,5 +366,5 @@
  // No se puede posponer una tarea urgente: solo adelantarla o dejarla para hoy
  const blocksPostpone=(t,date,today)=>!!t&&!!t.urgent&&!t.done&&!!date&&date>(validDate(t.date)&&t.date>today?t.date:today);
 
- const api={norm,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
+ const api={norm,isCleaningMaintenance,movableReminders,remindersToTasks,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

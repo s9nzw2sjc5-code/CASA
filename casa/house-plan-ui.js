@@ -116,6 +116,22 @@ function houseJoinSheet(){
  ov.addEventListener('change',e=>{if(e.target.matches('[data-join]')){picks.set(e.target.dataset.join,e.target.value);draw()}else if(e.target.matches('[data-join-all]')){showAll=e.target.checked;draw()}});
  draw();return ov;
 }
+/* ---------- recordatorios y mantenimientos de limpieza → Tareas ---------- */
+function houseMoveSheet(){
+ const list=CasaHousePlan.movableReminders(S).sort((a,b)=>(a.date||'9').localeCompare(b.date||'9'));
+ if(!list.length){toast('No quedan recordatorios por pasar a Tareas');return}
+ const picked=new Set(list.map(r=>r.id)),who=[...S.people.map(p=>[p.id,p.name]),[BOTH.id,BOTH.name]];
+ const row=r=>`<label><input type="checkbox" data-move="${esc(r.id)}" checked><span>${esc(r.title)}<small>${r.kind==='maintenance'?'🔧 Mantenimiento de limpieza · ':''}${r.date?esc(relDate(r.date))+(r.time?' a las '+esc(r.time):''):'Sin fecha'}${r.repeat&&r.repeat!=='none'?' · '+esc(repLabel(r)):''}</small></span></label>`;
+ const ov=sheet('Pasar a Tareas',`<p class="hint">Lo que hay que hacer va en Tareas: así sale en Hoy, se marca como hecho, se puede reorganizar y unir al plan de limpieza. Cada uno conserva su fecha, hora, repetición y notas.</p><div class="home-checklist move-list">${list.map(row).join('')}</div><label for="moveWho">Para</label><select class="field" id="moveWho">${opt(who,BOTH.id)}</select><label class="urgent-check"><input type="checkbox" id="moveUrgent"><span><b>❗ Marcar como urgentes los de fecha concreta</b><small>Los que no se repiten y tienen fecha: no se podrán posponer.</small></span></label><p class="plan-count" data-move-count role="status" aria-live="polite"></p>`,{saveLabel:'Pasar a Tareas',autoFocus:false,onSave:()=>{
+  if(!picked.size){toast('Marca al menos uno');return false}
+  const res=CasaHousePlan.remindersToTasks(S,[...picked],{uid,who:val(ov,'moveWho'),urgentDated:ov.querySelector('#moveUrgent').checked});
+  S.tasks=res.tasks;S.reminders=res.reminders;save();
+  toastUndo(`${res.moved.length} pasado${res.moved.length===1?'':'s'} a Tareas · únelos al plan desde 🧽 Plan de limpieza`,7000);
+ }});
+ const draw=()=>{ov.querySelector('[data-move-count]').textContent=picked.size?`Se pasarán ${picked.size} a Tareas.`:'No hay ninguno marcado.'};
+ ov.addEventListener('change',e=>{if(!e.target.matches('[data-move]'))return;e.target.checked?picked.add(e.target.dataset.move):picked.delete(e.target.dataset.move);draw()});
+ draw();return ov;
+}
 /* ---------- consejos ---------- */
 const houseTipSteps=tip=>`<ol class="tip-steps">${tip.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`;
 function houseTipSheet(task){const tip=CasaHousePlan.tipFor(task);if(!tip)return;const ov=sheet('💡 '+tip.title,`<p class="hint">${esc(task.title)}</p>${houseTipSteps(tip)}<button type="button" class="link" data-tips-all>Ver todos los consejos</button>`,{autoFocus:false});ov.querySelector('[data-s=cancel]').textContent='Cerrar';ov.querySelector('[data-tips-all]').onclick=()=>{ov.remove();houseTipsLibrary()};return ov}
@@ -144,6 +160,7 @@ function houseMonthSection(ym){
 const HOUSE_ACT={
  housePlan:()=>housePlanSheet(),
  houseJoin:()=>houseJoinSheet(),
+ remindersToTasks:()=>houseMoveSheet(),
  tipsLibrary:()=>houseTipsLibrary(),
  taskTip:d=>{const t=S.tasks.find(x=>x.id===d.id);if(t)houseTipSheet(t)},
  seasonAll:()=>{ui.seasonAll=!ui.seasonAll;render()},
