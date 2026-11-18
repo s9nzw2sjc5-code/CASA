@@ -40,6 +40,9 @@
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+/* Sin zoom involuntario: el doble toque no amplía (se puede seguir pellizcando para ampliar) y en iPhone ningún campo baja de 16 px, que es lo que hace que Safari amplíe al escribir. */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}button,a,label,.chip,[data-act]{touch-action:manipulation}
+@supports(-webkit-touch-callout:none){input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:max(16px,1em)!important}}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent;min-height:100%}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
@@ -677,27 +680,27 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=119"></script>
-<script src="sync.js?v=119"></script>
-<script src="receipts.js?v=119"></script>
-<script src="receipt-image.js?v=119"></script>
-<script src="receipt-layout.js?v=119"></script>
-<script src="receipt-ocr.js?v=119"></script>
-<script src="product-photo.js?v=119"></script>
-<script src="product-photo-ui.js?v=119"></script>
-<script src="shopping-recommendations.js?v=119"></script>
-<script src="household-insights.js?v=119"></script>
-<script src="document-files.js?v=119"></script>
-<script src="document-photo.js?v=119"></script>
-<script src="cleaning-links.js?v=119"></script>
-<script src="home-model.js?v=119"></script>
-<script src="cocina.js?v=119"></script>
-<script src="home-ui.js?v=119"></script>
-<script src="household-ui.js?v=119"></script>
-<script src="receipt-extras.js?v=119"></script>
-<script src="house-plan.js?v=119"></script>
-<script src="house-plan-ui.js?v=119"></script>
-<script src="lidl-ui.js?v=119"></script>
+<script src="push.js?v=120"></script>
+<script src="sync.js?v=120"></script>
+<script src="receipts.js?v=120"></script>
+<script src="receipt-image.js?v=120"></script>
+<script src="receipt-layout.js?v=120"></script>
+<script src="receipt-ocr.js?v=120"></script>
+<script src="product-photo.js?v=120"></script>
+<script src="product-photo-ui.js?v=120"></script>
+<script src="shopping-recommendations.js?v=120"></script>
+<script src="household-insights.js?v=120"></script>
+<script src="document-files.js?v=120"></script>
+<script src="document-photo.js?v=120"></script>
+<script src="cleaning-links.js?v=120"></script>
+<script src="home-model.js?v=120"></script>
+<script src="cocina.js?v=120"></script>
+<script src="home-ui.js?v=120"></script>
+<script src="household-ui.js?v=120"></script>
+<script src="receipt-extras.js?v=120"></script>
+<script src="house-plan.js?v=120"></script>
+<script src="house-plan-ui.js?v=120"></script>
+<script src="lidl-ui.js?v=120"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -752,7 +755,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=119;
+const APP_VERSION=120;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
