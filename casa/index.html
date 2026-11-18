@@ -235,6 +235,12 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.tz-h2{font-size:1.45rem!important;margin:22px 0 10px!important}.tz-h2::before{display:none!important}
+.tz-done summary{display:flex;justify-content:space-between;align-items:center;list-style:none}.tz-done summary::-webkit-details-marker{display:none}.tz-caret{font-size:1.2rem;color:var(--muted);transition:transform .2s}.tz-done[open] .tz-caret{transform:rotate(180deg)}
+.tz-ic{color:var(--ink)}.tz-ic svg{display:block}.tz-ic.sm{width:34px;height:34px;border-radius:9px}.tz-ic.sm svg{width:20px;height:20px}
+.tz-ptitle{font-size:2.1rem!important}
+.tz-page .tz-row{min-height:60px}
+.tz-wide{background:color-mix(in srgb,var(--c-tareas) 10%,var(--surface))!important;color:var(--ink)!important;border:0!important;box-shadow:none!important}
 /* Pasar a mañana: solo el icono, sin botón alrededor */
 .tomorrow-ic{flex:none;width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;background:none;box-shadow:none;font-size:1.25rem;line-height:1;border-radius:50%}.tomorrow-ic:active{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .tz-org button{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:left;color:var(--ink)}
@@ -769,29 +775,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=133"></script>
-<script src="sync.js?v=133"></script>
-<script src="receipts.js?v=133"></script>
-<script src="receipt-image.js?v=133"></script>
-<script src="receipt-layout.js?v=133"></script>
-<script src="receipt-ocr.js?v=133"></script>
-<script src="product-photo.js?v=133"></script>
-<script src="product-photo-ui.js?v=133"></script>
-<script src="shopping-recommendations.js?v=133"></script>
-<script src="household-insights.js?v=133"></script>
-<script src="document-files.js?v=133"></script>
-<script src="document-photo.js?v=133"></script>
-<script src="cleaning-links.js?v=133"></script>
-<script src="home-model.js?v=133"></script>
-<script src="cocina.js?v=133"></script>
-<script src="cleaning-view.js?v=133"></script>
-<script src="home-ui.js?v=133"></script>
-<script src="household-ui.js?v=133"></script>
-<script src="receipt-extras.js?v=133"></script>
-<script src="house-plan.js?v=133"></script>
-<script src="house-plan-ui.js?v=133"></script>
-<script src="lidl-ui.js?v=133"></script>
-<script src="tasks-ui.js?v=133"></script>
+<script src="push.js?v=134"></script>
+<script src="sync.js?v=134"></script>
+<script src="receipts.js?v=134"></script>
+<script src="receipt-image.js?v=134"></script>
+<script src="receipt-layout.js?v=134"></script>
+<script src="receipt-ocr.js?v=134"></script>
+<script src="product-photo.js?v=134"></script>
+<script src="product-photo-ui.js?v=134"></script>
+<script src="shopping-recommendations.js?v=134"></script>
+<script src="household-insights.js?v=134"></script>
+<script src="document-files.js?v=134"></script>
+<script src="document-photo.js?v=134"></script>
+<script src="cleaning-links.js?v=134"></script>
+<script src="home-model.js?v=134"></script>
+<script src="cocina.js?v=134"></script>
+<script src="cleaning-view.js?v=134"></script>
+<script src="home-ui.js?v=134"></script>
+<script src="household-ui.js?v=134"></script>
+<script src="receipt-extras.js?v=134"></script>
+<script src="house-plan.js?v=134"></script>
+<script src="house-plan-ui.js?v=134"></script>
+<script src="lidl-ui.js?v=134"></script>
+<script src="tasks-ui.js?v=134"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -846,7 +852,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=133;
+const APP_VERSION=134;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1184,7 +1190,7 @@ function vTareasAll(inTabs){
   h+=`<div class="chips home-task-modes"><button class="chip on" data-act="taskMode" data-v="tasks">Tareas</button><button class="chip" data-act="taskMode" data-v="routines">🧹 Rutinas de limpieza</button></div>`;
   h+=`<div class="task-toolbar"><small>${esc({pend:'Pendientes',done:'Hechas',all:'Todas'}[ui.taskFilter]||'Pendientes')} · ${ui.personFilter==='all'?'Todos':esc(person(ui.personFilter)?.name||'Conjunto')}</small><button class="link" data-act="taskFilters">Filtrar</button></div>`;
   if(reorgSel!==null)h+=`<button class="link" data-act="reorgStart">Cerrar reorganización</button>`;
-  else h+=`<details class="task-options"><summary>Más opciones</summary><div class="task-options-list"><button data-act="reorgStart">Reorganizar pendientes</button><button data-act="housePlan">Plan de limpieza</button><button data-act="tipsLibrary">Consejos</button><button data-act="people">Personas</button></div>${houseWxCard()}</details>`;
+  else h+=`<details class="task-options"${ui.taskOptsOpen?' open':''}><summary>Más opciones</summary><div class="task-options-list"><button data-act="reorgStart">Reorganizar pendientes</button><button data-act="housePlan">Plan de limpieza</button><button data-act="tipsLibrary">Consejos</button><button data-act="people">Personas</button></div>${houseWxCard()}</details>`;
   if(reorgSel!==null)return h+reorgPanel(pend);
   h+=`<div class="quick"><input class="field" id="qNoDate" placeholder="Añadir algo sin fecha" enterkeyhint="done"><button class="btn" data-act="quickNoDate">Añadir</button></div>`;
   const groups=[];

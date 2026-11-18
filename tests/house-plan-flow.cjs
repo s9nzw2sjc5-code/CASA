@@ -56,7 +56,7 @@ const P = require("../casa/house-plan.js");
     const ok = () => p.locator(".overlay [data-s=ok]").last().click();
 
     // 1) Ubicación: se busca, se elige y queda en los datos de la casa (redondeada)
-    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // el tiempo se ve en «Para hoy»
+    await p.evaluate(() => { ui.taskView = "todas"; ui.taskOptsOpen = true; render(); }); // el tiempo está en Todas › Más opciones
     assert.match(await p.locator(".wx").innerText(), /Indica dónde está la casa/);
     assert.equal(forecastCalls, 0);
     await p.locator("[data-act=wxPlace]").click();
@@ -128,7 +128,7 @@ const P = require("../casa/house-plan.js");
     await p.locator("[data-act=seasonAll]").click();
 
     // 4) Frío mañana: pregunta por la calefacción y adelanta la purga de radiadores
-    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // el tiempo se ve en «Para hoy»
+    await p.evaluate(() => { ui.taskView = "todas"; ui.taskOptsOpen = true; render(); }); // el tiempo está en Todas › Más opciones
     const heat = p.locator(".wx-recs li", { hasText: "¿has puesto ya la calefacción?" });
     assert.equal(await heat.count(), 1);
     await heat.locator("[data-act=wxMove]").click();
@@ -153,7 +153,7 @@ const P = require("../casa/house-plan.js");
     const callsBefore = forecastCalls;
     await p.reload({ waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined");
-    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.taskView = "hoy"; render(); });
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.taskView = "todas"; ui.taskOptsOpen = true; render(); });
     assert.equal(await p.locator(".wx-day").count(), 5);
     assert.equal(forecastCalls, callsBefore, "la previsión reciente no se vuelve a pedir");
     assert.ok(forecastCalls <= 2, "sin bucles de peticiones: " + forecastCalls);
