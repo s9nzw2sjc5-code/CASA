@@ -213,25 +213,28 @@
  const LEGACY={'lavadora-1':['Poner una lavadora'],'lavadora-2':['Poner otra lavadora'],'caldera':['Caldera: comprobar la presión y pedir la revisión anual']};
  function legacyTitles(state){return (state.tasks||[]).filter(t=>t.plan==='casa'&&(LEGACY[t.planKey]||[]).includes(t.title)).map(t=>({id:t.id,title:ITEMS.find(i=>i.key===t.planKey).title}))}
 
- /* ---------- recordatorios y mantenimientos de limpieza → Tareas ---------- */
- // Mantenimiento es solo para revisiones técnicas y garantías; lo que es limpiar va a Tareas (y al plan)
- const TECH=/\b(revision|revisar|tecnico|garantia|itv|inspeccion|certificad|contador|seguro|averia)\b/;
- const CLEAN=/\b(limpi\w*|filtros?|descalcific\w*|desinfect\w*|aspirar|lavar|fregar|purgar|desatascar|quitar el polvo)\b/;
- const isCleaningMaintenance=r=>r.kind==='maintenance'&&!r.done&&CLEAN.test(norm(r.title))&&!TECH.test(norm(r.title));
- // Recordatorios pendientes que se pueden pasar a Tareas (los mantenimientos técnicos se quedan)
- const movableReminders=state=>(state.reminders||[]).filter(r=>!r.done&&(!r.kind||isCleaningMaintenance(r)));
- // Cada recordatorio elegido pasa a ser una tarea con su fecha, hora, repetición y notas; se quita de recordatorios
- function remindersToTasks(state,ids,opt){
-  const pick=new Set(ids||[]),moved=[],tasks=[...(state.tasks||[])],reminders=[];
+ /* ---------- todo en Tareas: recordatorios, mantenimientos y rutinas antiguas ---------- */
+ // Repetición de una rutina antigua → repetición de tarea
+ function routineRepeat(r){if(r.repeat==='weekly')return {repeat:'weekly'};if(r.repeat==='monthly')return {repeat:'monthly'};if(r.repeat==='fortnightly')return {repeat:'custom',every:2,unit:'w'};if(r.repeat==='custom'&&Number(r.days)>0)return {repeat:'custom',every:Number(r.days),unit:'d'};return {repeat:'none'}}
+ const needsUnify=state=>(state.reminders||[]).length>0||(state.routines||[]).some(r=>!r.linkedTasks);
+ // Convierte en tareas los recordatorios, los mantenimientos y los pasos de las rutinas antiguas.
+ // Los ids son fijos (derivan del original): si los dos móviles lo hacen a la vez, salen las mismas tareas.
+ function unifyTasks(state,today){
+  const tasks=[...(state.tasks||[])],have=new Set(tasks.map(t=>t.id)),add=t=>{if(!have.has(t.id)){have.add(t.id);tasks.push(t)}};
+  let reminders=0,steps=0;
   for(const r of state.reminders||[]){
-   if(!pick.has(r.id)||r.done||(r.kind&&!isCleaningMaintenance(r))){reminders.push(r);continue}
-   const t={id:opt.uid(),title:r.title,date:validDate(r.date)?r.date:'',time:validDate(r.date)&&r.time?r.time:'',who:opt.who||'ambos',repeat:r.repeat||'none',notes:r.notes||'',done:false,fromReminder:r.id};
+   const date=validDate(r.date)?r.date:'',t={id:'rem-'+r.id,title:r.title||'Recordatorio',date,time:date&&r.time?r.time:'',who:r.who||'ambos',repeat:r.repeat||'none',notes:r.notes||'',done:!!r.done};
    if(r.repeat==='custom'){t.every=r.every;t.unit=r.unit||'m'}
-   if(r.kind==='maintenance'&&r.last)t.lastDone=r.last;
-   if(opt.urgentDated&&t.date&&t.repeat==='none'&&!r.kind)t.urgent=true;
-   tasks.push(t);moved.push(t.id);
+   if(t.done)t.doneAt=date||today;
+   if(r.kind==='maintenance'){t.maintenance=true;if(r.applianceId)t.applianceId=r.applianceId;const log=[...(r.maintenanceLog||[]),r.last].filter(validDate).sort();if(log.length){t.lastDone=log[log.length-1];t.maintenanceLog=[...new Set(log)]}}
+   add(t);reminders++;
   }
-  return {tasks,reminders,moved};
+  const keep=[];
+  for(const r of state.routines||[]){
+   if(r.linkedTasks){keep.push(r);continue}
+   if(!r.archived){const date=validDate(r.date)?r.date:today;for(const st of r.steps||[]){add({id:'rut-'+r.id+'-'+st.id,title:(r.title?r.title+': ':'')+st.title,date,time:'',who:r.who||'ambos',notes:'',done:false,...routineRepeat(r)});steps++}}
+  }
+  return {tasks,reminders:[],routines:keep,moved:{reminders,steps}};
  }
 
  /* ---------- unir tareas propias al plan ---------- */
@@ -366,5 +369,5 @@
  // No se puede posponer una tarea urgente: solo adelantarla o dejarla para hoy
  const blocksPostpone=(t,date,today)=>!!t&&!!t.urgent&&!t.done&&!!date&&date>(validDate(t.date)&&t.date>today?t.date:today);
 
- const api={norm,isCleaningMaintenance,movableReminders,remindersToTasks,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
+ const api={norm,needsUnify,unifyTasks,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

@@ -284,34 +284,36 @@ test('el día de colada con dos lavadoras hay un solo aviso con las dos', () => 
   assert.match(recs[0].text, /Hoy toca colada \(lavadora de arriba y lavadora de abajo\) y no llueve: Pon la lavadora de arriba y la lavadora de abajo a la vez\. Tiéndela en el tendedero de fuera/);
 });
 
-test('mantenimiento solo para revisiones y garantías: lo de limpieza puede pasar a Tareas', () => {
-  const m = title => ({ kind: 'maintenance', title, done: false });
-  assert.equal(P.isCleaningMaintenance(m('Limpiar el filtro de la campana')), true);
-  assert.equal(P.isCleaningMaintenance(m('Descalcificar la cafetera')), true);
-  assert.equal(P.isCleaningMaintenance(m('Revisión anual de la caldera')), false);
-  assert.equal(P.isCleaningMaintenance(m('Revisar la garantía del aire')), false);
-  assert.equal(P.isCleaningMaintenance({ title: 'Limpiar filtros' }), false, 'un recordatorio normal no es mantenimiento');
-});
-
-test('los recordatorios pasan a Tareas con su fecha, hora, repetición y notas', () => {
-  let n = 0;
-  const state = { tasks: [{ id: 'ya', title: 'Tarea que ya estaba', done: false }], reminders: [
-    { id: 'r1', title: 'Pagar la luz', date: TODAY, time: '09:00', repeat: 'monthly', notes: 'Domiciliado', done: false },
-    { id: 'r2', title: 'Llamar al seguro', date: plus(TODAY, 3), time: '', repeat: 'none', notes: '', done: false },
-    { id: 'r3', title: 'Comprar regalo', date: '', time: '', repeat: 'none', notes: '', done: false },
-    { id: 'm1', kind: 'maintenance', title: 'Limpiar el filtro de la campana', date: plus(TODAY, 10), repeat: 'custom', every: 3, unit: 'm', last: plus(TODAY, -80), notes: 'Lavavajillas', done: false },
-    { id: 'm2', kind: 'maintenance', title: 'Revisión anual de la caldera', date: plus(TODAY, 40), repeat: 'custom', every: 12, unit: 'm', done: false },
-    { id: 'h', title: 'Ya hecho', date: TODAY, done: true },
-  ] };
-  assert.deepEqual(P.movableReminders(state).map(r => r.id), ['r1', 'r2', 'r3', 'm1']);
-  const res = P.remindersToTasks(state, ['r1', 'r2', 'm1', 'm2', 'h'], { uid: () => 'n' + (++n), who: 'ambos', urgentDated: true });
-  assert.deepEqual(res.reminders.map(r => r.id), ['r3', 'm2', 'h'], 'la revisión técnica y lo no elegido se quedan');
-  const by = id => res.tasks.find(t => t.fromReminder === id);
-  assert.deepEqual([by('r1').date, by('r1').time, by('r1').repeat, by('r1').notes, by('r1').who, by('r1').done, !!by('r1').urgent], [TODAY, '09:00', 'monthly', 'Domiciliado', 'ambos', false, false]);
-  assert.equal(by('r2').urgent, true, 'fecha concreta sin repetición: urgente si se pide');
-  assert.deepEqual([by('m1').repeat, by('m1').every, by('m1').unit, by('m1').lastDone, by('m1').urgent], ['custom', 3, 'm', plus(TODAY, -80), undefined]);
-  assert.equal(res.tasks.length, 4);
-  assert.equal(res.moved.length, 3);
+test('todo en Tareas: recordatorios, mantenimientos y rutinas antiguas, sin duplicar', () => {
+  const state = {
+    tasks: [{ id: 'ya', title: 'Tarea que ya estaba', done: false }],
+    reminders: [
+      { id: 'r1', title: 'Pagar la luz', date: TODAY, time: '09:00', repeat: 'monthly', notes: 'Domiciliado', done: false },
+      { id: 'r2', title: 'Comprar regalo', date: '', time: '', repeat: 'none', notes: '', done: false },
+      { id: 'r3', title: 'Hecho antes', date: plus(TODAY, -2), repeat: 'none', done: true },
+      { id: 'm1', kind: 'maintenance', title: 'Revisión de la caldera', date: plus(TODAY, 40), repeat: 'custom', every: 12, unit: 'm', last: plus(TODAY, -300), maintenanceLog: [plus(TODAY, -665), plus(TODAY, -300)], applianceId: 'caldera', notes: 'Técnico', done: false },
+    ],
+    routines: [
+      { id: 'vieja', title: 'Baños', steps: [{ id: 's1', title: 'Lavabo' }, { id: 's2', title: 'Inodoro' }], date: plus(TODAY, 1), repeat: 'fortnightly', who: 'juanma', cycle: 0 },
+      { id: 'archivada', title: 'Antigua', steps: [{ id: 'x', title: 'Algo' }], archived: true },
+      { id: 'vinc', linkedTasks: true, taskIds: ['ya'], title: 'Vinculada' },
+    ],
+  };
+  assert.equal(P.needsUnify(state), true);
+  const r = P.unifyTasks(state, TODAY);
+  assert.deepEqual([r.reminders, r.routines.map(x => x.id), r.moved], [[], ['vinc'], { reminders: 4, steps: 2 }]);
+  const by = id => r.tasks.find(t => t.id === id);
+  assert.deepEqual([by('rem-r1').date, by('rem-r1').time, by('rem-r1').repeat, by('rem-r1').notes, by('rem-r1').who, by('rem-r1').done], [TODAY, '09:00', 'monthly', 'Domiciliado', 'ambos', false]);
+  assert.deepEqual([by('rem-r2').date, by('rem-r3').done, by('rem-r3').doneAt], ['', true, plus(TODAY, -2)]);
+  const m = by('rem-m1');
+  assert.deepEqual([m.maintenance, m.applianceId, m.repeat, m.every, m.unit, m.lastDone, m.maintenanceLog.length, m.notes], [true, 'caldera', 'custom', 12, 'm', plus(TODAY, -300), 2, 'Técnico']);
+  assert.deepEqual([by('rut-vieja-s1').title, by('rut-vieja-s1').date, by('rut-vieja-s1').repeat, by('rut-vieja-s1').every, by('rut-vieja-s1').unit, by('rut-vieja-s1').who], ['Baños: Lavabo', plus(TODAY, 1), 'custom', 2, 'w', 'juanma']);
+  assert.ok(!r.tasks.some(t => /Algo/.test(t.title)), 'las rutinas archivadas no crean tareas');
+  assert.equal(P.needsUnify({ ...state, ...r }), false);
+  // Los dos móviles a la vez: mismas tareas, sin duplicados
+  const again = P.unifyTasks({ ...state, tasks: r.tasks }, TODAY);
+  assert.equal(again.tasks.length, r.tasks.length);
+  assert.equal(new Set(r.tasks.map(t => t.id)).size, r.tasks.length);
 });
 
 test('la caldera del plan solo comprueba la presión y no duplica la tarea antigua', () => {

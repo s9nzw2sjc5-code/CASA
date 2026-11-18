@@ -156,16 +156,13 @@ const { chromium } = require("playwright"),
     assert.doesNotMatch(rest, /Limpiar la fuente de Ringo|Fuente: cambiar el filtro/, "no se repiten más abajo");
     if (process.env.SHOT) { await p.evaluate(() => { document.querySelector("#toast").classList.remove("show"); $("#app").scrollTop = document.querySelector(".hsec.imp").offsetTop - 60; }); await p.screenshot({ path: process.env.SHOT + "-hoy.png" }); }
 
-    // 5) Electrodomésticos, documentos y mantenimientos, en Importantes; el Calendario solo muestra fechas
+    // 5) Electrodomésticos y documentos, en Importantes; el Calendario solo muestra fechas
     await p.locator('#tabs [data-v="semana"]').click();
     assert.equal(await p.locator("#app [data-act=homeHub]").count(), 0);
     assert.equal(await p.locator("#app [data-act=newMaintenance]").count(), 0);
     await p.locator('#tabs [data-v="recordar"]').click();
     assert.equal(await p.locator("#app [data-act=homeHub]").count(), 1);
-    assert.match(await p.locator("#app").innerText(), /Mantenimiento de casa/);
-    await p.locator("#app [data-act=newMaintenance]").click();
-    assert.equal(await p.locator("#mtDate").inputValue(), await today());
-    await cancel();
+    assert.doesNotMatch(await p.locator("#app").innerText(), /Mantenimiento de casa/, "los mantenimientos ya son tareas");
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("urgent-join-flow: OK");

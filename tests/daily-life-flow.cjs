@@ -372,31 +372,13 @@ const { chromium } = require("playwright"),
         .getByText("Nota de auditoría con acentos", { exact: true })
         .isVisible(),
     );
-    // Ya no se crean recordatorios: los que había se editan y se pasan a Tareas
+    // Ya no hay recordatorios: los que llegan (por ejemplo, de una versión anterior) pasan solos a Tareas
     assert.equal(await p.locator("#qRemNoDate").count(), 0);
     assert.equal(await p.locator("#fab").isHidden(), true);
-    await p.evaluate(() => { S.reminders.push({ id: "rem-auditoria", title: "Recordatorio sin fecha de auditoría", date: "", time: "", repeat: "none", notes: "", done: false }); save(); });
-    const reminder = await p.evaluate(() => S.reminders.find((r) => r.title === "Recordatorio sin fecha de auditoría"));
-    assert.equal(reminder.date, "");
-    await p
-      .locator('[data-act=editRem][data-id="' + reminder.id + '"]')
-      .click();
-    await p.locator("#f_d").fill(await p.evaluate(() => addDays(today(), 2)));
-    await p.locator("#f_h").fill("09:00");
-    await p.locator("#f_r").selectOption("monthly");
-    await ok();
-    assert.equal(
-      await p.evaluate(
-        (id) => S.reminders.find((r) => r.id === id).repeat,
-        reminder.id,
-      ),
-      "monthly",
-    );
-    await p.locator("[data-act=remindersToTasks]").first().click();
-    await ok();
+    await p.evaluate(() => { S.reminders.push({ id: "rem-auditoria", title: "Recordatorio sin fecha de auditoría", date: addDays(today(), 2), time: "09:00", repeat: "monthly", notes: "", done: false }); save(); });
+    await p.waitForFunction(() => S.reminders.length === 0);
     const moved = await p.evaluate(() => S.tasks.find((t) => t.title === "Recordatorio sin fecha de auditoría"));
     assert.deepEqual([moved.date, moved.time, moved.repeat], [await p.evaluate(() => addDays(today(), 2)), "09:00", "monthly"]);
-    assert.equal(await p.evaluate(() => S.reminders.some((r) => r.title === "Recordatorio sin fecha de auditoría")), false);
     console.log(
       "PASS Important reminders, quick notes and board message without external messaging",
     );

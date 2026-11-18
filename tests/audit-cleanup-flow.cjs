@@ -31,7 +31,7 @@ const { chromium } = require("playwright"),
     p.on("pageerror", (e) => errors.push(e.message));
     await p.route("https://**/*", (r) => r.abort());
     await p.goto("http://127.0.0.1:" + server.address().port + "/casa/", { waitUntil: "domcontentloaded" });
-    await p.waitForFunction(() => typeof ACT !== "undefined" && ACT.remindersToTasks);
+    await p.waitForFunction(() => typeof ACT !== "undefined" && ACT.housePlan);
     await p.evaluate(() => {
       S = fresh();
       const t = today(), add = (n) => addDays(t, n), at = (d) => new Date(d + "T10:00:00").getTime();
@@ -39,7 +39,7 @@ const { chromium } = require("playwright"),
         { id: "r1", title: "Pagar la luz", date: add(2), time: "09:00", repeat: "monthly", notes: "Domiciliado", done: false },
         { id: "r2", title: "Comprar regalo", date: "", time: "", repeat: "none", notes: "", done: false },
         { id: "m1", kind: "maintenance", title: "Limpiar el filtro de la campana", date: add(10), repeat: "custom", every: 3, unit: "m", last: add(-80), notes: "", done: false },
-        { id: "m2", kind: "maintenance", title: "Revisión anual de la caldera", date: add(40), repeat: "custom", every: 12, unit: "m", last: "", notes: "", done: false },
+        { id: "m2", kind: "maintenance", title: "Revisión anual de la caldera", date: add(5), repeat: "custom", every: 12, unit: "m", last: add(-360), applianceId: "ap1", notes: "", done: false },
       ];
       S.documents = [
         { id: "f1", title: "Factura de la luz enero", category: "Factura", docDate: "2025-01-20", mime: "application/pdf", createdAt: at(t), archived: false },
@@ -47,41 +47,54 @@ const { chromium } = require("playwright"),
         { id: "f3", title: "Factura del gas", category: "Factura", mime: "application/pdf", createdAt: at("2026-06-15"), archived: false },
         { id: "g1", title: "Garantía de la lavadora", category: "Garantía", mime: "application/pdf", createdAt: at(t), archived: false },
       ];
+      S.appliances = [{ id: "ap1", name: "Caldera", type: "otro", archived: false }];
       S.routines = [{ id: "clasica", title: "Limpieza de baños", steps: [{ id: "s1", title: "Lavabo" }], date: t, repeat: "weekly", days: 7, who: "ambos", cycle: 0 }];
       S.tasks = [{ id: "nd", title: "Algo sin fecha", date: "", who: "yo", repeat: "none", notes: "", done: false }];
       ui.view = "recordar";
-      save();
+      persistLocal();
     });
+    await p.evaluate(() => render());
     const ok = () => p.locator(".overlay [data-s=ok]").last().click(),
       cancel = () => p.locator(".overlay [data-s=cancel]").last().click(),
       tab = (v) => p.locator(`#tabs [data-v="${v}"]`).click();
 
-    // 1) Importantes: archivo de la casa, sin botón + ni alta de recordatorios
-    const imp = await p.locator("#app").innerText();
-    assert.match(imp, /Documentos, mantenimientos, teléfonos y notas/);
-    assert.match(imp, /Electrodomésticos y documentos[\s\S]*Mantenimiento de casa[\s\S]*Notas guardadas/);
-    assert.match(imp, /Solo revisiones técnicas y garantías/);
-    assert.equal(await p.locator("#fab").isHidden(), true);
-    assert.equal(await p.locator("#qRemNoDate").count(), 0);
-    assert.match(await p.locator("#app").innerText(), /1 mantenimiento es de limpieza: mejor en Tareas/);
+    // 1) Todo en Tareas: recordatorios, mantenimientos y la rutina antigua se convierten solos, con copia antes
+    await p.waitForFunction(() => S.reminders.length === 0);
+    const unified = await p.evaluate(() => ({
+      reminders: S.reminders.length,
+      routines: S.routines.length,
+      tasks: S.tasks.map((t) => [t.id, t.title, t.date, t.repeat, !!t.maintenance, t.applianceId || ""]).sort(),
+      backup: localBackups().some((b) => b.label === "Antes de pasar todo a Tareas" && b.data.reminders.length === 4),
+    }));
+    assert.equal(unified.backup, true, "copia de seguridad antes de convertir");
+    assert.deepEqual([unified.reminders, unified.routines], [0, 0]);
+    const titles = unified.tasks.map((t) => t[1]);
+    for (const t of ["Pagar la luz", "Comprar regalo", "Limpiar el filtro de la campana", "Revisión anual de la caldera", "Limpieza de baños: Lavabo"]) assert.ok(titles.includes(t), t);
+    const caldera = unified.tasks.find((t) => t[1] === "Revisión anual de la caldera");
+    assert.deepEqual(caldera.slice(3), ["custom", true, "ap1"]);
+    assert.match(await p.locator("#toast").innerText(), /Ahora todo está en Tareas: 5 elementos pasados/);
 
-    // 2) Pasar recordatorios (y el mantenimiento de limpieza) a Tareas, con Deshacer
-    await p.locator(".move-banner [data-act=remindersToTasks]", { hasText: "Pasar 3 a Tareas" }).click();
-    assert.equal(await p.locator(".move-list input[data-move]").count(), 3);
-    assert.match(await p.locator("[data-move-count]").innerText(), /Se pasarán 3 a Tareas/);
-    await p.locator('[data-move="r2"]').uncheck();
+    // 2) Importantes: documentos, teléfonos y notas; sin recordatorios, mantenimientos ni botón +
+    const imp = await p.locator("#app").innerText();
+    assert.match(imp, /Documentos, teléfonos y notas/);
+    assert.doesNotMatch(imp, /Mantenimiento de casa|⏰ Recordatorios/);
+    assert.equal(await p.locator("#fab").isHidden(), true);
+    // La ficha del aparato muestra su mantenimiento como tarea y crea otras vinculadas
+    await p.locator("#app [data-act=homeHub]").click();
+    await p.locator('[data-home-appliance="ap1"]').click();
+    assert.match(await p.locator(".overlay").last().innerText(), /Revisión anual de la caldera/);
+    await p.locator("[data-appliance-care]").click();
+    await p.locator("#f_t").fill("Cambiar el ánodo");
     await ok();
-    const after = await p.evaluate(() => ({ reminders: S.reminders.map((r) => r.id).sort(), tasks: S.tasks.filter((t) => t.fromReminder).map((t) => [t.fromReminder, t.date, t.time, t.repeat, t.who]) }));
-    assert.deepEqual(after.reminders, ["m2", "r2"]);
-    assert.deepEqual(after.tasks.map((x) => x[0]).sort(), ["m1", "r1"]);
-    const luz = after.tasks.find((x) => x[0] === "r1");
-    assert.deepEqual(luz.slice(1), [await p.evaluate(() => addDays(today(), 2)), "09:00", "monthly", "ambos"]);
-    await p.locator(".toast-undo").click();
-    assert.equal(await p.evaluate(() => S.reminders.length), 4, "Deshacer devuelve los recordatorios");
-    await p.locator(".move-banner [data-act=remindersToTasks]").first().click();
-    await ok();
-    assert.deepEqual(await p.evaluate(() => S.reminders.map((r) => r.id)), ["m2"], "solo queda la revisión técnica");
-    assert.doesNotMatch(await p.locator("#app").innerText(), /⏰ Recordatorios/);
+    assert.deepEqual(await p.evaluate(() => { const t = S.tasks.find((t) => t.title === "Cambiar el ánodo"); return [t.applianceId, t.maintenance]; }), ["ap1", true]);
+    while (await p.locator(".overlay").count()) await cancel();
+    // El Calendario sigue enseñando el mantenimiento en su día
+    await tab("semana");
+    const day = await p.evaluate(() => addDays(today(), 5));
+    if (day.slice(0, 7) !== (await p.evaluate(() => today().slice(0, 7)))) await p.locator('[data-act=month][data-v="1"]').click();
+    await p.locator(`[data-act=calDay][data-v="${day}"]`).click();
+    assert.match(await p.locator("section.day").innerText(), /Revisión anual de la caldera/);
+    await tab("recordar");
 
     // 3) Documentos: por tipo, facturas primero y por año (de la más reciente a la más antigua)
     await p.locator("#app [data-act=homeHub]").click();
@@ -101,9 +114,7 @@ const { chromium } = require("playwright"),
     await tab("tareas");
     await p.locator('[data-act=taskMode][data-v="routines"]').click();
     assert.equal(await p.locator(".home-other-routine, [data-act=newRoutine]").count(), 0);
-    await p.locator('[data-act=cleaningRoutine][data-id="clasica"]').click();
-    assert.match(await p.locator(".overlay").last().innerText(), /Limpieza de baños/, "una rutina antigua sigue abriéndose");
-    await cancel();
+    assert.equal(await p.locator('[data-act=cleaningRoutine][data-id="clasica"]').count(), 0, "la rutina antigua ya es tareas");
     await p.locator('[data-act=taskMode][data-v="tasks"]').click();
     assert.ok(await p.evaluate(() => [...document.querySelectorAll("#app h2")].some((h) => h.textContent === "Sin fecha")));
     assert.equal(await p.locator("#qNoDate").getAttribute("placeholder"), "Añadir algo sin fecha");
