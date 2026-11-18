@@ -74,8 +74,7 @@ function vTasksToday(){
  if(urgentFirst.length)h+=tzList(urgentFirst.map(x=>tzRow(x)));
  else{const next=mine.filter(x=>!x.done&&x.date>t).sort(byDateTime)[0];h+=`<div class="empty tz-empty">Nada pendiente para hoy 🎉${next?`<br><small>Lo próximo: ${esc(next.title)} · ${esc(relDate(next.date).toLowerCase())}</small>`:''}</div>`}
  if(doneToday.length)h+=`<details class="tz-done"${ui.tzDoneOpen?' open':''}><summary data-act="tzDoneToggle"><span>Hechas hoy · ${doneToday.length}</span><span class="tz-caret" aria-hidden="true">⌄</span></summary>${tzList(doneToday.map(x=>tzRow(x,{done:true})))}</details>`;
- // El tiempo y sus consejos (no tender ni barrer fuera si llueve, calefacción, radiadores…)
- return h+houseWxCard('tips')+organizeButton();
+ return h+organizeButton();
 }
 // Estado de cada zona en esta semana (de lunes a domingo; lo atrasado cuenta como pendiente)
 function zoneStats(){
@@ -127,7 +126,8 @@ let taskErrorNote='';
 function vTareasNew(){
  if(ui.taskZone)return vTaskZonePage(ui.taskZone);
  const view=['hoy','zonas','todas'].includes(ui.taskView)?ui.taskView:'hoy';
- const head=`<h1>Limpieza</h1><p class="sub">Paso a paso, a tu ritmo</p><div class="tz-seg" role="tablist">${[['hoy','Para hoy'],['zonas','Por zonas'],['todas','Todas']].map(([k,l])=>`<button role="tab" aria-selected="${view===k}" class="${view===k?'on':''}" data-act="taskView" data-v="${k}">${l}</button>`).join('')}</div>`;
+ // Los consejos según el tiempo (no tender ni barrer fuera si llueve, calefacción, radiadores…), justo debajo del título
+ const head=`<h1>Limpieza</h1><p class="sub">Paso a paso, a tu ritmo</p>${houseWxCard('tips')}<div class="tz-seg" role="tablist">${[['hoy','Para hoy'],['zonas','Por zonas'],['todas','Todas']].map(([k,l])=>`<button role="tab" aria-selected="${view===k}" class="${view===k?'on':''}" data-act="taskView" data-v="${k}">${l}</button>`).join('')}</div>`;
  if(view==='todas')return head+vTareasAll(true);
  return head+(view==='zonas'?vTasksZones():vTasksToday());
 }

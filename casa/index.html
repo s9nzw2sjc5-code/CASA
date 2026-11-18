@@ -235,6 +235,12 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.task-sheet #calcRep{display:none!important}
+.ts-title{font-size:1.05rem;font-weight:600;margin-bottom:4px}
+.ts-grid{gap:8px 10px}.ts-grid label{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.ts-clr{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;color:var(--muted);font-size:.85rem;padding:0}
+.ts-flags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 8px}.ts-flags .urgent-check{margin:0!important}.ts-flags .imp-check{margin-left:0}.ts-tip{width:44px;height:44px;font-size:1.2rem}
+
 .wx-h{display:flex;align-items:center;gap:6px}.wx-h>b{min-width:0;overflow-wrap:anywhere}.wx-sync{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;font-size:1.1rem;padding:0}.wx-sync.spin{animation:wxspin 1s linear infinite}@keyframes wxspin{to{transform:rotate(360deg)}}.wx-age{flex:1;color:var(--muted);font-size:.75rem;white-space:nowrap}.wx-h .link{margin-left:auto}
 .imp-check{margin-left:8px;border-color:var(--line)!important}.imp-check span{font-size:.92rem;font-weight:600}.imp-dates{margin:6px 0 16px}
 .tz-error{color:var(--danger);margin:0 0 10px}
@@ -778,29 +784,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=145"></script>
-<script src="sync.js?v=145"></script>
-<script src="receipts.js?v=145"></script>
-<script src="receipt-image.js?v=145"></script>
-<script src="receipt-layout.js?v=145"></script>
-<script src="receipt-ocr.js?v=145"></script>
-<script src="product-photo.js?v=145"></script>
-<script src="product-photo-ui.js?v=145"></script>
-<script src="shopping-recommendations.js?v=145"></script>
-<script src="household-insights.js?v=145"></script>
-<script src="document-files.js?v=145"></script>
-<script src="document-photo.js?v=145"></script>
-<script src="cleaning-links.js?v=145"></script>
-<script src="home-model.js?v=145"></script>
-<script src="cocina.js?v=145"></script>
-<script src="cleaning-view.js?v=145"></script>
-<script src="home-ui.js?v=145"></script>
-<script src="household-ui.js?v=145"></script>
-<script src="receipt-extras.js?v=145"></script>
-<script src="house-plan.js?v=145"></script>
-<script src="house-plan-ui.js?v=145"></script>
-<script src="lidl-ui.js?v=145"></script>
-<script src="tasks-ui.js?v=145"></script>
+<script src="push.js?v=146"></script>
+<script src="sync.js?v=146"></script>
+<script src="receipts.js?v=146"></script>
+<script src="receipt-image.js?v=146"></script>
+<script src="receipt-layout.js?v=146"></script>
+<script src="receipt-ocr.js?v=146"></script>
+<script src="product-photo.js?v=146"></script>
+<script src="product-photo-ui.js?v=146"></script>
+<script src="shopping-recommendations.js?v=146"></script>
+<script src="household-insights.js?v=146"></script>
+<script src="document-files.js?v=146"></script>
+<script src="document-photo.js?v=146"></script>
+<script src="cleaning-links.js?v=146"></script>
+<script src="home-model.js?v=146"></script>
+<script src="cocina.js?v=146"></script>
+<script src="cleaning-view.js?v=146"></script>
+<script src="home-ui.js?v=146"></script>
+<script src="household-ui.js?v=146"></script>
+<script src="receipt-extras.js?v=146"></script>
+<script src="house-plan.js?v=146"></script>
+<script src="house-plan-ui.js?v=146"></script>
+<script src="lidl-ui.js?v=146"></script>
+<script src="tasks-ui.js?v=146"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -855,7 +861,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=145;
+const APP_VERSION=146;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1197,7 +1203,7 @@ function vTareasAll(inTabs){
   h+=`<div class="chips home-task-modes"><button class="chip on" data-act="taskMode" data-v="tasks">Tareas</button><button class="chip" data-act="taskMode" data-v="routines">🧹 Rutinas de limpieza</button></div>`;
   h+=`<div class="task-toolbar"><small>${esc({pend:'Pendientes',done:'Hechas',all:'Todas'}[ui.taskFilter]||'Pendientes')} · ${ui.personFilter==='all'?'Todos':esc(person(ui.personFilter)?.name||'Conjunto')}</small><button class="link" data-act="taskFilters">Filtrar</button></div>`;
   if(reorgSel!==null)h+=`<button class="link" data-act="reorgStart">Cerrar reorganización</button>`;
-  else h+=`<details class="task-options"${ui.taskOptsOpen?' open':''}><summary>Más opciones</summary><div class="task-options-list"><button data-act="reorgStart">Reorganizar pendientes</button><button data-act="housePlan">Plan de limpieza</button><button data-act="tipsLibrary">Consejos</button><button data-act="people">Personas</button></div>${houseWxCard()}</details>`;
+  else h+=`<details class="task-options"${ui.taskOptsOpen?' open':''}><summary>Más opciones</summary><div class="task-options-list"><button data-act="reorgStart">Reorganizar pendientes</button><button data-act="housePlan">Plan de limpieza</button><button data-act="tipsLibrary">Consejos</button><button data-act="people">Personas</button></div></details>`;
   if(reorgSel!==null)return h+reorgPanel(pend);
   h+=`<div class="quick"><input class="field" id="qNoDate" placeholder="Añadir algo sin fecha" enterkeyhint="done"><button class="btn" data-act="quickNoDate">Añadir</button></div>`;
   const groups=[];
@@ -1646,19 +1652,20 @@ function addChooser(date){
 }
 function taskSheet(t,date,extra){
   const n=!t;t=t||{title:'',date:date||'',who:'yo',repeat:'none',notes:'',...(extra||{})};
+  // Ficha escueta: lo justo para que quepa sin bajar. Al abrir una tarea que ya existe no sale el teclado.
+  const clr=id=>`<button type="button" class="ts-clr" data-clear="${id}" aria-label="Quitar" title="Quitar">✕</button>`;
   const ov0=sheet(n?'Nueva tarea':'Editar tarea',`
-    <label for="f_t">Tarea</label><input class="field" id="f_t" value="${esc(t.title)}" placeholder="Ej.: Poner la lavadora">
-    <div class="grid2"><div><label for="f_d">Fecha (opcional)</label><input class="field" type="date" id="f_d" value="${t.date}"><button type="button" class="link" style="margin-top:6px" data-clear="f_d">Quitar fecha</button></div>
+    <input class="field ts-title" id="f_t" value="${esc(t.title)}" placeholder="Nombre de la tarea" aria-label="Tarea">
+    <div class="grid2 ts-grid"><div><label for="f_d">Fecha ${clr('f_d')}</label><input class="field" type="date" id="f_d" value="${t.date}"></div>
+    <div><label for="f_h">Hora ${clr('f_h')}</label><input class="field" type="time" id="f_h" value="${t.time||''}"></div>
+    <div><label for="f_r">Repetir</label><select class="field" id="f_r">${opt(Object.entries(REP),t.repeat||'none')}</select></div>
     <div><label for="f_w">Para</label><select class="field" id="f_w">${opt([...S.people,BOTH].map(p=>[p.id,p.name]),t.who||'yo')}</select></div></div>
-    <label for="f_h">Hora (opcional)</label><div style="display:flex;gap:10px;align-items:center"><input class="field" type="time" id="f_h" value="${t.time||''}" style="max-width:160px"><button type="button" class="link" data-clear="f_h">Quitar hora</button></div>
-    <p class="hint">Si no le pones fecha, queda en «Sin fecha».</p>
-    <label for="f_r">Repetir</label><select class="field" id="f_r">${opt(Object.entries(REP),t.repeat||'none')}</select>
     <div id="f_cw" style="display:none;gap:6px;margin-top:8px;align-items:center"><span>Cada</span><input class="field" type="number" min="1" inputmode="numeric" id="f_ce" value="${t.every||''}" style="width:72px;flex:none"><select class="field" id="f_cu">${opt(Object.entries(UNITS),t.unit||'m')}</select></div>
-    <div id="calcRep" class="summary" style="margin-top:10px;display:none"></div>
-    ${(tip=>tip?`<details class="tipbox"><summary>💡 Cómo hacerlo: ${esc(tip.title)}</summary>${houseTipSteps(tip)}</details>`:'')(CasaHousePlan.tipFor(t))}
-    <label class="urgent-check" title="Urgente"><input type="checkbox" id="f_u" aria-label="Urgente" ${t.urgent?'checked':''}><span aria-hidden="true">❗</span></label>
+    <div id="calcRep" class="summary" style="display:none"></div>
+    <div class="ts-flags"><label class="urgent-check" title="Urgente"><input type="checkbox" id="f_u" aria-label="Urgente" ${t.urgent?'checked':''}><span aria-hidden="true">❗</span></label>
     <label class="urgent-check imp-check" title="Verla en Importantes"><input type="checkbox" id="f_imp" aria-label="Fecha importante: verla en Importantes" ${isImportantTask(t)?'checked':''}><span>📅 En Importantes</span></label>
-    <label for="f_n">Notas</label><textarea class="field" id="f_n">${esc(t.notes)}</textarea>`,
+    ${CasaHousePlan.tipFor(t)?`<button type="button" class="tip-inline ts-tip" data-ts-tip aria-label="Cómo hacerlo" title="Cómo hacerlo">💡</button>`:''}</div>
+    <textarea class="field ts-notes" id="f_n" rows="2" placeholder="Notas" aria-label="Notas">${esc(t.notes)}</textarea>`,
   {onSave:ov=>{
     const title=val(ov,'f_t');if(!title){toast('Escribe el nombre de la tarea');return false}
     const rep=val(ov,'f_r');let d=val(ov,'f_d');if(rep!=='none'&&!d)d=today();
@@ -1669,8 +1676,10 @@ function taskSheet(t,date,extra){
     const o={title,date:d,time:d?val(ov,'f_h'):'',who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,...cus};
     if(n)S.tasks.push({id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o});else{const x=find(S.tasks,t.id);if(x)Object.assign(x,o)}
     save();toast(n?'Tarea creada':'Tarea guardada');
-  },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')}});
-  repeatPreview(ov0);
+  },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});
+  ov0.classList.add('task-sheet');repeatPreview(ov0);
+  // 💡 abre el consejo en su propia ventana, sin alargar la ficha
+  const tipBtn=ov0.querySelector('[data-ts-tip]');if(tipBtn)tipBtn.addEventListener('click',()=>houseTipSheet(t));
 }
 function gcalUrl(r){
   const d=r.date.replace(/-/g,'');let dates;

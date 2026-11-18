@@ -97,11 +97,12 @@ const { chromium } = require("playwright"),
     assert.deepEqual(await p.evaluate(() => S.cook.houseLaundry), { twoWashers: true, dryer: true, coveredLine: true, indoorLine: true, names: ["Lavadora de arriba", "Lavadora de abajo"] });
     for (const key of ["bano-principal", "patio", "cocina-semanal", "escaleras"]) assert.equal(await p.evaluate((k) => S.tasks.filter((t) => t.planKey === k).length, key), 1, key);
     assert.equal(await p.evaluate(() => S.tasks.filter((t) => /fuente/i.test(t.title)).length), 1, "la fuente no se duplica");
-    await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true)));
+    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // los consejos según el tiempo, arriba de Tareas
     assert.match(await p.locator(".wx").innerText(), /nada de tender al descubierto[\s\S]*tendedero cubierto sirve si no sopla viento/);
     assert.match(await p.locator(".wx-recs li").first().innerText(), /❗[\s\S]*Urgente: «Limpiar la fuente de Ringo»/);
 
     // 3) Urgente: marcada, primero, sin «Mañana →» y sin poder posponerse por ninguna vía
+    await p.evaluate(() => { ui.taskView = "todas"; render(); });
     const row = p.locator("#app .row.is-urgent", { hasText: "Limpiar la fuente de Ringo" });
     assert.equal(await row.count(), 1);
     assert.equal(await row.locator("[data-act=toTomorrow]").count(), 0);

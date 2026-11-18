@@ -56,7 +56,7 @@ const P = require("../casa/house-plan.js");
     const ok = () => p.locator(".overlay [data-s=ok]").last().click();
 
     // 1) Ubicación: se busca, se elige y queda en los datos de la casa (redondeada)
-    await p.evaluate(() => { ui.taskView = "todas"; ui.taskOptsOpen = true; render(); }); // la tarjeta completa está en Todas › Más opciones
+    await p.evaluate(() => { ui.view = "hoy"; render(); }); // la previsión está en Hoy
     assert.match(await p.locator(".wx").innerText(), /Indica dónde está la casa/);
     assert.equal(forecastCalls, 0);
     await p.locator("[data-act=wxPlace]").click();
@@ -67,9 +67,12 @@ const P = require("../casa/house-plan.js");
     assert.deepEqual(await p.evaluate(() => S.cook.homeWeather), { name: "Villa de Prueba", region: "Provincia de Ejemplo", lat: 40.12, lon: -3.68 });
     const card = await p.locator(".wx").innerText();
     assert.match(card, /Villa de Prueba/);
-    assert.match(card, /no tiendas fuera/);
     assert.match(card, /Ver en eltiempo\.es/);
     assert.equal(await p.locator(".wx a", { hasText: "eltiempo.es" }).getAttribute("href"), "https://www.eltiempo.es/villa-de-prueba.html");
+    // Los consejos según el tiempo, debajo del título de Tareas («Limpieza»)
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskView = "hoy"; render(); });
+    assert.match(await p.locator("#app .wx-tips").innerText(), /no tiendas fuera/);
+    assert.ok(await p.evaluate(() => { const t = document.querySelector("#app .wx-tips"), seg = document.querySelector("#app .tz-seg"); return t && seg && (t.compareDocumentPosition(seg) & Node.DOCUMENT_POSITION_FOLLOWING); }), "antes de las pestañas");
 
     // 2) La tarea de tender pasa al próximo día seco y se puede deshacer
     const tomorrow = await p.evaluate(() => addDays(today(), 1));
@@ -85,12 +88,13 @@ const P = require("../casa/house-plan.js");
     await p.evaluate(() => { ui.view = "tareas"; ui.taskView = "hoy"; render(); });
     assert.equal(await p.locator("#app .wx-day").count(), 0);
     assert.match(await p.locator("#app .wx-tips").innerText(), /Consejos según el tiempo[\s\S]*no tiendas fuera/);
-    await p.evaluate(() => { ui.taskView = "todas"; render(); });
+    await p.evaluate(() => { ui.view = "hoy"; render(); });
 
     // Al lado del lugar dice cuándo se actualizó (se renueva sola cada hora; sin botón)
     assert.match(await p.locator(".wx-age").first().innerText(), /ahora|hace/);
     assert.equal(await p.locator(".wx-sync").count(), 0);
     // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
+    await p.evaluate(() => { ui.view = "tareas"; render(); });
     await p.evaluate(() => { ui.taskView = "todas"; render(); });
     await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=housePlan]:visible").first().click();
     assert.match(await p.locator("[data-plan-count]").innerText(), new RegExp("Se crearán " + P.ITEMS.length + " tareas"));
@@ -126,8 +130,11 @@ const P = require("../casa/house-plan.js");
     assert.equal(await p.locator(".overlay .tips-lib details").count(), Object.keys(P.TIPS).length);
     await p.locator(".overlay [data-s=cancel]").click();
     await p.locator(".row", { hasText: "Cintas de las persianas" }).locator(".row-main").click();
-    assert.match(await p.locator(".overlay .tipbox summary").innerText(), /Cómo hacerlo: Cintas de las persianas/);
-    await p.locator(".overlay [data-s=cancel]").click();
+    // La ficha es escueta: el consejo se abre con 💡, en su propia ventana; al abrir la tarea no sale el teclado
+    assert.equal(await p.evaluate(() => document.activeElement.id), "", "sin cursor en el título");
+    await p.locator(".overlay [data-ts-tip]").click();
+    assert.match(await p.locator(".overlay").last().innerText(), /Cintas de las persianas/);
+    while (await p.locator(".overlay").count()) await p.locator(".overlay [data-s=cancel]").last().click();
     await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=tipsLibrary]:visible").first().click();
     assert.equal(await p.locator(".overlay .tips-lib details").count(), Object.keys(P.TIPS).length);
     await p.locator(".overlay [data-s=cancel]").click();
@@ -140,7 +147,7 @@ const P = require("../casa/house-plan.js");
     await p.locator("[data-act=seasonAll]").click();
 
     // 4) Frío mañana: pregunta por la calefacción y adelanta la purga de radiadores
-    await p.evaluate(() => { ui.taskView = "todas"; ui.taskOptsOpen = true; render(); }); // el tiempo está en Todas › Más opciones
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskView = "hoy"; render(); }); // los consejos, arriba de Tareas
     const heat = p.locator(".wx-recs li", { hasText: "¿has puesto ya la calefacción?" });
     assert.equal(await heat.count(), 1);
     await heat.locator("[data-act=wxMove]").click();
@@ -165,7 +172,7 @@ const P = require("../casa/house-plan.js");
     const callsBefore = forecastCalls;
     await p.reload({ waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined");
-    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.taskView = "todas"; ui.taskOptsOpen = true; render(); });
+    await p.evaluate(() => { ui.view = "hoy"; render(); });
     assert.equal(await p.locator(".wx-day").count(), 5);
     assert.equal(forecastCalls, callsBefore, "la previsión reciente no se vuelve a pedir");
     assert.ok(forecastCalls <= 2, "sin bucles de peticiones: " + forecastCalls);
