@@ -87,9 +87,14 @@ const { chromium } = require("playwright"),
     // 2) Crear el plan después: no duplica lo unido y guarda lo que hay para la colada
     await p.locator(".chip[data-act=housePlan]").click();
     assert.equal(await p.locator(".plan-join").count(), 0, "ya no quedan tareas por unir");
+    assert.equal(await p.locator("[data-washer-names]").isVisible(), false);
     for (const k of ["twoWashers", "dryer", "coveredLine", "indoorLine"]) await p.locator(`[data-laundry="${k}"]`).check();
+    assert.deepEqual([await p.locator("#washer1").inputValue(), await p.locator("#washer2").inputValue()], ["Lavadora de arriba", "Lavadora de abajo"]);
     await ok();
-    assert.deepEqual(await p.evaluate(() => S.cook.houseLaundry), { twoWashers: true, dryer: true, coveredLine: true, indoorLine: true });
+    const coladas = await p.evaluate(() => S.tasks.filter((t) => /^(Segundo día|Día) de colada/.test(t.title)).map((t) => t.title).sort());
+    assert.deepEqual(coladas, ["Día de colada: lavadora de abajo", "Día de colada: lavadora de arriba", "Segundo día de colada: lavadora de abajo", "Segundo día de colada: lavadora de arriba"]);
+    assert.equal(await p.evaluate(() => S.tasks.filter((t) => /: limpiar el filtro y la goma/.test(t.title)).length), 2, "un filtro por lavadora");
+    assert.deepEqual(await p.evaluate(() => S.cook.houseLaundry), { twoWashers: true, dryer: true, coveredLine: true, indoorLine: true, names: ["Lavadora de arriba", "Lavadora de abajo"] });
     for (const key of ["bano-principal", "patio", "cocina-semanal", "escaleras"]) assert.equal(await p.evaluate((k) => S.tasks.filter((t) => t.planKey === k).length, key), 1, key);
     assert.equal(await p.evaluate(() => S.tasks.filter((t) => /fuente/i.test(t.title)).length), 1, "la fuente no se duplica");
     assert.match(await p.locator(".wx").innerText(), /nada de tender al descubierto[\s\S]*tendedero cubierto sirve si no sopla viento/);
@@ -150,6 +155,17 @@ const { chromium } = require("playwright"),
     const rest = await p.evaluate(() => [...document.querySelectorAll(".hsec:not(.imp)")].map((s) => s.innerText).join("\n"));
     assert.doesNotMatch(rest, /Limpiar la fuente de Ringo|Fuente: cambiar el filtro/, "no se repiten más abajo");
     if (process.env.SHOT) { await p.evaluate(() => { document.querySelector("#toast").classList.remove("show"); $("#app").scrollTop = document.querySelector(".hsec.imp").offsetTop - 60; }); await p.screenshot({ path: process.env.SHOT + "-hoy.png" }); }
+
+    // 5) Electrodomésticos, documentos y mantenimientos, en Importantes; el Calendario solo muestra fechas
+    await p.locator('#tabs [data-v="semana"]').click();
+    assert.equal(await p.locator("#app [data-act=homeHub]").count(), 0);
+    assert.equal(await p.locator("#app [data-act=newMaintenance]").count(), 0);
+    await p.locator('#tabs [data-v="recordar"]').click();
+    assert.equal(await p.locator("#app [data-act=homeHub]").count(), 1);
+    assert.match(await p.locator("#app").innerText(), /Mantenimiento de casa/);
+    await p.locator("#app [data-act=newMaintenance]").click();
+    assert.equal(await p.locator("#mtDate").inputValue(), await today());
+    await cancel();
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("urgent-join-flow: OK");

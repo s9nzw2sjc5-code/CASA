@@ -18,6 +18,10 @@
   ['ventanas','Ventanas y persianas'],['radiadores','Radiadores y caldera'],['aire','Aire acondicionado'],['chimenea','Chimenea'],
   ['entrada','Entrada y recibidor'],['mascota','Fuente de agua de Ringo']
  ];
+ // Con dos lavadoras, cada una tiene su nombre para distinguirlas (se puede cambiar en el plan)
+ const WASHER_NAMES=['Lavadora de arriba','Lavadora de abajo'];
+ const washerNames=L=>{const n=(L&&Array.isArray(L.names)?L.names:[]).map(s=>String(s||'').trim().slice(0,40));return WASHER_NAMES.map((d,i)=>n[i]||d)};
+ const lcFirst=s=>s.charAt(0).toLowerCase()+s.slice(1);
  // Lo que hay en casa para la colada (se guarda en los datos privados de la casa)
  const LAUNDRY=[['twoWashers','Dos lavadoras'],['dryer','Secadora'],['coveredLine','Tendedero cubierto en el exterior (patio, terraza…)'],['indoorLine','Tendedero dentro de casa (lavadero, sótano…)']];
 
@@ -136,7 +140,7 @@
 
  // Consejo de una tarea: el de su plantilla o, si es una tarea propia, por su título
  function tipFor(task){
-  const item=task&&task.planKey&&ITEMS.find(i=>i.key===task.planKey);if(item)return item.tip?{key:item.tip,...TIPS[item.tip]}:null;
+  const item=task&&task.planKey&&ITEMS.find(i=>i.key===baseKey(task.planKey));if(item)return item.tip?{key:item.tip,...TIPS[item.tip]}:null;
   const title=norm(task&&task.title),hit=TIP_MATCH.find(([re])=>re.test(title));return hit?{key:hit[1],...TIPS[hit[1]]}:null;
  }
 
@@ -161,11 +165,41 @@
   if(item.kind==='every')return {repeat:'custom',every:item.every,unit:'m',date:plus(today,item.offset)};
   return {repeat:'yearly',date:seasonDate(item,today,n||0)};
  }
+ /* ---------- dos lavadoras con nombre ---------- */
+ const PER_WASHER=new Set(['lavadora-1','lavadora-2','lavadora-filtro']);
+ const baseKey=k=>String(k||'').split(':')[0];
+ // Título de la tarea de cada lavadora: «Día de colada: lavadora de arriba», «Lavadora de abajo: limpiar el filtro…»
+ function washerTitle(key,name){return key==='lavadora-1'?'Día de colada: '+lcFirst(name):key==='lavadora-2'?'Segundo día de colada: '+lcFirst(name):name+': limpiar el filtro y la goma de la puerta'}
+ // Con dos lavadoras, las tareas de colada y del filtro se hacen una por lavadora (el filtro, en semanas distintas)
+ function expandItems(laundry){
+  if(!laundry||!laundry.twoWashers)return ITEMS;
+  const names=washerNames(laundry);
+  return ITEMS.flatMap(item=>PER_WASHER.has(item.key)?names.map((name,i)=>({...item,key:item.key+':'+(i+1),base:item.key,title:washerTitle(item.key,name),week:item.key==='lavadora-filtro'?(item.week||0)+2*i:item.week})):[item]);
+ }
+ // Al pasar a dos lavadoras (o cambiarles el nombre), las tareas que ya existen pasan a ser de la primera,
+ // o se renombran; solo cambia el título si no se había cambiado a mano
+ function washerUpdates(state,before,after){
+  if(!after||!after.twoWashers)return [];
+  const oldNames=before&&before.twoWashers?washerNames(before):null,newNames=washerNames(after),out=[];
+  for(const t of state.tasks||[]){
+   if(t.plan!=='casa'||!PER_WASHER.has(baseKey(t.planKey)))continue;
+   const base=baseKey(t.planKey),n=t.planKey.includes(':')?Number(t.planKey.split(':')[1]):1,item=ITEMS.find(i=>i.key===base);
+   const template=[item.title,...(LEGACY[base]||[]),...(oldNames?[washerTitle(base,oldNames[n-1])]:[])].map(norm);
+   const upd={id:t.id,planKey:base+':'+n};if(template.includes(norm(t.title)))upd.title=washerTitle(base,newNames[n-1]);
+   if(upd.planKey!==t.planKey||(upd.title&&upd.title!==t.title))out.push(upd);
+  }
+  return out;
+ }
  function buildPlan(state,opt){
   const zones=new Set(opt.zones||[]),today=opt.today,existing=state.tasks||[];if(!validDate(today))throw Error('Fecha no válida.');
-  const has=item=>existing.some(t=>t.planKey===item.key||norm(t.title)===norm(item.title)||(LEGACY[item.key]||[]).some(old=>norm(t.title)===norm(old)));
+  // La tarea de la primera lavadora también cuenta si ya existe la de antes (sin lavadora concreta)
+  const keys=item=>item.base&&item.key.endsWith(':1')?[item.key,item.base]:[item.key];
+  const has=item=>{
+   const first=!item.base||item.key.endsWith(':1'),olds=first?[...(LEGACY[item.base||item.key]||[]),...(item.base?[ITEMS.find(i=>i.key===item.base).title]:[])].map(norm):[];
+   return existing.some(t=>keys(item).includes(t.planKey)||norm(t.title)===norm(item.title)||olds.includes(norm(t.title)));
+  };
   const tasks=[],skipped=[];let inSeason=0;
-  ITEMS.forEach((item,i)=>{
+  expandItems(opt.laundry).forEach((item,i)=>{
    if(item.zone&&!zones.has(item.zone))return;
    if(has(item)){skipped.push(item.key);return}
    const s=scheduleFor(item,today,inSeason);if(item.kind==='year'&&s.date<plus(today,30))inSeason++;
@@ -201,7 +235,7 @@
    const t=byId.get(id),item=ITEMS.find(i=>i.key===key);if(!t||!item||t.done||t.planKey||changed.has(id))continue;
    let s=byKey.get(key);
    if(!s){
-    const twin=tasks.find(x=>x.planKey===key&&x.plan==='casa'&&!x.planJoined&&!x.done&&!removed.has(x.id)&&!changed.has(x.id));
+    const twin=tasks.find(x=>(x.planKey===key||x.planKey===key+':1')&&x.plan==='casa'&&!x.planJoined&&!x.done&&!removed.has(x.id)&&!changed.has(x.id));
     s=twin?{repeat:twin.repeat,date:twin.date,every:twin.every,unit:twin.unit}:scheduleFor(item,today,0);
     if(twin&&!linked.has(twin.id))removed.add(twin.id);
     byKey.set(key,s);
@@ -242,7 +276,7 @@
  function sky(c){if(c===0)return['☀️','Despejado'];if(c===1||c===2)return['🌤️','Poco nuboso'];if(c===3)return['☁️','Nublado'];if(c===45||c===48)return['🌫️','Niebla'];if(c>=51&&c<=57)return['🌦️','Llovizna'];if(c>=61&&c<=67||c>=80&&c<=82)return['🌧️','Lluvia'];if(c>=71&&c<=77||c===85||c===86)return['🌨️','Nieve'];if(c>=95)return['⛈️','Tormenta'];return['🌡️','Previsión']}
  const OUTDOOR=/\b(tender|terraza|patio|por fuera|exterior|toldos?|canaletas?|jardin|balcon|fachada)\b/;
  const isOutdoor=t=>OUTDOOR.test(norm(t.title));
- const isWash=t=>/\blavadoras?\b/.test(norm(t.title))&&/\bponer\b/.test(norm(t.title));
+ const isWash=t=>['lavadora-1','lavadora-2'].includes(baseKey(t.planKey))||/\blavadoras?\b/.test(norm(t.title))&&/\bponer\b/.test(norm(t.title));
  const deg=v=>Math.round(v)+' °C';
  function findTask(state,key,re){const all=(state.tasks||[]).filter(t=>t.planKey===key||re.test(norm(t.title)));return all.find(t=>!t.done)||all[0]||null}
 
@@ -254,7 +288,10 @@
   const used=new Set(),act=(t,date,label)=>{used.add(t.id);return {id:t.id,date,label}};
   // Colada según lo que hay en casa (h.laundry); sin datos, consejos generales
   const L=h.laundry||{},setup=LAUNDRY.some(([k])=>L[k]),wet0=isWet(d0),windy0=(d0.wind??0)>=30,cold0=d0.max!==null&&d0.max<10;
-  const wash=tasks.find(t=>t.date<=today&&isWash(t)),rainSoon=wet0?null:days.slice(i0+1,i0+3).find(isWet),two=L.twoWashers?'Pon las dos lavadoras a la vez. ':'';
+  // Las coladas de hoy (con dos lavadoras, una tarea por lavadora): un solo aviso para todas
+  const washes=tasks.filter(t=>t.date<=today&&isWash(t)),names=washerNames(L);
+  const wash=washes.length?{id:washes[0].id,label:washes.length>1?'colada ('+washes.map(t=>lcFirst(t.title.replace(/^(segundo )?d[ií]a de colada:\s*/i,''))).join(' y ')+')':`«${washes[0].title}»`}:null;
+  const rainSoon=wet0?null:days.slice(i0+1,i0+3).find(isWet),two=L.twoWashers?`Pon la ${lcFirst(names[0])} y la ${lcFirst(names[1])} a la vez. `:'';
   function dryingAdvice(){
    if(!setup)return wet0?'sécala en la secadora o tiéndela dentro, junto a una ventana abierta.':cold0?'mejor la secadora o tender dentro.':'tiéndela fuera en cuanto termine.';
    if(!wet0&&!cold0)return L.coveredLine?'tiéndela en el tendedero de fuera en cuanto termine: al aire se seca antes.':'tiéndela fuera en cuanto termine.';
@@ -264,20 +301,22 @@
    if(L.dryer)parts.push('La secadora, para toallas y sábanas o si corre prisa.');
    return parts.join(' ')||'tiéndela dentro, junto a una ventana abierta.';
   }
+  // Tras «Pon las dos lavadoras…», el consejo empieza en mayúscula
+  const laundryAdvice=()=>{const a=dryingAdvice();return two?two+a.charAt(0).toUpperCase()+a.slice(1):a};
   // Lo de exterior que se puede pasar a otro día (nunca lo urgente; tender bajo techo sí se puede si no hay viento fuerte)
   const movable=t=>isOutdoor(t)&&!t.urgent&&!(L.coveredLine&&/\btender\b/.test(norm(t.title))&&(d0.wind??0)<40);
   // Primero, lo urgente que toca hoy o está atrasado: no se puede posponer
   for(const t of tasks.filter(t=>t.urgent&&t.date<=today).sort(byDate).slice(0,3))recs.push({icon:'❗',text:`Urgente${t.date<today?' y atrasada':''}: «${t.title}». No se puede posponer.`,actions:[],tip:t.id});
   if(wet0){
    recs.push({icon:'🌧️',text:!setup?`Hoy hay un ${d0.rain??0} % de probabilidad de lluvia: no tiendas fuera. Usa la secadora y vacía el filtro al terminar.`:`Hoy hay un ${d0.rain??0} % de probabilidad de lluvia: nada de tender al descubierto.${L.coveredLine?(windy0?' Con viento, tampoco en el tendedero cubierto.':' El tendedero cubierto sirve si no sopla viento.'):''}${L.dryer?' Si usas la secadora, vacía el filtro al terminar.':''}`,actions:[]});
-   if(wash)recs.push({icon:'🧺',text:`Hoy toca «${wash.title}» y llueve: ${two}${dryingAdvice()}`,actions:[],tip:wash.id});
+   if(wash)recs.push({icon:'🧺',text:`Hoy toca ${wash.label} y llueve: ${laundryAdvice()}`,actions:[],tip:wash.id});
    for(const t of tasks.filter(t=>t.date<=today&&movable(t)).sort(byDate).slice(0,3))recs.push({icon:'↪️',text:`«${t.title}» mejor en un día seco.`,actions:nextDry?[act(t,nextDry.date,'Pasar a '+fmt(nextDry.date))]:[]});
   }else{
    if(rainSoon){
-    recs.push({icon:'🧺',text:`Llueve ${fmt(rainSoon.date)} (${rainSoon.rain??0} %): ${wash?`hoy toca «${wash.title}»${L.twoWashers?' (pon las dos lavadoras a la vez)':''}, así que tiende fuera en cuanto termine.`:'aprovecha hoy para tender fuera.'}`,actions:[],tip:wash?.id});
+    recs.push({icon:'🧺',text:`Llueve ${fmt(rainSoon.date)} (${rainSoon.rain??0} %): ${wash?`hoy toca ${wash.label}${L.twoWashers?` (pon la ${lcFirst(names[0])} y la ${lcFirst(names[1])} a la vez)`:''}, así que tiende fuera en cuanto termine.`:'aprovecha hoy para tender fuera.'}`,actions:[],tip:wash?.id});
     for(const t of tasks.filter(t=>isOutdoor(t)&&t.date>today&&wetDays.has(t.date)).sort(byDate).slice(0,3))recs.push({icon:'☀️',text:`«${t.title}» cae en día de lluvia (${fmt(t.date)}): mejor hoy.`,actions:[act(t,today,'Hacer hoy')]});
    }else{
-    if(wash)recs.push({icon:'🧺',text:`Hoy toca «${wash.title}»${cold0?' y hace frío':' y no llueve'}: ${two}${dryingAdvice()}`,actions:[],tip:wash.id});
+    if(wash)recs.push({icon:'🧺',text:`Hoy toca ${wash.label}${cold0?' y hace frío':' y no llueve'}: ${laundryAdvice()}`,actions:[],tip:wash.id});
     if(d0.max!==null&&d0.max>=12&&d0.max<=30&&(d0.wind??0)<30)recs.push({icon:'🪟',text:'Buen día para ventanas por fuera, la terraza y tender la ropa.',actions:[]});
    }
   }
@@ -306,5 +345,5 @@
  // No se puede posponer una tarea urgente: solo adelantarla o dejarla para hoy
  const blocksPostpone=(t,date,today)=>!!t&&!!t.urgent&&!t.done&&!!date&&date>(validDate(t.date)&&t.date>today?t.date:today);
 
- const api={norm,ZONES,LAUNDRY,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
+ const api={norm,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

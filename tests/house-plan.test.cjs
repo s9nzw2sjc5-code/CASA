@@ -241,7 +241,7 @@ test('la colada se adapta a lo que hay en casa', () => {
   const rec = (d, extra = []) => P.recommendations({ tasks: [wash, ...extra] }, d, TODAY, { relDate, laundry: L });
   const wetCalm = rec([day(TODAY, { rain: 80, mm: 2, wind: 10 }), day(plus(TODAY, 1))]);
   const w1 = wetCalm.find(r => r.tip === 'w').text;
-  assert.match(w1, /Pon las dos lavadoras a la vez/);
+  assert.match(w1, /Pon la lavadora de arriba y la lavadora de abajo a la vez/);
   assert.match(w1, /tendedero cubierto sirve si no sopla viento/);
   assert.match(w1, /tendedero de dentro/);
   assert.match(wetCalm[0].text, /nada de tender al descubierto/);
@@ -251,4 +251,35 @@ test('la colada se adapta a lo que hay en casa', () => {
   const tender = { id: 't', title: 'Tender la ropa', date: TODAY, done: false };
   assert.ok(!rec([day(TODAY, { rain: 80, mm: 2, wind: 10 }), day(plus(TODAY, 1))], [tender]).some(r => r.actions.some(a => a.id === 't')));
   assert.ok(P.recommendations({ tasks: [tender] }, [day(TODAY, { rain: 80, mm: 2 }), day(plus(TODAY, 1))], TODAY, { relDate }).some(r => r.actions.some(a => a.id === 't')), 'sin tendedero cubierto, sí');
+});
+
+test('dos lavadoras con nombre: una tarea por lavadora y sin duplicar las que ya había', () => {
+  const L = { twoWashers: true };
+  const { tasks } = P.buildPlan({ tasks: [] }, { zones: ['ropa', 'lavadero'], who: 'yo', today: TODAY, uid, laundry: L });
+  const by = k => tasks.find(t => t.planKey === k);
+  assert.deepEqual(['lavadora-1:1', 'lavadora-1:2', 'lavadora-2:1', 'lavadora-2:2'].map(k => by(k).title), ['Día de colada: lavadora de arriba', 'Día de colada: lavadora de abajo', 'Segundo día de colada: lavadora de arriba', 'Segundo día de colada: lavadora de abajo']);
+  assert.equal(by('lavadora-1:1').date, by('lavadora-1:2').date, 'las dos el mismo día de colada');
+  assert.equal(by('lavadora-filtro:1').title, 'Lavadora de arriba: limpiar el filtro y la goma de la puerta');
+  assert.notEqual(by('lavadora-filtro:1').date, by('lavadora-filtro:2').date, 'el filtro de cada una, en semanas distintas');
+  assert.equal(P.tipFor(by('lavadora-filtro:2')).key, 'lavadoraFiltro');
+  assert.equal(P.tipFor(by('lavadora-1:2')).key, 'lavar');
+  // Con una sola lavadora, como antes
+  assert.ok(P.buildPlan({ tasks: [] }, { zones: ['ropa'], who: 'yo', today: TODAY, uid }).tasks.some(t => t.planKey === 'lavadora-1' && t.title === 'Día de colada: poner lavadoras'));
+  // Si ya había una tarea de colada, cuenta como la de la primera lavadora: solo se crea la segunda
+  const old = [{ id: 'a', title: 'Día de colada: poner lavadoras', plan: 'casa', planKey: 'lavadora-1', date: TODAY, done: false }, { id: 'b', title: 'Mi colada de los jueves', plan: 'casa', planKey: 'lavadora-2', date: TODAY, done: false }];
+  const more = P.buildPlan({ tasks: old }, { zones: ['ropa'], who: 'yo', today: TODAY, uid, laundry: L }).tasks.map(t => t.planKey).sort();
+  assert.deepEqual(more.filter(k => k.startsWith('lavadora')), ['lavadora-1:2', 'lavadora-2:2']);
+  assert.deepEqual(P.washerUpdates({ tasks: old }, {}, L), [{ id: 'a', planKey: 'lavadora-1:1', title: 'Día de colada: lavadora de arriba' }, { id: 'b', planKey: 'lavadora-2:1' }]);
+  // Cambiar los nombres renombra las tareas que no se habían cambiado a mano
+  const named = [{ id: 'c', title: 'Día de colada: lavadora de abajo', plan: 'casa', planKey: 'lavadora-1:2' }];
+  assert.deepEqual(P.washerUpdates({ tasks: named }, L, { twoWashers: true, names: ['Lavadora del lavadero', 'Lavadora del sótano'] }), [{ id: 'c', planKey: 'lavadora-1:2', title: 'Día de colada: lavadora del sótano' }]);
+  assert.deepEqual(P.washerUpdates({ tasks: old }, {}, {}), [], 'con una sola lavadora no se toca nada');
+});
+
+test('el día de colada con dos lavadoras hay un solo aviso con las dos', () => {
+  const L = { twoWashers: true, coveredLine: true };
+  const tasks = [{ id: 'x', title: 'Día de colada: lavadora de arriba', planKey: 'lavadora-1:1', date: TODAY, done: false }, { id: 'y', title: 'Día de colada: lavadora de abajo', planKey: 'lavadora-1:2', date: TODAY, done: false }];
+  const recs = P.recommendations({ tasks }, [day(TODAY), day(plus(TODAY, 1)), day(plus(TODAY, 2))], TODAY, { relDate, laundry: L }).filter(r => /colada/.test(r.text));
+  assert.equal(recs.length, 1);
+  assert.match(recs[0].text, /Hoy toca colada \(lavadora de arriba y lavadora de abajo\) y no llueve: Pon la lavadora de arriba y la lavadora de abajo a la vez\. Tiéndela en el tendedero de fuera/);
 });
