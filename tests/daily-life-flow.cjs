@@ -108,13 +108,9 @@ const { chromium } = require("playwright"),
     const repeating = await p.evaluate(() =>
       S.tasks.find((t) => t.title === "Limpieza periódica de auditoría"),
     );
-    await p
-      .locator(
-        '[data-act=answerNotice][data-kind=task][data-id="' +
-          repeating.id +
-          '"]',
-      )
-      .click();
+    // Las filas ya no tienen «Responder»: la respuesta se abre como desde un aviso
+    assert.equal(await p.locator("[data-act=answerNotice]").count(), 0);
+    await p.evaluate((id) => answerNotice({ kind: "task", id }), repeating.id);
     assert.equal(await p.locator("[data-response]").count(), 2);
     await p.locator("[data-response=tomorrow]").click();
     assert.equal(

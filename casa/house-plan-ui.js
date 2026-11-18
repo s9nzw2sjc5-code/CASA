@@ -22,7 +22,7 @@ function houseWxRefresh(force){
   .finally(()=>{houseWx.busy=false;if(ui.view==='tareas'&&ui.taskMode!=='routines')render()});
 }
 const houseWxLink=place=>'https://www.eltiempo.es/'+(CasaHousePlan.norm(place.name).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'')+'.html';
-const houseTipButton=(id,label='💡 Cómo hacerlo')=>`<button class="btn sec" data-act="taskTip" data-id="${esc(id)}">${esc(label)}</button>`;
+const houseTipButton=id=>`<button class="tip-inline" data-act="taskTip" data-id="${esc(id)}" aria-label="Cómo hacerlo" title="Cómo hacerlo">💡</button>`;
 function houseWxCard(){
  const place=houseWxPlace();
  if(!place)return`<section class="wx"><div class="wx-h"><b>🌦️ Tiempo y recomendaciones</b></div><p class="hint">Indica dónde está la casa para ver la previsión y qué conviene hacer cada día: no tender si va a llover, preparar la calefacción cuando llega el frío…</p><button class="btn sec" data-act="wxPlace">Añadir ubicación</button></section>`;
