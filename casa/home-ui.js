@@ -96,7 +96,7 @@ function routineCard(r){const p=CasaHome.progress(S,r),date=routineDate(r),who=r
 function cleaningSection(dueOnly=false){const routines=(S.routines||[]).filter(r=>!r.archived&&(!dueOnly||routineDate(r)&&routineDate(r)<=today())).sort((a,b)=>(routineDate(a)||'9').localeCompare(routineDate(b)||'9'));if(dueOnly&&!routines.length)return '';return `<section class="home-routines"><div class="head-row"><h2>🧹 Rutinas de limpieza</h2><button class="link" data-act="${dueOnly?'taskMode':'linkRoutine'}" ${dueOnly?'data-v="routines"':''}>${dueOnly?'Ver rutinas':'+ Crear'}</button></div>${routines.map(routineCard).join('')||'<p class="hint">Organiza tus tareas programadas en una rutina.</p>'}</section>`}
 function vCleaning(){
  const model=CasaCleaningView.build(S,CasaHousePlan,today()),view=['today','frequency','zone','all'].includes(ui.cleaningView)?ui.cleaningView:'today';
- const sort=rows=>rows.slice().sort((a,b)=>Number(a.task.done)-Number(b.task.done)||Number(!!b.task.urgent)-Number(!!a.task.urgent)||(a.task.date||'9999').localeCompare(b.task.date||'9999'));
+ const sort=rows=>rows.slice().sort((a,b)=>Number(a.task.done)-Number(b.task.done)||Number(!!b.task.urgent)-Number(!!a.task.urgent)||String(a.task.date||'9999').localeCompare(String(b.task.date||'9999')));
  const list=rows=>`<div class="cleaning-task-list">${ul(sort(rows).map(e=>taskRow(e.task)))}</div>`;
  const groups=view==='zone'?model.byZone:model.byFrequency;
  const ranks=['Diarias','Semanales','Quincenales','Mensuales','Cada 2 días','Cada 3 días','Por estación · Primavera','Por estación · Verano','Por estación · Otoño','Por estación · Invierno','Anuales','Puntuales','Sin clasificar'];

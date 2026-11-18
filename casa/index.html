@@ -776,29 +776,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=135"></script>
-<script src="sync.js?v=135"></script>
-<script src="receipts.js?v=135"></script>
-<script src="receipt-image.js?v=135"></script>
-<script src="receipt-layout.js?v=135"></script>
-<script src="receipt-ocr.js?v=135"></script>
-<script src="product-photo.js?v=135"></script>
-<script src="product-photo-ui.js?v=135"></script>
-<script src="shopping-recommendations.js?v=135"></script>
-<script src="household-insights.js?v=135"></script>
-<script src="document-files.js?v=135"></script>
-<script src="document-photo.js?v=135"></script>
-<script src="cleaning-links.js?v=135"></script>
-<script src="home-model.js?v=135"></script>
-<script src="cocina.js?v=135"></script>
-<script src="cleaning-view.js?v=135"></script>
-<script src="home-ui.js?v=135"></script>
-<script src="household-ui.js?v=135"></script>
-<script src="receipt-extras.js?v=135"></script>
-<script src="house-plan.js?v=135"></script>
-<script src="house-plan-ui.js?v=135"></script>
-<script src="lidl-ui.js?v=135"></script>
-<script src="tasks-ui.js?v=135"></script>
+<script src="push.js?v=136"></script>
+<script src="sync.js?v=136"></script>
+<script src="receipts.js?v=136"></script>
+<script src="receipt-image.js?v=136"></script>
+<script src="receipt-layout.js?v=136"></script>
+<script src="receipt-ocr.js?v=136"></script>
+<script src="product-photo.js?v=136"></script>
+<script src="product-photo-ui.js?v=136"></script>
+<script src="shopping-recommendations.js?v=136"></script>
+<script src="household-insights.js?v=136"></script>
+<script src="document-files.js?v=136"></script>
+<script src="document-photo.js?v=136"></script>
+<script src="cleaning-links.js?v=136"></script>
+<script src="home-model.js?v=136"></script>
+<script src="cocina.js?v=136"></script>
+<script src="cleaning-view.js?v=136"></script>
+<script src="home-ui.js?v=136"></script>
+<script src="household-ui.js?v=136"></script>
+<script src="receipt-extras.js?v=136"></script>
+<script src="house-plan.js?v=136"></script>
+<script src="house-plan-ui.js?v=136"></script>
+<script src="lidl-ui.js?v=136"></script>
+<script src="tasks-ui.js?v=136"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -853,7 +853,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=135;
+const APP_VERSION=136;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1120,7 +1120,7 @@ function vHoy(){
 
 /* «Reorganizar pendientes»: null = fuera del modo; Set = tareas marcadas (solo en memoria) */
 let reorgSel=null;
-const byDateTime=(a,b)=>(a.date||'9').localeCompare(b.date||'9')||(a.time||'99:99').localeCompare(b.time||'99:99');
+const byDateTime=(a,b)=>String(a.date||'9').localeCompare(String(b.date||'9'))||String(a.time||'99:99').localeCompare(String(b.time||'99:99'));
 // Cada tarea pendiente cae en una sola sección: atrasadas, hoy, mañana, próximos días o sin fecha
 function taskSections(pend,t){
   // Lo urgente (❗), primero dentro de cada sección
@@ -1519,6 +1519,8 @@ function render(){
   if(document.activeElement?.id==='qProd'&&ui.view==='compras'&&ui.ckTab==='productos'){refreshFocusedProducts();updSync();refreshHomeViews();return}
   // Recordatorios, mantenimientos y rutinas antiguas pasan a Tareas (al guardar se vuelve a pintar)
   if(houseUnify())return;
+  // Fechas antiguas guardadas como número: se arreglan antes de ordenar nada
+  if(taskDatesRepair())return;
   // Lo de Lidl va en su propia lista, separado de la cesta de Mercadona
   if(lidlSeparate())return;
   if(lidlFillImages())return;
@@ -1912,7 +1914,8 @@ document.addEventListener('click',e=>{
   if(e.target.closest('.overlay'))return;
   const contact=e.target.closest('[data-home-contact]');if(contact){contactDetail(contact.dataset.homeContact);return}
   const el=e.target.closest('[data-act]');if(!el)return;
-  const f=ACT[el.dataset.act];if(f)f(el.dataset,el);
+  // Si algo falla, se avisa con el motivo en vez de quedarse la pantalla quieta sin explicación
+  const f=ACT[el.dataset.act];if(f){try{f(el.dataset,el)}catch(err){console.error(err);toast('No se ha podido abrir: '+String(err&&err.message||err).slice(0,120))}}
 });
 document.addEventListener('input',e=>{if(e.target.id==='qHist'){ui.histQ=e.target.value;clearTimeout(ui._ht);ui._ht=setTimeout(()=>{render();const f=$('#qHist');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},250)}});
 document.addEventListener('keydown',e=>{

@@ -111,11 +111,15 @@ function vTaskZonePage(id){
 }
 // Pantalla de Tareas: pestañas arriba y su contenido (la vista completa de antes queda en «Todas»)
 function vTareas(){
- if(ui.taskMode==='routines')return vCleaning();
- if(reorgSel!==null)return vTareasAll();
+ // Rutinas y Reorganizar: si fallaran, se vuelve a la vista nueva en lugar de dejar la pestaña sin abrir
+ if(ui.taskMode==='routines'||reorgSel!==null){
+  try{return ui.taskMode==='routines'?vCleaning():vTareasAll()}catch(e){console.error(e);ui.taskMode='tasks';reorgSel=null;taskErrorNote=String(e&&e.message||e)}
+ }
  // Si algo de la vista nueva fallara con los datos de casa, Tareas sigue funcionando con la vista completa de siempre
- try{return vTareasNew()}catch(e){console.error(e);ui.taskZone=null;return`<h1>Limpieza</h1><p class="sub">Paso a paso, a tu ritmo</p><p class="hint tz-error">No se ha podido mostrar «${esc(ui.taskView==='zonas'?'Por zonas':'Para hoy')}». Te enseño todas las tareas. Detalle: ${esc(String(e&&e.message||e).slice(0,140))}</p>`+vTareasAll(true)}
+ try{const h=vTareasNew();if(taskErrorNote){const n=taskErrorNote;taskErrorNote='';return h.replace('<div class="tz-seg"',`<p class="hint tz-error">No se ha podido abrir esa parte de Tareas. Detalle: ${esc(n.slice(0,140))}</p><div class="tz-seg"`)}return h}
+ catch(e){console.error(e);ui.taskZone=null;try{return`<h1>Limpieza</h1><p class="sub">Paso a paso, a tu ritmo</p><p class="hint tz-error">No se ha podido mostrar «${esc(ui.taskView==='zonas'?'Por zonas':'Para hoy')}». Te enseño todas las tareas. Detalle: ${esc(String(e&&e.message||e).slice(0,140))}</p>`+vTareasAll(true)}catch(e2){console.error(e2);return`<h1>Limpieza</h1><p class="hint tz-error">No se pueden mostrar las tareas. Detalle: ${esc(String(e2&&e2.message||e2).slice(0,140))}</p>`}}
 }
+let taskErrorNote='';
 function vTareasNew(){
  if(ui.taskZone)return vTaskZonePage(ui.taskZone);
  const view=['hoy','zonas','todas'].includes(ui.taskView)?ui.taskView:'hoy';
@@ -143,3 +147,17 @@ const TASKS_ACT={
 };
 // «Más opciones» de Todas se queda abierto o cerrado al volver a pintar la pantalla
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.task-options'))ui.taskOptsOpen=e.target.open},true);
+
+// Fechas de tareas guardadas como número (versiones antiguas): se pasan a «AAAA-MM-DD», con copia antes.
+// Sin esto, ordenar por fecha fallaba y la pestaña Tareas no se abría.
+function taskDatesRepair(){
+ if(taskDatesRepair.busy||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
+ const fix=v=>{if(v==null||v===''||typeof v==='string')return undefined;if(typeof v==='number'&&v>1e11&&v<1e14){const d=new Date(v);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}return ''};
+ const changes=[];for(const t of S.tasks||[])for(const k of ['date','doneAt','lastDone','time']){const v=k==='time'?(t.time==null||typeof t.time==='string'?undefined:''):fix(t[k]);if(v!==undefined)changes.push([t,k,v])}
+ if(!changes.length)return false;
+ taskDatesRepair.busy=true;
+ try{const id='antes-de-arreglar-fechas-'+Date.now(),before=clone(S);saveLocalBackup(id,before,'Antes de arreglar fechas de tareas');cloudBackup(id,before,'Antes de arreglar fechas de tareas');
+  for(const [t,k,v] of changes)t[k]=v;save();
+  const n=new Set(changes.map(c=>c[0].id)).size;setTimeout(()=>toast(`Arregladas las fechas antiguas de ${n} tarea${n===1?'':'s'} (hay copia de seguridad)`),0);return true}
+ finally{taskDatesRepair.busy=false}
+}

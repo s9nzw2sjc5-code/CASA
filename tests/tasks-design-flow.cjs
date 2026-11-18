@@ -161,6 +161,26 @@ const { chromium } = require("playwright"),
     assert.ok(await p.locator("#qNoDate").count());
     await p.evaluate(() => { vTaskZonePage = window._z; ui.taskZone = null; render(); });
 
+    // Fecha antigua guardada como número + modo «rutinas» recordado: la pestaña Tareas se abre y se marca
+    await p.evaluate(() => { S.tasks.push({ id: "num", title: "Fecha antigua", date: new Date(today() + "T10:00:00").getTime(), repeat: "weekly", done: false }); ui.taskMode = "routines"; ui.cleaningView = "frequency"; ui.view = "hoy"; save(); });
+    await p.waitForFunction(() => S.tasks.find((t) => t.id === "num").date === today());
+    assert.match(await p.locator("#toast").innerText(), /Arregladas las fechas antiguas de 1 tarea \(hay copia de seguridad\)/);
+    for (const cv of ["frequency", "zone", "all", "today"]) {
+      await p.evaluate((cv) => { ui.cleaningView = cv; ui.view = "hoy"; render(); }, cv);
+      await p.locator('#tabs [data-v="tareas"]').click();
+      assert.equal(await p.evaluate(() => document.body.dataset.view), "tareas", cv);
+      assert.match(await p.locator("#tabs .tab.on").innerText(), /Tareas/, cv);
+    }
+    // Sin poder guardar el arreglo (solo lectura), tampoco se bloquea: rutinas, Reorganizar y las pestañas nuevas
+    await p.evaluate(() => { S.tasks.find((t) => t.id === "num").date = 1731900000000; syncState = "ro"; ui.view = "hoy"; render(); });
+    for (const setup of [() => { ui.taskMode = "routines"; ui.cleaningView = "frequency"; }, () => { ui.taskMode = "tasks"; reorgSel = new Set(); }, () => { ui.taskMode = "tasks"; reorgSel = null; ui.taskView = "zonas"; }]) {
+      await p.evaluate(`(${setup})(); ui.view = "hoy"; render();`);
+      await p.locator('#tabs [data-v="tareas"]').click();
+      assert.equal(await p.evaluate(() => document.body.dataset.view), "tareas");
+      assert.ok(await p.locator("#app h1").count());
+    }
+    await p.evaluate(() => { syncState = "local"; reorgSel = null; ui.taskMode = "tasks"; S.tasks = S.tasks.filter((t) => t.id !== "num"); save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {
