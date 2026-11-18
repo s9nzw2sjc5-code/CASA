@@ -43,6 +43,12 @@ const fixture = {
     await p.goto("http://127.0.0.1:" + server.address().port + "/casa/", { waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined" && ACT.lidlAdd);
     await p.evaluate(() => { S = fresh(); ui.view = "compras"; ui.ckTab = "lista"; save(); });
+    // La pestaña Lidl está oculta por defecto (no se borra): se activa en ⚙️ Ajustes
+    assert.equal(await p.locator('#app [data-act=ckTab][data-v="lidl"]').count(), 0, "oculta por defecto");
+    assert.equal(await p.evaluate(() => { ui.ckTab = "lidl"; render(); return !!document.querySelector(".lidl-card, .lidl-only-offers"); }), false, "ni entrando directamente");
+    await p.locator('#app [data-act=ckTab][data-v="ajustes"]').first().click();
+    await p.locator("[data-act=ckLidlTab]").click();
+    assert.equal(await p.evaluate(() => S.cook.lidlTab), true);
     await p.locator('#app [data-act=ckTab][data-v="lidl"]').first().click();
     await p.waitForFunction(() => document.querySelectorAll(".lidl-card").length > 0);
 
@@ -128,6 +134,13 @@ const fixture = {
     assert.deepEqual(await p.evaluate(() => S.lists.map((l) => l.id).slice(0, 2)), ["super", "lidl"], "Lidl nueva va justo detrás");
     await p.evaluate(() => { ui.ckTab = "lidl"; render(); });
     assert.match(await p.locator(".lidl-only-offers").innerText(), /Solo salen los productos en oferta del folleto/);
+    // Se vuelve a ocultar desde Ajustes; la lista Lidl de la compra sigue ahí
+    await p.evaluate(() => { ui.ckTab = "ajustes"; render(); });
+    await p.locator("[data-act=ckLidlTab]").click();
+    assert.equal(await p.locator('#app [data-act=ckTab][data-v="lidl"]').count(), 0);
+    assert.equal(await p.evaluate(() => new Set([...document.querySelectorAll(".ck-tabs .chip")].map((c) => Math.round(c.getBoundingClientRect().top))).size), 1, "las 5 pestañas en una fila");
+    await p.evaluate(() => { ui.ckTab = "lista"; render(); });
+    assert.equal(await p.locator('[data-act=pickList][data-v="lidl"]').count(), 1, "la lista Lidl se conserva");
     assert.deepEqual(errors, [], "errores de página");
     console.log("lidl-flow: OK");
   } finally {

@@ -438,6 +438,7 @@ const CK_CATEMO={'Aceite, especias y salsas':'🫒','Agua y refrescos':'🥤','A
 function vCocina(){
   loadMC();
   let tab=ui.ckTab||'productos';if(tab==='menu'||tab==='lista'||tab==='recetas')tab='productos';
+  if(tab==='lidl'&&!lidlTabOn())tab='productos';
   const low=(S.pantry||[]).filter(pantryLow).length,ci=cartItems();
   const sub={novedades:'Lo nuevo de Mercadona en tu código postal',lidl:'Ofertas de Lidl',productos:'Elige qué va a la cesta y qué tienes en casa',despensa:'Tus productos de un vistazo',ajustes:'Presupuesto y supermercados'}[tab];
   let h=`<h1>${tab==='despensa'?'En casa':'Compras'}</h1><p class="sub">${sub}</p>${tab==='despensa'?'':heroStats([[ci.length,'en la cesta'],[eur0(cartTotal()),'cesta'],[(S.pantry||[]).filter(x=>x.n>0).length,'en casa'],[low,'por reponer']])}`;
@@ -446,9 +447,11 @@ function vCocina(){
   return h+cartBar();
 }
 // Pestañas dentro de Compras
+// La pestaña de ofertas de Lidl está oculta salvo que se active en ⚙️ Ajustes (el código y la lista Lidl se conservan)
+const lidlTabOn=()=>!!(S.cook&&S.cook.lidlTab);
 function ckSubTabs(){
-  const tab=ui.ckTab||'lista';
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['lidl','🟡 Lidl'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}"><span class="ck-tab-icon" aria-hidden="true">${l.split(' ')[0]}</span><span>${l.split(' ').slice(1).join(' ')}</span>${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
+  const tab=ui.ckTab||'lista',tabs=[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['lidl','🟡 Lidl'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].filter(([k])=>k!=='lidl'||lidlTabOn());
+  return`<div class="chips ck-tabs" style="--ck-n:${tabs.length}">${tabs.map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}"><span class="ck-tab-icon" aria-hidden="true">${l.split(' ')[0]}</span><span>${l.split(' ').slice(1).join(' ')}</span>${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
@@ -733,6 +736,7 @@ function vCkAjustes(){
   <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}</div>
   <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: se guardará en el historial de compras.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${x==='Mercadona'?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${x==='Mercadona'?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
+  <h2>Ofertas de Lidl</h2><label class="row ck-lidl-toggle"><div class="row-main">Mostrar la pestaña 🟡 Lidl<br><small class="hint">Las ofertas del folleto de Lidl. La lista Lidl de la compra se queda igual.</small></div><input type="checkbox" data-act="ckLidlTab" ${lidlTabOn()?'checked':''} aria-label="Mostrar la pestaña de ofertas de Lidl"></label>
   ${Object.values(S.prices||{}).filter(e=>e.use!==false).length?`<h2>Precios de otros súper</h2>`+ul(Object.values(S.prices).filter(e=>e.use!==false).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(e=>`<li class="row"><div class="row-main" data-act="ckPrice" data-v="${esc(e.name)}"><div class="row-title">${esc(e.name)}</div><div class="row-meta"><span>🏪 ${esc(e.store)}</span><span>${parse(e.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</span></div></div><span class="row-side">${eur(e.price)}${e.qtxt?' / '+esc(e.qtxt):e.n?' / '+(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):''}</span></li>`)):''}
 `;
   return h;
@@ -1730,6 +1734,7 @@ const CK_ACT={
   ckSuggest:d=>shoppingSuggest(d),
   ckSuggestLearn:()=>shoppingLearningSheet(),
   ckBuys:()=>buysSheet(),
+  ckLidlTab:()=>{S.cook=S.cook||{};S.cook.lidlTab=!lidlTabOn();save();toast(S.cook.lidlTab?'Pestaña 🟡 Lidl visible':'Pestaña 🟡 Lidl oculta')},
   ckPendingReceipt:d=>ticketFlow({pendingId:d.id}),
   ckReceiptDraft:d=>resumeReceiptDraft(d.id),
   ckSpend:()=>spendSheet(),
