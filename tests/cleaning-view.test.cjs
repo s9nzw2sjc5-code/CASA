@@ -1,3 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),view=require('../casa/cleaning-view.js'),plan=require('../casa/house-plan.js');
 test('conserva todas las tareas, los textos y las áreas sin modificar el estado',()=>{const state={tasks:plan.ITEMS.map((p,i)=>({id:String(i),title:p.title,notes:p.notes,planKey:p.key,date:'2026-11-18',repeat:'weekly',planKind:p.kind==='year'?'temporada':'semanal'})),cook:{housePlanZones:plan.ZONES.map(z=>z[0])}};state.tasks.push({id:'extra',title:'Texto propio sin clasificación',notes:'Nota exacta'});const before=JSON.stringify(state),result=view.build(state,plan,'2026-11-18');assert.equal(JSON.stringify(state),before);for(const groups of [result.byZone,result.byFrequency]){const ids=[...groups.values()].flat().map(e=>e.task.id);assert.equal(ids.length,state.tasks.length);assert.equal(new Set(ids).size,state.tasks.length)}for(const [,name] of plan.ZONES)assert(result.byZone.has(name));assert(result.byZone.has('Sin clasificar'));});
 test('frecuencias y fechas: no pierde pendientes ni muestra futuras como de hoy',()=>{const state={tasks:[{id:'d',repeat:'daily',date:'2026-11-17'},{id:'q',repeat:'custom',every:2,unit:'w',date:'2026-11-19'},{id:'f',done:true,date:'2026-11-17'},{id:'s',date:''}]};const result=view.build(state,plan,'2026-11-18');assert.deepEqual(result.due.map(e=>e.task.id),['d']);assert(result.byFrequency.has('Diarias'));assert(result.byFrequency.has('Quincenales'));});
+
+test('entiende las zonas del plan guardadas como {chosen, known}', () => {
+  const V = require('../casa/cleaning-view.js'), P = require('../casa/house-plan.js');
+  const state = { tasks: [], cook: { housePlanZones: { chosen: ['cocina', 'taller'], known: P.ZONES.map((z) => z[0]) } } };
+  const m = V.build(state, P, '2026-11-18');
+  assert.ok(m.byZone.has('Cocina') && m.byZone.has('Taller'));
+  assert.doesNotThrow(() => V.build({ tasks: [], cook: { housePlanZones: {} } }, P, '2026-11-18'));
+});

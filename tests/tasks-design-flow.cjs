@@ -61,6 +61,7 @@ const { chromium } = require("playwright"),
     assert.doesNotMatch(await p.locator(".tz-list").first().innerText(), /Juanma|Mari|Conjunto/, "sin quién se encarga");
     assert.match(await p.locator(".tz-row", { hasText: "fuente" }).innerText(), /Ringo/);
     assert.match(await p.locator(".tz-done summary").innerText(), /Hechas hoy · 1/);
+    assert.equal(await p.locator(".tz-done ~ .wx, .wx").count(), 1, "el tiempo y sus consejos siguen en Para hoy");
     // Marcar desde aquí
     await p.locator('.tz-row [data-act=toggleTask][data-id="luz"]').click();
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "luz").done), true);
@@ -180,6 +181,16 @@ const { chromium } = require("playwright"),
       assert.ok(await p.locator("#app h1").count());
     }
     await p.evaluate(() => { syncState = "local"; reorgSel = null; ui.taskMode = "tasks"; S.tasks = S.tasks.filter((t) => t.id !== "num"); save(); });
+
+    // Rutinas de limpieza con las zonas del plan guardadas como {chosen, known} (lo que guarda el plan): sin error
+    await p.evaluate(() => { S.cook = { ...S.cook, housePlanZones: { chosen: ["cocina", "banoPrincipal"], known: CasaHousePlan.ZONES.map((z) => z[0]) } }; ui.view = "tareas"; ui.taskMode = "tasks"; ui.taskView = "todas"; render(); });
+    await p.locator('[data-act=taskMode][data-v="routines"]').click();
+    for (const cv of ["today", "frequency", "zone", "all"]) {
+      await p.evaluate((cv) => { ui.cleaningView = cv; render(); }, cv);
+      assert.equal(await p.locator(".tz-error").count(), 0, "rutinas " + cv + " sin error");
+      assert.match(await p.locator("#app h1").first().innerText(), /Limpieza/);
+    }
+    await p.evaluate(() => { ui.taskMode = "tasks"; render(); });
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");

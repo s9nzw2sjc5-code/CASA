@@ -56,7 +56,7 @@ const P = require("../casa/house-plan.js");
     const ok = () => p.locator(".overlay [data-s=ok]").last().click();
 
     // 1) Ubicación: se busca, se elige y queda en los datos de la casa (redondeada)
-    await p.evaluate(() => { ui.taskView = "todas"; ui.taskOptsOpen = true; render(); }); // el tiempo está en Todas › Más opciones
+    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // el tiempo y sus consejos se ven en «Para hoy»
     assert.match(await p.locator(".wx").innerText(), /Indica dónde está la casa/);
     assert.equal(forecastCalls, 0);
     await p.locator("[data-act=wxPlace]").click();

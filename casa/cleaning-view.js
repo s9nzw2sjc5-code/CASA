@@ -21,7 +21,7 @@
    return {task,zone,frequency:frequency(task,template),due:!task.done&&!!task.date&&task.date<=today,doneToday:task.doneAt===today||task.lastDone===today};
   });
   const group=field=>{const groups=new Map();for(const e of entries){if(!groups.has(e[field]))groups.set(e[field],[]);groups.get(e[field]).push(e)}return groups};
-  const byZone=group('zone');for(const id of state.cook?.housePlanZones||[]){const name=zones.get(id);if(name&&!byZone.has(name))byZone.set(name,[])}
+  const byZone=group('zone');const hz=state.cook?.housePlanZones,planZones=Array.isArray(hz)?hz:hz&&Array.isArray(hz.chosen)?hz.chosen:[];/* el plan guarda {chosen,known} */for(const id of planZones){const name=zones.get(id);if(name&&!byZone.has(name))byZone.set(name,[])}
   return {entries,byZone,byFrequency:group('frequency'),due:entries.filter(e=>e.due),doneToday:entries.filter(e=>e.doneToday)};
  }
  const api={build,frequency};root.CasaCleaningView=api;if(typeof module!=='undefined')module.exports=api;
