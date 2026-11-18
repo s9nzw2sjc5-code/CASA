@@ -237,6 +237,44 @@ const { chromium } = require("playwright"),
     assert.match(await p.locator("#app").innerText(), /Tarea atrasada de prueba/);
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => t.id !== "late1"); save(); });
 
+    // Al añadir una tarea salen las parecidas: «Hecha hoy», «A su rutina» o «Añadir aparte»
+    await p.evaluate(() => {
+      const t = today(), a = (n) => addDays(t, n);
+      S.tasks.push({ id: "sb1", title: "Barrer entrada", date: a(2), repeat: "weekly", who: "yo", notes: "", done: false }, { id: "sb2", title: "Limpiar baño grande", date: a(3), repeat: "weekly", who: "yo", notes: "", done: false });
+      S.routines = [CasaCleaningLinks.link(S, null, "rsb", "Limpieza semanal", ["sb2"], 1)];
+      save(); ui.view = "hoy"; render();
+    });
+    await p.locator("#qTask").fill("barrer");
+    await p.locator("#qTask").dispatchEvent("input");
+    assert.match(await p.locator(".tz-sug").innerText(), /¿Es alguna de estas\?[\s\S]*Barrer entrada/);
+    await p.locator('.tz-sug [data-sug="done"][data-id="sb1"]').click();
+    const sb1 = await p.evaluate(() => S.tasks.find((t) => t.id === "sb1"));
+    assert.equal(sb1.lastDone, await p.evaluate(() => today()), "queda reflejada hoy");
+    assert.ok(sb1.date > (await p.evaluate(() => addDays(today(), 2))), "la siguiente, después de la que tocaba");
+    assert.equal(await p.locator(".tz-sug").count(), 0);
+    assert.equal(await p.evaluate(() => S.tasks.filter((t) => /barrer/i.test(t.title)).length), 1, "no se duplica");
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskView = "hoy"; render(); });
+    assert.match(await p.locator(".tz-done summary").innerText(), /Hechas hoy/);
+    // A su rutina: la nueva entra en la rutina de la parecida, con su misma repetición
+    await p.evaluate(() => { ui.view = "hoy"; render(); });
+    await p.locator("#qTask").fill("Limpiar baño pequeño");
+    await p.locator("#qTask").dispatchEvent("input");
+    await p.locator('.tz-sug [data-sug="routine"][data-id="sb2"]').click();
+    const rt = await p.evaluate(() => { const r = S.routines.find((r) => r.id === "rsb"), n = S.tasks.find((t) => t.title === "Limpiar baño pequeño"); return [r.taskIds.includes(n.id), n.repeat, n.date === today()]; });
+    assert.deepEqual(rt, [true, "weekly", true]);
+    // Aparte: como siempre
+    await p.locator("#qTask").fill("Limpiar baño de arriba");
+    await p.locator("#qTask").dispatchEvent("input");
+    await p.locator(".tz-sug [data-sug=apart]").click();
+    assert.equal(await p.evaluate(() => S.tasks.some((t) => t.title === "Limpiar baño de arriba" && t.date === today())), true);
+    // También en la ficha de tarea nueva (+)
+    await p.evaluate(() => taskSheet(null, today()));
+    await p.locator("#f_t").fill("barrer la entrada");
+    await p.locator("#f_t").dispatchEvent("input");
+    assert.match(await p.locator(".overlay .tz-sug").innerText(), /Barrer entrada/);
+    await p.locator(".overlay [data-s=cancel]").click();
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !/^sb|baño pequeño|baño de arriba/i.test(t.id + " " + t.title)); S.routines = []; save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

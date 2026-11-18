@@ -236,6 +236,13 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.tz-sug{margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:grid;gap:8px}
+.tz-sug-h{margin:0;font-size:.82rem;color:var(--muted);font-weight:600}
+.tz-sug-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}.tz-sug-row:first-of-type{border-top:0}
+.tz-sug-t{flex:1 1 160px;min-width:0;display:grid}.tz-sug-t b{font-size:.92rem;overflow-wrap:anywhere}.tz-sug-t small{color:var(--muted);font-size:.76rem}
+.tz-sug-b{display:flex;gap:6px;flex-wrap:wrap}.tz-sug-b .btn{min-height:38px;padding:6px 10px;font-size:.8rem}
+.tz-sug-apart{min-height:42px;border-radius:10px;font-weight:600;color:var(--c-tareas);text-align:left;padding:6px 4px}
+
 .late-note{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;margin:0 0 14px;padding:10px 14px;border-radius:16px;border:1.5px solid color-mix(in srgb,var(--danger) 45%,var(--line));background:color-mix(in srgb,var(--danger) 8%,var(--surface));color:var(--ink);text-align:left}.late-note>span:nth-child(2){flex:1;display:grid}.late-note small{color:var(--muted);font-size:.8rem}.late-note>span:last-child{color:var(--muted);font-size:1.4rem}
 .task-sheet #calcRep{display:none!important}
 .ts-title{font-size:1.05rem;font-weight:600;margin-bottom:4px}
@@ -791,29 +798,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=154"></script>
-<script src="sync.js?v=154"></script>
-<script src="receipts.js?v=154"></script>
-<script src="receipt-image.js?v=154"></script>
-<script src="receipt-layout.js?v=154"></script>
-<script src="receipt-ocr.js?v=154"></script>
-<script src="product-photo.js?v=154"></script>
-<script src="product-photo-ui.js?v=154"></script>
-<script src="shopping-recommendations.js?v=154"></script>
-<script src="household-insights.js?v=154"></script>
-<script src="document-files.js?v=154"></script>
-<script src="document-photo.js?v=154"></script>
-<script src="cleaning-links.js?v=154"></script>
-<script src="home-model.js?v=154"></script>
-<script src="cocina.js?v=154"></script>
-<script src="cleaning-view.js?v=154"></script>
-<script src="home-ui.js?v=154"></script>
-<script src="household-ui.js?v=154"></script>
-<script src="receipt-extras.js?v=154"></script>
-<script src="house-plan.js?v=154"></script>
-<script src="house-plan-ui.js?v=154"></script>
-<script src="lidl-ui.js?v=154"></script>
-<script src="tasks-ui.js?v=154"></script>
+<script src="push.js?v=155"></script>
+<script src="sync.js?v=155"></script>
+<script src="receipts.js?v=155"></script>
+<script src="receipt-image.js?v=155"></script>
+<script src="receipt-layout.js?v=155"></script>
+<script src="receipt-ocr.js?v=155"></script>
+<script src="product-photo.js?v=155"></script>
+<script src="product-photo-ui.js?v=155"></script>
+<script src="shopping-recommendations.js?v=155"></script>
+<script src="household-insights.js?v=155"></script>
+<script src="document-files.js?v=155"></script>
+<script src="document-photo.js?v=155"></script>
+<script src="cleaning-links.js?v=155"></script>
+<script src="home-model.js?v=155"></script>
+<script src="cocina.js?v=155"></script>
+<script src="cleaning-view.js?v=155"></script>
+<script src="home-ui.js?v=155"></script>
+<script src="household-ui.js?v=155"></script>
+<script src="receipt-extras.js?v=155"></script>
+<script src="house-plan.js?v=155"></script>
+<script src="house-plan-ui.js?v=155"></script>
+<script src="lidl-ui.js?v=155"></script>
+<script src="tasks-ui.js?v=155"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -868,7 +875,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=154;
+const APP_VERSION=155;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1688,7 +1695,7 @@ function taskSheet(t,date,extra){
     if(n)S.tasks.push({id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o});else{const x=find(S.tasks,t.id);if(x)Object.assign(x,o)}
     save();toast(n?'Tarea creada':'Tarea guardada');
   },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});
-  ov0.classList.add('task-sheet');repeatPreview(ov0);
+  ov0.classList.add('task-sheet');if(n)ov0.dataset.newTask='1';repeatPreview(ov0);
   // 💡 abre el consejo en su propia ventana, sin alargar la ficha
   const tipBtn=ov0.querySelector('[data-ts-tip]');if(tipBtn)tipBtn.addEventListener('click',()=>houseTipSheet(t));
   // ❗ y 📅: solo el icono; se resalta cuando está activo
