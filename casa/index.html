@@ -235,6 +235,7 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.wx-h{display:flex;align-items:center;gap:6px}.wx-h>b{min-width:0;overflow-wrap:anywhere}.wx-sync{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;font-size:1.1rem;padding:0}.wx-sync.spin{animation:wxspin 1s linear infinite}@keyframes wxspin{to{transform:rotate(360deg)}}.wx-age{flex:1;color:var(--muted);font-size:.75rem;white-space:nowrap}.wx-h .link{margin-left:auto}
 .imp-check{margin-left:8px;border-color:var(--line)!important}.imp-check span{font-size:.92rem;font-weight:600}.imp-dates{margin:6px 0 16px}
 .tz-error{color:var(--danger);margin:0 0 10px}
 .tz-h2{font-size:1.45rem!important;margin:22px 0 10px!important}.tz-h2::before{display:none!important}
@@ -777,29 +778,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=141"></script>
-<script src="sync.js?v=141"></script>
-<script src="receipts.js?v=141"></script>
-<script src="receipt-image.js?v=141"></script>
-<script src="receipt-layout.js?v=141"></script>
-<script src="receipt-ocr.js?v=141"></script>
-<script src="product-photo.js?v=141"></script>
-<script src="product-photo-ui.js?v=141"></script>
-<script src="shopping-recommendations.js?v=141"></script>
-<script src="household-insights.js?v=141"></script>
-<script src="document-files.js?v=141"></script>
-<script src="document-photo.js?v=141"></script>
-<script src="cleaning-links.js?v=141"></script>
-<script src="home-model.js?v=141"></script>
-<script src="cocina.js?v=141"></script>
-<script src="cleaning-view.js?v=141"></script>
-<script src="home-ui.js?v=141"></script>
-<script src="household-ui.js?v=141"></script>
-<script src="receipt-extras.js?v=141"></script>
-<script src="house-plan.js?v=141"></script>
-<script src="house-plan-ui.js?v=141"></script>
-<script src="lidl-ui.js?v=141"></script>
-<script src="tasks-ui.js?v=141"></script>
+<script src="push.js?v=142"></script>
+<script src="sync.js?v=142"></script>
+<script src="receipts.js?v=142"></script>
+<script src="receipt-image.js?v=142"></script>
+<script src="receipt-layout.js?v=142"></script>
+<script src="receipt-ocr.js?v=142"></script>
+<script src="product-photo.js?v=142"></script>
+<script src="product-photo-ui.js?v=142"></script>
+<script src="shopping-recommendations.js?v=142"></script>
+<script src="household-insights.js?v=142"></script>
+<script src="document-files.js?v=142"></script>
+<script src="document-photo.js?v=142"></script>
+<script src="cleaning-links.js?v=142"></script>
+<script src="home-model.js?v=142"></script>
+<script src="cocina.js?v=142"></script>
+<script src="cleaning-view.js?v=142"></script>
+<script src="home-ui.js?v=142"></script>
+<script src="household-ui.js?v=142"></script>
+<script src="receipt-extras.js?v=142"></script>
+<script src="house-plan.js?v=142"></script>
+<script src="house-plan-ui.js?v=142"></script>
+<script src="lidl-ui.js?v=142"></script>
+<script src="tasks-ui.js?v=142"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -854,7 +855,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=141;
+const APP_VERSION=142;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
