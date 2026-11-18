@@ -1,0 +1,54 @@
+"""Lectura de las ofertas de Lidl: precios de la provincia, Lidl Plus y fechas en hora de España."""
+import html, json, os, sys, unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
+import lidl  # noqa: E402
+
+
+def product(regions, prices, **extra):
+    g = {'fullTitle': 'Naranja mesa', 'category': 'F+V', 'canonicalUrl': '/p/naranja-mesa/p11150785',
+         'image': 'https://www.lidl.es/assets/x.png', 'price': {'price': 9.99},
+         'regionsV2': regions, 'regionsPrices': prices,
+         'stockAvailability': {'badgeInfo': {'badges': [{'text': 'Solo en tienda'}]}}}
+    g.update(extra)
+    return g
+
+
+GRANADA = {'46': {'regionName': 'Granada', 'regionPriceId': '1'}, '1': {'regionName': 'A Coruña', 'regionPriceId': '2'}}
+PRICES = {
+    '1': {'futureLidlPlusPrices': [{'price': {'price': {'price': 1.19, 'startDate': '2026-11-19T23:00Z', 'endDate': '2026-11-22T22:59:59Z'}}}],
+          'currentPrice': {'price': {'price': 1.29, 'oldPrice': 1.89, 'packaging': {'text': 'A granel'},
+                                     'discount': {'showDiscount': True, 'percentageDiscount': 31},
+                                     'startDate': '2026-11-19T23:00Z', 'endDate': '2026-11-22T22:59:59Z'}}},
+    '2': {'currentPrice': {'price': {'price': 2.50}}},
+}
+
+
+class LidlTest(unittest.TestCase):
+    def test_precio_de_la_provincia_lidl_plus_y_fechas(self):
+        x = lidl.item(product(GRANADA, PRICES), 'Granada', 'finde')
+        self.assertEqual((x['p'], x['o'], x['d'], x['l'], x['k']), (1.29, 1.89, 31, 1.19, 'A granel'))
+        self.assertEqual((x['f'], x['e']), ('2026-11-20', '2026-11-22'), 'las 23:00 UTC ya son el día siguiente en España')
+        self.assertEqual((x['c'], x['g'], x['w'], x['b']), ('11150785', 'fruta', 'finde', 'Solo en tienda'))
+        self.assertEqual(lidl.item(product(GRANADA, PRICES), 'A Coruña')['p'], 2.50)
+
+    def test_no_se_vende_en_la_provincia(self):
+        self.assertIsNone(lidl.item(product({'1': {'regionName': 'A Coruña', 'regionPriceId': '2'}}, PRICES), 'Granada'))
+        self.assertIsNone(lidl.item(product({'46': {'regionName': 'Granada'}}, PRICES), 'Granada'))
+
+    def test_sin_precios_por_provincia_usa_el_general(self):
+        x = lidl.item(product({}, {}, price={'price': 0.75, 'oldPrice': 0.85, 'packaging': {'text': '250 g'}}), 'Granada')
+        self.assertEqual((x['p'], x['o'], x['k']), (0.75, 0.85, '250 g'))
+
+    def test_solo_precio_lidl_plus(self):
+        prices = {'1': {'currentLidlPlusPrice': {'price': {'price': {'price': 0.75, 'oldPrice': 0.99}}}}}
+        x = lidl.item(product(GRANADA, prices), 'Granada')
+        self.assertEqual((x['p'], x['o'], x.get('l')), (0.75, 0.99, None))
+
+    def test_lee_los_productos_de_la_pagina(self):
+        page = '<div data-grid-data="%s"></div><div data-grid-data="no es json"></div>' % html.escape(json.dumps(product(GRANADA, PRICES)), quote=True)
+        self.assertEqual([g['fullTitle'] for g in lidl.grid_items(page)], ['Naranja mesa'])
+
+
+if __name__ == '__main__':
+    unittest.main()
