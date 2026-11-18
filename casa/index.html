@@ -235,6 +235,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+/* Pasar a mañana: solo el icono, sin botón alrededor */
+.tomorrow-ic{flex:none;width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;background:none;box-shadow:none;font-size:1.25rem;line-height:1;border-radius:50%}.tomorrow-ic:active{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .tz-org button{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:left;color:var(--ink)}
 .tz-org button>span:first-child{font-size:1.3rem;width:28px;text-align:center}.tz-org button>span:nth-child(2){flex:1;display:grid}.tz-org small{color:var(--muted);font-size:.8rem}.tz-org button>span:last-child{color:var(--muted);font-size:1.3rem}
 .reorg{margin-top:4px}.reorg>.hint{margin:8px 0 0}.reorg-bar{display:grid;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin:10px 0 6px}.reorg-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.84rem;color:var(--muted)}.reorg-top .link{min-height:40px}.reorg-actions{display:flex;gap:8px;flex-wrap:wrap}.reorg-actions .btn{flex:1 1 130px}.reorg-date{display:flex;gap:8px;flex-wrap:wrap}.reorg-date .field{flex:1 1 150px;width:auto;min-width:0}.reorg-date .btn{flex:1 1 150px}.reorg-bar .btn:disabled{opacity:.45}.reorg-away-title{display:grid;gap:3px}.reorg-away-title span{font-size:.8rem;color:var(--muted);line-height:1.4}.reorg-days{display:flex;align-items:center;gap:8px;flex:1 1 120px;font-size:.9rem;color:var(--muted)}.reorg-days .field{width:80px;flex:none;text-align:center}.reorg-row .row-main{cursor:pointer}.reorg-row.is-picked{box-shadow:inset 3px 0 0 var(--c-tareas)}
@@ -737,25 +739,25 @@ body[data-view="tareas"] .hero h1{font-size:1.85rem}
 body[data-view="tareas"] .hero .sub{color:var(--muted);font-size:.9rem}
 body[data-view="tareas"] .hero-stats{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
 body[data-view="tareas"] .hero-stats>*{background:none;color:var(--muted);border:0;box-shadow:none;padding:0;border-radius:0}
-body[data-view="tareas"] .home-task-modes{display:flex;background:#eeebf7;border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;margin:8px 0}
+body[data-view="tareas"] .home-task-modes{display:flex;background:color-mix(in srgb,var(--accent) 8%,var(--surface));border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;margin:8px 0}
 body[data-view="tareas"] .home-task-modes .chip{flex:1;border:0;border-radius:7px;background:none;min-height:44px;font-size:.85rem;padding:8px 10px}
 body[data-view="tareas"] .home-task-modes .chip.on{background:var(--accent);color:white;box-shadow:none}
 .task-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:6px 0}
 .task-toolbar small{color:var(--muted)}.task-toolbar button{min-height:44px}
-.task-options{border:1px solid var(--line);border-radius:10px;background:white;margin:8px 0 16px;padding:0 12px}
+.task-options{border:1px solid var(--line);border-radius:10px;background:var(--surface);margin:8px 0 16px;padding:0 12px}
 .task-options>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:.87rem;font-weight:600}
 .task-options>summary::after{content:'⌄';margin-left:auto}
 .task-options-list{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding-bottom:10px}
-.task-options-list button{min-height:44px;text-align:left;padding:8px;font-size:.85rem;color:var(--accent);border-radius:6px;background:#f6f5fb}
-body[data-view="tareas"] .list{background:white;border:1px solid var(--line);border-radius:12px;box-shadow:none}
+.task-options-list button{min-height:44px;text-align:left;padding:8px;font-size:.85rem;color:var(--accent);border-radius:6px;background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+body[data-view="tareas"] .list{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:none}
 body[data-view="tareas"] .row{background:transparent;box-shadow:none;min-height:64px;border-radius:0;padding:10px 12px}
 body[data-view="tareas"] .row-title{white-space:normal;overflow-wrap:anywhere;font-size:.93rem}
 body[data-view="tareas"] h2{font-size:1.05rem;margin:20px 0 10px}
 body[data-view="tareas"] .quick .btn{border-radius:9px;box-shadow:none;font-size:.85rem}
-body[data-view="tareas"] .cleaning-group{border-radius:12px;box-shadow:none;background:white}
+body[data-view="tareas"] .cleaning-group{border-radius:12px;box-shadow:none;background:var(--surface)}
 body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;font-size:.9rem}
 .cleaning-view-select{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;font-size:.85rem}
-.cleaning-view-select select{max-width:65%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);min-height:44px}
+.cleaning-view-select select{max-width:65%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-height:44px}
 </style>
 </head>
 <body>
@@ -767,29 +769,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=132"></script>
-<script src="sync.js?v=132"></script>
-<script src="receipts.js?v=132"></script>
-<script src="receipt-image.js?v=132"></script>
-<script src="receipt-layout.js?v=132"></script>
-<script src="receipt-ocr.js?v=132"></script>
-<script src="product-photo.js?v=132"></script>
-<script src="product-photo-ui.js?v=132"></script>
-<script src="shopping-recommendations.js?v=132"></script>
-<script src="household-insights.js?v=132"></script>
-<script src="document-files.js?v=132"></script>
-<script src="document-photo.js?v=132"></script>
-<script src="cleaning-links.js?v=132"></script>
-<script src="home-model.js?v=132"></script>
-<script src="cocina.js?v=132"></script>
-<script src="cleaning-view.js?v=132"></script>
-<script src="home-ui.js?v=132"></script>
-<script src="household-ui.js?v=132"></script>
-<script src="receipt-extras.js?v=132"></script>
-<script src="house-plan.js?v=132"></script>
-<script src="house-plan-ui.js?v=132"></script>
-<script src="lidl-ui.js?v=132"></script>
-<script src="tasks-ui.js?v=132"></script>
+<script src="push.js?v=133"></script>
+<script src="sync.js?v=133"></script>
+<script src="receipts.js?v=133"></script>
+<script src="receipt-image.js?v=133"></script>
+<script src="receipt-layout.js?v=133"></script>
+<script src="receipt-ocr.js?v=133"></script>
+<script src="product-photo.js?v=133"></script>
+<script src="product-photo-ui.js?v=133"></script>
+<script src="shopping-recommendations.js?v=133"></script>
+<script src="household-insights.js?v=133"></script>
+<script src="document-files.js?v=133"></script>
+<script src="document-photo.js?v=133"></script>
+<script src="cleaning-links.js?v=133"></script>
+<script src="home-model.js?v=133"></script>
+<script src="cocina.js?v=133"></script>
+<script src="cleaning-view.js?v=133"></script>
+<script src="home-ui.js?v=133"></script>
+<script src="household-ui.js?v=133"></script>
+<script src="receipt-extras.js?v=133"></script>
+<script src="house-plan.js?v=133"></script>
+<script src="house-plan-ui.js?v=133"></script>
+<script src="lidl-ui.js?v=133"></script>
+<script src="tasks-ui.js?v=133"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -844,7 +846,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=132;
+const APP_VERSION=133;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1031,7 +1033,7 @@ function taskRow(t,occ){
   ].join('');
   return`<li class="row task-row ${t.done?'is-done':''} ${preview?'ghost':''} ${urgent?'is-urgent':''}">
     <button class="check round ${t.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleTask" data-id="${t.id}" aria-label="Completar ${esc(t.title)}"`}></button>
-    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&!t.urgent&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="width:40px;height:40px;padding:0;font-size:1.15rem;flex:none;border-radius:50%" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana" title="Pasar a mañana">⏭️</button>`:''}</li>`;
+    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&!t.urgent&&t.date===today()&&(!occ||occ===t.date)?`<button class="tomorrow-ic" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana" title="Pasar a mañana">⏭️</button>`:''}</li>`;
 }
 function eventRow(e,occ,label){
   if(typeof occ!=='string')occ=undefined;

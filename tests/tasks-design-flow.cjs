@@ -131,6 +131,18 @@ const { chromium } = require("playwright"),
     }
     if (process.env.SHOT) { await p.setViewportSize({ width: 390, height: 844 }); await p.evaluate(() => { ui.taskView = "hoy"; render(); }); await p.screenshot({ path: process.env.SHOT }); }
 
+    // Modo oscuro: listas y opciones con fondo oscuro (texto claro legible) en Tareas y en Hoy; ⏭️ sin círculo
+    await p.emulateMedia({ colorScheme: "dark" });
+    for (const [view, tv] of [["tareas", "hoy"], ["tareas", "todas"], ["hoy", "hoy"]]) {
+      await p.evaluate(([v, tv]) => { ui.view = v; ui.taskView = tv; ui.taskZone = null; render(); document.querySelectorAll("details.task-options").forEach((d) => (d.open = true)); }, [view, tv]);
+      const bad = await p.evaluate(() => [...document.querySelectorAll("#app .list, #app .task-options, #app .tz-zone, #app .tz-organize")].filter((el) => {
+        const m = getComputedStyle(el).backgroundColor.match(/\d+/g).map(Number); return m[0] > 200 && m[1] > 200 && m[2] > 200;
+      }).map((el) => el.className));
+      assert.deepEqual(bad, [], `${view}/${tv}: nada blanco en modo oscuro`);
+    }
+    assert.equal(await p.evaluate(() => getComputedStyle(document.querySelector("#app .tomorrow-ic")).backgroundColor), "rgba(0, 0, 0, 0)", "⏭️ solo el icono");
+    await p.emulateMedia({ colorScheme: "light" });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {
