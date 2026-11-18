@@ -767,29 +767,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=131"></script>
-<script src="sync.js?v=131"></script>
-<script src="receipts.js?v=131"></script>
-<script src="receipt-image.js?v=131"></script>
-<script src="receipt-layout.js?v=131"></script>
-<script src="receipt-ocr.js?v=131"></script>
-<script src="product-photo.js?v=131"></script>
-<script src="product-photo-ui.js?v=131"></script>
-<script src="shopping-recommendations.js?v=131"></script>
-<script src="household-insights.js?v=131"></script>
-<script src="document-files.js?v=131"></script>
-<script src="document-photo.js?v=131"></script>
-<script src="cleaning-links.js?v=131"></script>
-<script src="home-model.js?v=131"></script>
-<script src="cocina.js?v=131"></script>
-<script src="cleaning-view.js?v=131"></script>
-<script src="home-ui.js?v=131"></script>
-<script src="household-ui.js?v=131"></script>
-<script src="receipt-extras.js?v=131"></script>
-<script src="house-plan.js?v=131"></script>
-<script src="house-plan-ui.js?v=131"></script>
-<script src="lidl-ui.js?v=131"></script>
-<script src="tasks-ui.js?v=131"></script>
+<script src="push.js?v=132"></script>
+<script src="sync.js?v=132"></script>
+<script src="receipts.js?v=132"></script>
+<script src="receipt-image.js?v=132"></script>
+<script src="receipt-layout.js?v=132"></script>
+<script src="receipt-ocr.js?v=132"></script>
+<script src="product-photo.js?v=132"></script>
+<script src="product-photo-ui.js?v=132"></script>
+<script src="shopping-recommendations.js?v=132"></script>
+<script src="household-insights.js?v=132"></script>
+<script src="document-files.js?v=132"></script>
+<script src="document-photo.js?v=132"></script>
+<script src="cleaning-links.js?v=132"></script>
+<script src="home-model.js?v=132"></script>
+<script src="cocina.js?v=132"></script>
+<script src="cleaning-view.js?v=132"></script>
+<script src="home-ui.js?v=132"></script>
+<script src="household-ui.js?v=132"></script>
+<script src="receipt-extras.js?v=132"></script>
+<script src="house-plan.js?v=132"></script>
+<script src="house-plan-ui.js?v=132"></script>
+<script src="lidl-ui.js?v=132"></script>
+<script src="tasks-ui.js?v=132"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -844,7 +844,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=131;
+const APP_VERSION=132;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -997,7 +997,7 @@ function migratePeople(){
   }
   return ch;
 }
-const curList=()=>S.lists.find(l=>l.id===ui.list)||S.lists[0];
+const curList=()=>shownLists().find(l=>l.id===ui.list)||shownLists()[0]||S.lists[0];
 function stapleLeft(s){const r=CasaShoppingRecommendations.rule(S,s,{listId:s.listId||cartList(),superId:cartList(),today:today()});return r.mode==='manual'&&!r.paused?r.days-diff(r.last||today(),today()):Infinity}
 function matchesStaple(s,i){return s.listId===i.listId&&(i.stapleId===s.id||(s.mid&&i.mid?s.mid===i.mid:norm(s.name)===norm(i.name)))}
 function stapleInList(s){return S.items.some(i=>matchesStaple(s,i))}
@@ -1025,14 +1025,13 @@ function taskRow(t,occ){
     urgent?'<span class="urgent-tag">❗ Urgente</span>':'',
     t.date&&!occ?`<span class="${late?'late':''}">${late?'Atrasada · ':''}${relDate(t.date)}${t.time?' a las '+t.time:''}</span>`:(t.time&&t.date?`<span>${t.time}</span>`:''),
     t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:'',
-    p?`<span class="who">${esc(p.name)}</span>`:'',
     CasaHousePlan.minutesFor(t)?`<span title="Tiempo aproximado">⏱ ${CasaHousePlan.minutesFor(t)} min</span>`:'',
     // El consejo va en la línea de detalles para no quitarle ancho al título
     !preview&&CasaHousePlan.tipFor(t)?`<button class="tip-inline" data-act="taskTip" data-id="${t.id}" aria-label="Cómo hacer ${esc(t.title)}" title="Cómo hacerlo">💡</button>`:''
   ].join('');
   return`<li class="row task-row ${t.done?'is-done':''} ${preview?'ghost':''} ${urgent?'is-urgent':''}">
     <button class="check round ${t.done?'on':''}" ${preview?'disabled aria-label="Repetición prevista"':`data-act="toggleTask" data-id="${t.id}" aria-label="Completar ${esc(t.title)}"`}></button>
-    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&!t.urgent&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana">Mañana →</button>`:''}</li>`;
+    <div class="row-main" data-act="editTask" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${meta}</div></div>${late&&!occ?`<button class="btn sec" style="padding:7px 10px;font-size:.8rem;flex:none" data-act="toToday" data-id="${t.id}">Pasar a hoy</button>`:''}${!t.done&&!t.urgent&&t.date===today()&&(!occ||occ===t.date)?`<button class="btn sec" style="width:40px;height:40px;padding:0;font-size:1.15rem;flex:none;border-radius:50%" data-act="toTomorrow" data-id="${t.id}" aria-label="Pasar ${esc(t.title)} a mañana" title="Pasar a mañana">⏭️</button>`:''}</li>`;
 }
 function eventRow(e,occ,label){
   if(typeof occ!=='string')occ=undefined;
@@ -1123,7 +1122,7 @@ function reorgRow(t){
   const on=reorgSel.has(t.id),p=person(t.who),late=!!t.date&&t.date<today(),linked=(S.routines||[]).some(r=>r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(t.id));
   const when=t.date?`${late?'Atrasada · ':''}${relDate(t.date)}${t.time?' a las '+t.time:''}`:'Sin fecha';
   return`<li class="row reorg-row ${on?'is-picked':''}"><button class="check round ${on?'on':''}" data-act="reorgPick" data-id="${t.id}" role="checkbox" aria-checked="${on}" aria-label="Seleccionar ${esc(t.title)}"></button>
-    <div class="row-main" data-act="reorgPick" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${t.urgent?'<span class="urgent-tag">❗ No se puede posponer</span>':''}<span class="${late?'late':''}">${esc(when)}</span>${p?`<span class="who">${esc(p.name)}</span>`:''}${t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:''}${linked?'<span>🧹 Rutina</span>':''}</div></div></li>`;
+    <div class="row-main" data-act="reorgPick" data-id="${t.id}"><div class="row-title">${esc(t.title)}</div><div class="row-meta">${t.urgent?'<span class="urgent-tag">❗ No se puede posponer</span>':''}<span class="${late?'late':''}">${esc(when)}</span>${t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:''}${linked?'<span>🧹 Rutina</span>':''}</div></div></li>`;
 }
 function reorgPanel(pend){
   const rows=pend.slice().sort(byDateTime),picked=rows.filter(x=>reorgSel.has(x.id)).length,all=!!rows.length&&picked===rows.length,dis=picked?'':' disabled';
@@ -1701,7 +1700,7 @@ function itemSheet(i){
     <div class="grid2"><div><label for="f_pr">Precio estimado (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${i.price?Math.round(i.price*100)/100:''}" ${i.mid?'disabled':''}></div>
     <div><label for="f_st">Supermercado</label><select class="field" id="f_st"><option value="">—</option>${opt(ck().stores.map(x=>[x,x]),i.store||'')}</select></div></div>
     <div class="grid2"><div><label for="f_s">Sección</label><select class="field" id="f_s">${opt(S.sections.map(s=>[s,s]),i.section)}</select></div>
-    <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(orderedLists().map(l=>[l.id,listName(l)]),i.listId)}</select></div></div>
+    <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(shownLists(i.listId).map(l=>[l.id,listName(l)]),i.listId)}</select></div></div>
     <label for="f_b">Lo pidió</label><input class="field" id="f_b" value="${esc(i.by)}" placeholder="Nombre">
 </details>`,
   {autoFocus:false,onSave:ov=>{

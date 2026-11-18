@@ -378,6 +378,8 @@ const cartList=()=>(S.lists.find(l=>l.id==='super')||S.lists[0]).id;
 // Orden de las listas: primero Mercadona (la del súper), luego Lidl y después el resto en su orden.
 const listRank=l=>l.id==='super'?0:l.id==='lidl'?1:2;
 const orderedLists=()=>S.lists.map((l,i)=>[l,i]).sort((a,b)=>listRank(a[0])-listRank(b[0])||a[1]-b[1]).map(x=>x[0]);
+// Listas que se enseñan: la de Lidl solo si están activadas las cosas de Lidl en ⚙️ Ajustes (no se borra; keep = la lista actual de un producto)
+const shownLists=keep=>orderedLists().filter(l=>l.id!=='lidl'||(S.cook&&S.cook.lidlTab)||l.id===keep);
 const listName=l=>l.id==='super'&&/^s[úu]per$/i.test(l.name||'')?'Mercadona':l.name;
 const cartItems=()=>S.items.filter(i=>i.listId===cartList()&&!i.done);
 const cartOf=mid=>cartItems().find(i=>i.mid===mid);
@@ -736,7 +738,7 @@ function vCkAjustes(){
   <h2>Precios de Mercadona</h2><div class="empty" style="text-align:left">${MC?`${MC.p.length.toLocaleString('es-ES')} productos con los precios de la tienda online de Mercadona para el CP <b>${esc(MC.cp||'18210')}</b> (almacén ${esc(MC.wh)}), del <b>${mcDate()}</b>. Se actualizan solos cada mañana.${mcFresh()?'':' <b>⚠️ Están desactualizados.</b>'}<br><br>Precios con «≈» = estimación. Lo gastado de verdad solo sale de lo que apuntáis o de los tiques.`:'Cargando precios…'}</div>
   <h2>Dónde compro</h2><p class="hint" style="margin-top:-4px">Al terminar la compra eliges dónde habéis comprado y lo que habéis pagado: se guardará en el historial de compras.</p><div class="ck-wrap">${c.stores.map((x,i)=>`<button class="chip ${x==='Mercadona'?'on':''}" data-act="ckStoreDel" data-v="${i}">${esc(x)}${x==='Mercadona'?'':' ✕'}</button>`).join('')}<button class="chip add" data-act="ckStoreNew">+ Supermercado</button></div>
   ${(S.buys||[]).length?`<button class="btn sec" style="width:100%;margin-top:10px" data-act="ckBuys">🧾 Historial de compras</button>`:''}
-  <h2>Ofertas de Lidl</h2><label class="row ck-lidl-toggle"><div class="row-main">Mostrar la pestaña 🟡 Lidl<br><small class="hint">Las ofertas del folleto de Lidl. La lista Lidl de la compra se queda igual.</small></div><input type="checkbox" data-act="ckLidlTab" ${lidlTabOn()?'checked':''} aria-label="Mostrar la pestaña de ofertas de Lidl"></label>
+  <h2>Ofertas de Lidl</h2><label class="row ck-lidl-toggle"><div class="row-main">Mostrar Lidl en Compras<br><small class="hint">La pestaña de ofertas 🟡 Lidl y la lista Lidl. Ocultas no se borra nada.</small></div><input type="checkbox" data-act="ckLidlTab" ${lidlTabOn()?'checked':''} aria-label="Mostrar la pestaña de ofertas de Lidl"></label>
   ${Object.values(S.prices||{}).filter(e=>e.use!==false).length?`<h2>Precios de otros súper</h2>`+ul(Object.values(S.prices).filter(e=>e.use!==false).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(e=>`<li class="row"><div class="row-main" data-act="ckPrice" data-v="${esc(e.name)}"><div class="row-title">${esc(e.name)}</div><div class="row-meta"><span>🏪 ${esc(e.store)}</span><span>${parse(e.at).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</span></div></div><span class="row-side">${eur(e.price)}${e.qtxt?' / '+esc(e.qtxt):e.n?' / '+(e.d==='ud'?e.n+' ud':fmtAmt(e.n,'g')):''}</span></li>`)):''}
 `;
   return h;
@@ -1156,7 +1158,7 @@ function vCompras(){
   loadMC();
   const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done),total=items.reduce((n,i)=>n+(Number(i.price)||0),0);
   let h=`<h1>Compras</h1><p class="sub">${esc(listName(L))}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
-  h+=`<div class="chips shop-lists">${orderedLists().map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(listName(l))}</button>`).join('')}</div>`;
+  h+=`<div class="chips shop-lists">${shownLists().map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(listName(l))}</button>`).join('')}</div>`;
   h+=`<div class="shop-current"><div><small>Cesta actual · estimación</small><strong>≈ ${eur(total)}</strong>${dn.length?`<small>En el carro: ${eur(dn.reduce((n,i)=>n+(Number(i.price)||0),0))}</small>`:''}</div><button type="button" class="link" data-act="shopAddFocus">+ Añadir</button>${dn.length?`<button class="btn" data-act="clearDone">Terminar (${dn.length})</button>`:''}</div>`;
   h+=shoppingReminderCard();
   h+=habSection(L);
@@ -1734,7 +1736,7 @@ const CK_ACT={
   ckSuggest:d=>shoppingSuggest(d),
   ckSuggestLearn:()=>shoppingLearningSheet(),
   ckBuys:()=>buysSheet(),
-  ckLidlTab:()=>{S.cook=S.cook||{};S.cook.lidlTab=!lidlTabOn();save();toast(S.cook.lidlTab?'Pestaña 🟡 Lidl visible':'Pestaña 🟡 Lidl oculta')},
+  ckLidlTab:()=>{S.cook=S.cook||{};S.cook.lidlTab=!lidlTabOn();save();toast(S.cook.lidlTab?'Lidl visible en Compras':'Lidl oculto en Compras')},
   ckPendingReceipt:d=>ticketFlow({pendingId:d.id}),
   ckReceiptDraft:d=>resumeReceiptDraft(d.id),
   ckSpend:()=>spendSheet(),

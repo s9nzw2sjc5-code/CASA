@@ -58,6 +58,7 @@ const { chromium } = require("playwright"),
     const banoRow = await p.locator(".tz-row", { hasText: "Baño principal" }).innerText();
     assert.match(banoRow, /Baños[\s\S]*20 min/);
     assert.match(await p.locator(".tz-row", { hasText: "Limpiar el espejo" }).innerText(), /Baños[\s\S]*Atrasada/);
+    assert.doesNotMatch(await p.locator(".tz-list").first().innerText(), /Juanma|Mari|Conjunto/, "sin quién se encarga");
     assert.match(await p.locator(".tz-row", { hasText: "fuente" }).innerText(), /Ringo/);
     assert.match(await p.locator(".tz-done summary").innerText(), /Hechas hoy · 1/);
     // Marcar desde aquí
@@ -110,6 +111,11 @@ const { chromium } = require("playwright"),
 
     // 5) Todas: la vista de siempre, con Sin fecha y el calendario de temporada
     await p.locator('[data-act=taskView][data-v=todas]').click();
+    // Pasar a mañana: solo el icono; sin quién se encarga
+    const tm = p.locator('[data-act=toTomorrow][data-id="luz"]');
+    assert.equal(await tm.innerText(), "⏭️");
+    assert.equal(await tm.getAttribute("title"), "Pasar a mañana");
+    assert.equal(await p.locator("#app .task-row .who").count(), 0);
     assert.ok(await p.evaluate(() => [...document.querySelectorAll("#app h2")].some((h) => h.textContent === "Sin fecha")));
     assert.equal(await p.locator("#qNoDate").count(), 1);
 

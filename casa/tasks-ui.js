@@ -31,11 +31,11 @@ const progressBar=(done,total,label)=>`<div class="tz-bar" role="progressbar" ar
 
 // Fila con casilla: hecha, por hacer o solo informativa (lo repetido ya hecho no se desmarca desde aquí)
 function tzRow(t,{done=false,showDate=false}={}){
- const z=taskZone(t),min=CasaHousePlan.minutesFor(t),late=!done&&t.date&&t.date<today(),canToggle=done?!!t.done:true,p=person(t.who);
+ const z=taskZone(t),min=CasaHousePlan.minutesFor(t),late=!done&&t.date&&t.date<today(),canToggle=done?!!t.done:true;
  const meta=[t.urgent&&!done?'<span class="urgent-tag" title="Urgente">❗</span>':'',`<span>${esc(z.name)}</span>`,min?`<span class="tz-min">${min} min</span>`:'',
   late?`<span class="late">Atrasada · ${esc(relDate(t.date))}</span>`:showDate&&t.date&&!done?`<span>${esc(relDate(t.date))}</span>`:'',
   done?`<span>Hecha ${taskDoneDay(t)===today()?'hoy':esc(relDate(taskDoneDay(t)).toLowerCase())}</span>`:'',
-  ui.personFilter==='all'&&p?`<span class="who">${esc(p.name)}</span>`:''].filter(Boolean).join('<i aria-hidden="true">·</i>');
+  ].filter(Boolean).join('<i aria-hidden="true">·</i>');
  const check=`<button class="check round ${done?'on':''}" ${canToggle?`data-act="toggleTask" data-id="${esc(t.id)}" aria-label="${esc((done?'Desmarcar ':'Completar ')+t.title)}"`:`disabled aria-label="Hecha"`}></button>`;
  return`<li class="row tz-row ${done?'is-done':''} ${t.urgent&&!done?'is-urgent':''}">${check}<button class="tz-main" data-act="editTask" data-id="${esc(t.id)}"><span class="tz-title">${esc(t.title)}</span><span class="tz-meta">${meta}</span></button><span class="tz-go" aria-hidden="true">›</span></li>`;
 }

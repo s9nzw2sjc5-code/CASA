@@ -117,7 +117,7 @@ const { chromium } = require("playwright"),
     assert.equal(await p.locator(".reorg-row").count(), 7);
     assert.equal(await p.locator("#fab").isHidden(), true);
     const lavadora = await p.locator(".reorg-row", { hasText: "Poner la lavadora" }).innerText();
-    assert.match(lavadora, /Juanma/);
+    assert.doesNotMatch(lavadora, /Juanma/, "sin quién se encarga");
     assert.match(lavadora, /09:00/);
     assert.match(await counter(), /0 de 7/);
     await p.locator('[data-act=reorgAll]').click();

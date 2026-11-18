@@ -140,7 +140,9 @@ const fixture = {
     assert.equal(await p.locator('#app [data-act=ckTab][data-v="lidl"]').count(), 0);
     assert.equal(await p.evaluate(() => new Set([...document.querySelectorAll(".ck-tabs .chip")].map((c) => Math.round(c.getBoundingClientRect().top))).size), 1, "las 5 pestañas en una fila");
     await p.evaluate(() => { ui.ckTab = "lista"; render(); });
-    assert.equal(await p.locator('[data-act=pickList][data-v="lidl"]').count(), 1, "la lista Lidl se conserva");
+    assert.equal(await p.locator('[data-act=pickList][data-v="lidl"]').count(), 0, "la lista Lidl también se oculta");
+    assert.equal(await p.evaluate(() => S.lists.some((l) => l.id === "lidl") && S.items.some((i) => i.listId === "lidl")), true, "pero no se borra nada");
+    assert.equal(await p.evaluate(() => curList().id), "super", "si estaba abierta la de Lidl, se ve la de Mercadona");
     assert.deepEqual(errors, [], "errores de página");
     console.log("lidl-flow: OK");
   } finally {
