@@ -21,15 +21,19 @@ test('el plan completo reparte cada tarea en su día y ciclo, desde hoy', () => 
     if (it.kind === 'week') { assert.equal(t.repeat, 'weekly'); assert.equal(wd(t.date), it.day); assert.ok(t.date < plus(TODAY, 7)); }
     if (it.kind === 'fortnight') { assert.deepEqual([t.repeat, t.every, t.unit], ['custom', 2, 'w']); assert.equal(wd(t.date), it.day); assert.ok(t.date < plus(TODAY, 14)); }
     if (it.kind === 'month4') { assert.deepEqual([t.repeat, t.every, t.unit], ['custom', 4, 'w']); assert.equal(wd(t.date), it.day); assert.ok(t.date < plus(TODAY, 28)); }
-    if (it.kind === 'every') { assert.deepEqual([t.repeat, t.unit], ['custom', 'm']); assert.equal(t.date, plus(TODAY, it.offset)); }
+    if (it.kind === 'every') { assert.deepEqual([t.repeat, t.unit], ['custom', 'm']); assert.ok(t.date >= plus(TODAY, it.offset) && t.date < plus(TODAY, it.offset + 7)); assert.equal(wd(t.date), it.min >= 30 ? 6 : 5, t.planKey); }
+    if (it.min >= 30) assert.ok(wd(t.date) >= 5, t.planKey + ': lo largo, en fin de semana');
     if (it.kind === 'year') assert.equal(t.repeat, 'yearly');
   }
   const by = k => tasks.find(t => t.planKey === k).date;
   // En temporada y con la fecha ideal ya pasada: pronto, repartidas en días distintos
-  for (const k of ['radiadores-purgar', 'chimenea', 'canaletas', 'caldera', 'aire-invierno']) assert.ok(by(k) > TODAY && by(k) <= plus(TODAY, 10), k);
-  assert.ok(new Set(['radiadores-purgar', 'chimenea', 'canaletas', 'caldera', 'aire-invierno'].map(by)).size >= 4);
-  assert.equal(by('burletes'), '2026-11-25');
-  assert.equal(by('cortinas'), '2027-03-15');
+  for (const k of ['caldera', 'aire-invierno']) assert.ok(by(k) > TODAY && by(k) <= plus(TODAY, 10), k);
+  // Las largas de temporada que tocan ya: en domingos distintos, en las próximas semanas
+  const longNow = ['radiadores-purgar', 'chimenea', 'canaletas'];
+  for (const k of longNow) assert.ok(by(k) > TODAY && by(k) <= plus(TODAY, 42) && wd(by(k)) === 6, k);
+  assert.equal(new Set(longNow.map(by)).size, 3);
+  assert.equal(by('burletes'), '2026-11-29'); // ideal el 25 (miércoles): pasa al domingo
+  assert.equal(by('cortinas'), '2027-03-21');
   assert.equal(by('aire-verano'), '2027-05-15');
   // La semana de cada «rincón» rota: no caen todos en la misma semana
   const corners = tasks.filter(t => item(t.planKey).kind === 'month4').map(t => Math.floor((Date.parse(t.date) - Date.parse(plus(TODAY, -wd(TODAY)))) / 864e5 / 7));
@@ -347,4 +351,37 @@ test('recordatorios duplicados o triplicados: se queda una sola tarea y no vuelv
   assert.equal(weekly.removed, 0);
   // Y los dos móviles eligen la misma
   assert.deepEqual(P.dedupeConverted({ tasks: [v109b, v109a] }).tasks.map(t => t.id), P.dedupeConverted({ tasks: [v109a, v109b] }).tasks.map(t => t.id));
+});
+
+test('entre semana, poco tiempo cada día; lo largo, el fin de semana', () => {
+  const laundry = { twoWashers: true, names: ['Lavadora de arriba', 'Lavadora de abajo'] };
+  for (const it of P.expandItems(laundry)) {
+    assert.ok(it.min > 0, it.key + ': tiene duración');
+    if (it.min >= 30 && it.day !== undefined) assert.ok(it.day >= 5, it.key + ': lo largo no va entre semana');
+  }
+  // Minutos por día en las 4 semanas del ciclo (casa completa y dos lavadoras)
+  for (let w = 0; w < 4; w++) {
+    const load = [0, 0, 0, 0, 0, 0, 0];
+    for (const it of P.expandItems(laundry)) {
+      const weeks = it.kind === 'week' ? [0, 1, 2, 3] : it.kind === 'fortnight' ? [it.week, it.week + 2] : it.kind === 'month4' ? [it.week] : [];
+      if (weeks.includes(w)) load[it.day] += it.min;
+    }
+    for (let d = 0; d < 5; d++) assert.ok(load[d] <= 50, `semana ${w}, día ${d}: ${load[d]} min`);
+    assert.ok(load[6] >= Math.max(...load.slice(0, 5)), 'el domingo es el día largo');
+  }
+});
+
+test('las tareas del plan que ya existen pasan a su nuevo día sin perder su semana ni ir hacia atrás', () => {
+  const tasks = [
+    { id: 'nev', plan: 'casa', planKey: 'nevera', date: '2026-11-23', done: false }, // lunes → domingo de esa semana
+    { id: 'ent', plan: 'casa', planKey: 'entrada', date: '2026-11-19', done: false }, // jueves → miércoles de esa semana (hoy)
+    { id: 'col', plan: 'casa', planKey: 'colchones', date: '2026-12-16', done: false }, // cada 3 meses, larga → domingo
+    { id: 'coc', plan: 'casa', planKey: 'cocina-semanal', date: '2026-11-23', done: false }, // ya en su día
+    { id: 'mia', title: 'Mía', date: '2026-11-19', done: false }, // propia: no se toca
+    { id: 'fue', plan: 'casa', planKey: 'fuente-limpiar', date: '2026-11-18', urgent: true, done: false }, // urgente: no se pospone
+    { id: 'hec', plan: 'casa', planKey: 'horno', date: '2026-11-19', done: true },
+  ];
+  assert.deepEqual(P.rebalance({ tasks }, '2026-11-18'), [{ id: 'nev', date: '2026-11-29' }, { id: 'ent', date: '2026-11-18' }, { id: 'col', date: '2026-12-20' }]);
+  assert.deepEqual(P.rebalance({ tasks: [{ ...tasks[1], date: '2026-11-26' }] }, '2026-11-18'), [{ id: 'ent', date: '2026-11-25' }]);
+  assert.equal(P.minutesFor({ planKey: 'nevera' }), 40);
 });

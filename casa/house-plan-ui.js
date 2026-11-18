@@ -140,6 +140,26 @@ function houseMergeRoutines(){
   S.routines=r.routines;save();setTimeout(()=>toast(`Rutinas de limpieza agrupadas: ${r.merged} repetida${r.merged===1?'':'s'} unida${r.merged===1?'':'s'} (hay copia de seguridad)`),0);return true}
  finally{houseMergeRoutines.busy=false}
 }
+// Una sola vez: las tareas del plan ya creadas pasan a su nuevo día (lo corto entre semana, lo largo el fin de semana).
+// Queda marcado en S.cook para no volver a mover lo que se cambie luego a mano.
+const PLAN_DAYS_V=2;
+function housePlanRebalance(){
+ if(housePlanRebalance.busy||(typeof canWrite!=='undefined'&&!canWrite)||syncState==='ro')return false;
+ if((S.cook?.planDays||0)>=PLAN_DAYS_V||!(S.tasks||[]).some(t=>t.plan==='casa'&&!t.done))return false;
+ S.cook=S.cook||{};
+ const ups=CasaHousePlan.rebalance(S,today());
+ // Si ya está todo en su día, solo se apunta (se guarda con el siguiente cambio) para no estorbar a «Deshacer»
+ if(!ups.length){S.cook.planDays=PLAN_DAYS_V;return false}
+ housePlanRebalance.busy=true;
+ try{
+  if(ups.length){const id='antes-de-repartir-por-dias-'+Date.now(),before=clone(S);saveLocalBackup(id,before,'Antes de repartir el plan por días');cloudBackup(id,before,'Antes de repartir el plan por días');
+   const by=new Map(ups.map(u=>[u.id,u.date]));S.tasks.forEach(t=>{if(by.has(t.id))t.date=by.get(t.id)});
+   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>by.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)})}
+  S.cook.planDays=PLAN_DAYS_V;save();
+  if(ups.length)setTimeout(()=>toast(`Plan de la casa repartido: entre semana lo corto y lo largo el fin de semana · ${ups.length} tarea${ups.length===1?'':'s'} cambiada${ups.length===1?'':'s'} de día (hay copia de seguridad)`,null,7000),0);
+  return true;
+ }finally{housePlanRebalance.busy=false}
+}
 /* ---------- consejos ---------- */
 const houseTipSteps=tip=>`<ol class="tip-steps">${tip.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`;
 function houseTipSheet(task){const tip=CasaHousePlan.tipFor(task);if(!tip)return;const ov=sheet('💡 '+tip.title,`<p class="hint">${esc(task.title)}</p>${houseTipSteps(tip)}<button type="button" class="link" data-tips-all>Ver todos los consejos</button>`,{autoFocus:false});ov.querySelector('[data-s=cancel]').textContent='Cerrar';ov.querySelector('[data-tips-all]').onclick=()=>{ov.remove();houseTipsLibrary()};return ov}

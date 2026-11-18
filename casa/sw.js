@@ -1,6 +1,6 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v123';
+const CACHE = 'casa-v124';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
 const SHELL = ['push.js?v=118','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=118', 'shopping-recommendations.js?v=118', 'household-insights.js?v=118', 'household-ui.js?v=118', 'document-files.js?v=118', 'document-photo.js?v=118', 'home-model.js?v=118', 'cleaning-links.js?v=118', 'home-ui.js?v=118', 'cocina.js?v=118', 'product-photo.js?v=118', 'product-photo-ui.js?v=118', 'receipts.js?v=118', 'receipt-image.js?v=118', 'receipt-layout.js?v=118', 'receipt-ocr.js?v=118', 'receipt-extras.js?v=118', 'house-plan.js?v=118', 'house-plan-ui.js?v=118', 'lidl-ui.js?v=118', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];

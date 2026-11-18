@@ -154,6 +154,23 @@ const P = require("../casa/house-plan.js");
     assert.equal(forecastCalls, callsBefore, "la previsión reciente no se vuelve a pedir");
     assert.ok(forecastCalls <= 2, "sin bucles de peticiones: " + forecastCalls);
 
+    // Reparto por días (una sola vez): lo largo que había caído entre semana pasa al domingo, con copia y aviso;
+    // si luego se mueve a mano, ya no se vuelve a tocar
+    await p.evaluate(() => {
+      const t = today(), mon = addDays(t, 7 - ((new Date(t + "T12:00:00").getDay() + 6) % 7)); // lunes que viene
+      S.tasks = [{ id: "nev", title: "Nevera: vaciar y limpiar por dentro", date: mon, repeat: "custom", every: 4, unit: "w", who: "yo", notes: "", done: false, plan: "casa", planKey: "nevera" }];
+      S.cook = { ...(S.cook || {}) }; delete S.cook.planDays; S.routines = []; save();
+    });
+    await p.waitForFunction(() => S.cook.planDays === 2);
+    const nev = await p.evaluate(() => S.tasks.find((t) => t.id === "nev").date);
+    assert.equal(await p.evaluate((d) => new Date(d + "T12:00:00").getDay(), nev), 0, "la nevera pasa al domingo");
+    assert.match(await p.locator("#toast").innerText(), /lo largo el fin de semana · 1 tarea cambiada de día/);
+    assert.equal(await p.evaluate(() => localBackups().some((b) => b.label === "Antes de repartir el plan por días")), true);
+    await p.evaluate(() => { const t = S.tasks.find((t) => t.id === "nev"); t.date = addDays(t.date, 1); save(); });
+    await p.evaluate(() => render());
+    assert.equal(await p.evaluate((d) => S.tasks.find((t) => t.id === "nev").date === addDays(d, 1), nev), true, "lo movido a mano se respeta");
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskMode = "tasks"; ui.personFilter = "all"; ui.taskFilter = "pend"; render(); });
+    assert.match(await p.locator("#app").innerText(), /⏱ 40 min/);
     assert.deepEqual(errors, [], "errores de página");
     console.log("house-plan-flow: OK");
   } finally {
