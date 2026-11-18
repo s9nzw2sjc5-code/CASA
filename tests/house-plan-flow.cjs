@@ -72,6 +72,17 @@ const P = require("../casa/house-plan.js");
     // Los consejos según el tiempo, debajo del título de Tareas («Limpieza»)
     await p.evaluate(() => { ui.view = "tareas"; ui.taskView = "hoy"; render(); });
     assert.match(await p.locator("#app .wx-tips").innerText(), /no tiendas fuera/);
+    // Se pliegan y despliegan, y se recuerda al volver a pintar
+    assert.equal(await p.locator("#app details.wx-tips").getAttribute("open"), "");
+    await p.locator("#app .wx-tips > summary").click();
+    await p.waitForFunction(() => ui.wxTipsOpen === false);
+    await p.evaluate(() => render());
+    assert.equal(await p.locator("#app details.wx-tips").getAttribute("open"), null, "sigue plegado");
+    assert.match(await p.locator("#app .wx-tips > summary").innerText(), /Consejos según el tiempo · \d/);
+    await p.locator("#app .wx-tips > summary").click();
+    await p.waitForFunction(() => ui.wxTipsOpen === true);
+    await p.evaluate(() => render());
+    assert.equal(await p.locator("#app details.wx-tips").getAttribute("open"), "");
     assert.ok(await p.evaluate(() => { const t = document.querySelector("#app .wx-tips"), seg = document.querySelector("#app .tz-seg"); return t && seg && (t.compareDocumentPosition(seg) & Node.DOCUMENT_POSITION_FOLLOWING); }), "antes de las pestañas");
 
     // 2) La tarea de tender pasa al próximo día seco y se puede deshacer

@@ -65,7 +65,9 @@ test('lee la previsión de Open-Meteo y tolera valores vacíos', () => {
   assert.equal(P.sky(80)[1], 'Lluvia');
   assert.equal(P.isOutdoor({ title: 'Tender la ropa' }), true);
   assert.equal(P.isOutdoor({ title: 'Rieles de las ventanas: aspirar y pasar un paño' }), false);
-  for (const t of ['Barrer entrada', 'Entrada: barrer y quitar el polvo del recibidor', 'Barrer el porche', 'Regar las plantas']) assert.equal(P.isOutdoor({ title: t }), true, t);
+  for (const t of ['Barrer entrada', 'Barrer el porche', 'Regar las plantas', 'Terraza: barrer']) assert.equal(P.isOutdoor({ title: t }), true, t);
+  // Lo de dentro de casa aunque diga «entrada»: el baño de la entrada, el recibidor…
+  for (const t of ['Cuartos de baño: Limpiar cuarto de baño entrada', 'Aseo de la entrada: repaso rápido', 'Entrada: barrer y quitar el polvo del recibidor']) assert.equal(P.isOutdoor({ title: t }), false, t);
 });
 
 const day = (date, o) => ({ date, code: 3, max: 18, min: 9, rain: 0, mm: 0, wind: 10, ...o });

@@ -33,17 +33,19 @@ function houseWxCard(mode){
  const place=houseWxPlace();
  if(!place)return`<section class="wx"><div class="wx-h"><b>🌦️ Tiempo y recomendaciones</b></div><p class="hint">Indica dónde está la casa para ver la previsión y qué conviene hacer cada día: no tender si va a llover, preparar la calefacción cuando llega el frío…</p><button class="btn sec" data-act="wxPlace">Añadir ubicación</button></section>`;
  houseWxRefresh(false);
+ let tipsN=0;
  const c=houseWxFor(place),t=today(),days=c?c.days.filter(d=>d.date>=t).slice(0,5):[],temp=v=>v===null?'–':Math.round(v)+'°';
- let h=mode==='tips'?`<section class="wx wx-tips" aria-label="Consejos según el tiempo"><div class="wx-h"><b>🌦️ Consejos según el tiempo</b></div>`:`<section class="wx" aria-label="Tiempo y recomendaciones"><div class="wx-h"><b>🌦️ ${esc(place.name)}</b><small class="wx-age">${houseWx.busy?'Actualizando…':c?esc(houseWxAge(c.at)):''}</small><button class="link" data-act="wxPlace">Cambiar</button></div>`;
+ // Los consejos se pliegan y despliegan (se recuerda cómo se dejaron); abiertos de entrada
+ let h=mode==='tips'?`<details class="wx wx-tips" aria-label="Consejos según el tiempo"${ui.wxTipsOpen===false?'':' open'}><summary class="wx-h"><b>🌦️ Consejos según el tiempo%%N%%</b><span class="tz-caret" aria-hidden="true">⌄</span></summary>`:`<section class="wx" aria-label="Tiempo y recomendaciones"><div class="wx-h"><b>🌦️ ${esc(place.name)}</b><small class="wx-age">${houseWx.busy?'Actualizando…':c?esc(houseWxAge(c.at)):''}</small><button class="link" data-act="wxPlace">Cambiar</button></div>`;
  if(!days.length)h+=`<p class="hint">${houseWx.busy?'Cargando la previsión…':esc(houseWx.error||'Todavía no hay previsión.')}</p>${houseWx.busy?'':'<button class="btn sec" data-act="wxRetry">Reintentar</button>'}`;
  else{
   if(mode!=='tips')h+=`<div class="wx-days">${days.map(d=>{const[ic,label]=CasaHousePlan.sky(d.code);return`<div class="wx-day${CasaHousePlan.isWet(d)?' wet':''}"><small>${d.date===t?'Hoy':esc(parse(d.date).toLocaleDateString('es-ES',{weekday:'short'}))}</small><span role="img" aria-label="${esc(label)}">${ic}</span><b>${temp(d.max)}</b><small>${temp(d.min)} · ${d.rain??0}%</small></div>`}).join('')}</div>`;
-  const recs=CasaHousePlan.recommendations(S,c.days,t,{relDate,laundry:S.cook?.houseLaundry});
+  const recs=CasaHousePlan.recommendations(S,c.days,t,{relDate,laundry:S.cook?.houseLaundry});tipsN=recs.length;
   if(mode==='tips'&&!recs.length)h+=`<p class="hint">Hoy el tiempo no cambia nada de tus tareas.</p>`;
   if(recs.length&&mode!=='forecast')h+=`<ul class="wx-recs">${recs.map(r=>{const tipTask=r.tip&&S.tasks.find(x=>x.id===r.tip);return`<li><span aria-hidden="true">${r.icon}</span><div><p>${esc(r.text)}</p>${r.actions.map(a=>`<button class="btn sec" data-act="wxMove" data-id="${esc(a.id)}" data-date="${esc(a.date)}">${esc(a.label)}</button>`).join('')}${tipTask&&CasaHousePlan.tipFor(tipTask)?houseTipButton(tipTask.id):''}</div></li>`}).join('')}</ul>`;
   if(houseWx.error)h+=`<p class="hint">${esc(houseWx.error)}</p>`;
  }
- if(mode==='tips')return h+'</section>';
+ if(mode==='tips')return(h+'</details>').replace('%%N%%',tipsN?` · ${tipsN}`:'');
  return h+`<p class="wx-src">Previsión de <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="${esc(houseWxLink(place))}" target="_blank" rel="noopener">Ver en eltiempo.es</a></p></section>`;
 }
 function houseWxPlaceSheet(){
@@ -206,3 +208,6 @@ const HOUSE_ACT={
  wxRetry:()=>{houseWx.failedAt=0;houseWxRefresh(true);render()},
  wxMove:d=>{const t=S.tasks.find(x=>x.id===d.id);if(!t)return;const r=shiftTasks([d.id],d.date);if(r.blocked){toast('Es urgente ❗: no se puede posponer');return}if(!r.moved)return;save();toastUndo(`«${t.title}» pasada a ${relDate(d.date).toLowerCase()}`)}
 };
+
+// Recordar si los consejos según el tiempo se dejaron plegados o desplegados
+document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.wx-tips')){ui.wxTipsOpen=e.target.open;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(err){}}},true);
