@@ -192,6 +192,19 @@ const { chromium } = require("playwright"),
     }
     await p.evaluate(() => { ui.taskMode = "tasks"; render(); });
 
+    // Al salir de Tareas y volver, siempre «Para hoy» (aunque estuviera en una zona, Por zonas, Todas o Rutinas)
+    for (const setup of ['ui.taskView = "zonas"; ui.taskZone = "banos";', 'ui.taskView = "zonas"; ui.taskZone = null;', 'ui.taskView = "todas";', 'ui.taskMode = "routines";']) {
+      await p.evaluate(`ui.view = "tareas"; ui.taskMode = "tasks"; reorgSel = null; ${setup} render();`);
+      await p.locator('#tabs [data-v="hoy"]').click();
+      await p.locator('#tabs [data-v="tareas"]').click();
+      assert.equal(await p.locator(".tz-seg .on").innerText(), "Para hoy", setup);
+      assert.equal(await p.locator(".tz-page").count(), 0, setup);
+    }
+    // Dentro de Tareas sí se mantiene al cambiar entre sus pestañas
+    await p.locator('[data-act=taskView][data-v=zonas]').click();
+    await p.locator('#tabs [data-v="tareas"]').click();
+    assert.equal(await p.locator(".tz-seg .on").innerText(), "Por zonas");
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

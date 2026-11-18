@@ -56,7 +56,7 @@ const { chromium } = require("playwright"),
     await p.evaluate(() => render());
     const ok = () => p.locator(".overlay [data-s=ok]").last().click(),
       cancel = () => p.locator(".overlay [data-s=cancel]").last().click(),
-      tab = (v) => p.locator(`#tabs [data-v="${v}"]`).click();
+      tab = async (v) => { await p.locator(`#tabs [data-v="${v}"]`).click(); if (v === "tareas") await p.locator('[data-act=taskView][data-v=todas]').click(); };
 
     // 1) Todo en Tareas: recordatorios, mantenimientos y la rutina antigua se convierten solos, con copia antes
     await p.waitForFunction(() => S.reminders.length === 0);

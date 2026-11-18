@@ -80,8 +80,11 @@ const { chromium } = require("playwright"),
       ui.me = "yo";
       save();
     });
-    const tab = async (name) =>
-        p.locator('#tabs [data-v="' + name + '"]').click(),
+    // Tareas se abre siempre en «Para hoy»: estas pruebas usan la vista completa («Todas»)
+    const tab = async (name) => {
+        await p.locator('#tabs [data-v="' + name + '"]').click();
+        if (name === "tareas") await p.locator('[data-act=taskView][data-v=todas]').click();
+      },
       close = async () => {
         while (await p.locator(".overlay").count())
           await p.locator(".overlay").last().locator("[data-s=cancel]").click();
