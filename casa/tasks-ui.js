@@ -45,13 +45,16 @@ function taskWeek(){const t=today(),start=addDays(t,-taskWeekday(t));return{t,st
 const taskMine=()=>(S.tasks||[]).filter(x=>x&&forPerson(x)).map(x=>x.date&&!tzDate(x.date)?{...x,date:''}:x);
 // «Mañana», «Sábado»… para lo de esta semana y la próxima; si no, la fecha
 const tzDay=d=>{const n=Math.round((new Date(d+'T12:00:00')-new Date(today()+'T12:00:00'))/864e5);if(n===0)return'Hoy';if(n===1)return'Mañana';if(n>1&&n<7){const w=new Date(d+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long'});return w.charAt(0).toUpperCase()+w.slice(1)}return relDate(d)};
+// ¿Llueve hoy según la última previsión guardada?
+const tzWetToday=()=>{try{const pl=houseWxPlace(),c=pl&&houseWxFor(pl),d=c&&c.days.find(d=>d.date===today());return !!(d&&CasaHousePlan.isWet(d))}catch(e){return false}};
 const plural=(n,a,b)=>n+' '+(n===1?a:b);
 const progressBar=(done,total,label)=>`<div class="tz-bar" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><span style="width:${total?Math.round(done/total*100):100}%"></span></div>`;
 
 // Fila con casilla: hecha, por hacer o solo informativa (lo repetido ya hecho no se desmarca desde aquí)
 function tzRow(t,{done=false,showDate=false,simple=false}={}){
  const z=taskZone(t),min=CasaHousePlan.minutesFor(t),late=!done&&t.date&&t.date<today(),canToggle=done?!!t.done:true;
- const meta=[t.urgent&&!done?'<span class="urgent-tag" title="Urgente">❗</span>':'',`<span>${esc(z.name)}</span>`,min?`<span class="tz-min">${min} min</span>`:'',
+ const wet=!done&&!t.urgent&&t.date&&t.date<=today()&&CasaHousePlan.isOutdoor(t)&&tzWetToday();
+ const meta=[t.urgent&&!done?'<span class="urgent-tag" title="Urgente">❗</span>':'',wet?'<span class="tz-wet">🌧️ mejor en día seco</span>':'',`<span>${esc(z.name)}</span>`,min?`<span class="tz-min">${min} min</span>`:'',
   late?`<span class="late">Atrasada · ${esc(relDate(t.date))}</span>`:showDate&&t.date&&!done?`<span>${esc(relDate(t.date))}</span>`:'',
   done?`<span>Hecha ${taskDoneDay(t)===today()?'hoy':esc(relDate(taskDoneDay(t)).toLowerCase())}</span>`:'',
   ].filter(Boolean).join('<i aria-hidden="true">·</i>');

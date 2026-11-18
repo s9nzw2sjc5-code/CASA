@@ -65,6 +65,7 @@ test('lee la previsión de Open-Meteo y tolera valores vacíos', () => {
   assert.equal(P.sky(80)[1], 'Lluvia');
   assert.equal(P.isOutdoor({ title: 'Tender la ropa' }), true);
   assert.equal(P.isOutdoor({ title: 'Rieles de las ventanas: aspirar y pasar un paño' }), false);
+  for (const t of ['Barrer entrada', 'Entrada: barrer y quitar el polvo del recibidor', 'Barrer el porche', 'Regar las plantas']) assert.equal(P.isOutdoor({ title: t }), true, t);
 });
 
 const day = (date, o) => ({ date, code: 3, max: 18, min: 9, rain: 0, mm: 0, wind: 10, ...o });
@@ -384,4 +385,12 @@ test('las tareas del plan que ya existen pasan a su nuevo día sin perder su sem
   assert.deepEqual(P.rebalance({ tasks }, '2026-11-18'), [{ id: 'nev', date: '2026-11-29' }, { id: 'ent', date: '2026-11-18' }, { id: 'col', date: '2026-12-20' }]);
   assert.deepEqual(P.rebalance({ tasks: [{ ...tasks[1], date: '2026-11-26' }] }, '2026-11-18'), [{ id: 'ent', date: '2026-11-25' }]);
   assert.equal(P.minutesFor({ planKey: 'nevera' }), 40);
+});
+
+test('barrer la entrada con lluvia: mejor en un día seco', () => {
+  const days = [day('2026-11-18', { rain: 85, mm: 4, code: 61 }), day('2026-11-19'), day('2026-11-20')];
+  const recs = P.recommendations({ tasks: [{ id: 'b', title: 'Barrer entrada', date: '2026-11-18', repeat: 'weekly', done: false }] }, days, '2026-11-18', { relDate: (d) => d });
+  const r = recs.find((r) => /Barrer entrada/.test(r.text));
+  assert.ok(r, 'aconseja moverla');
+  assert.deepEqual(r.actions.map((a) => a.date), ['2026-11-19']);
 });

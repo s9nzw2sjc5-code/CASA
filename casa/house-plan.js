@@ -357,7 +357,7 @@
  function forecastDays(json){const d=json&&json.daily;if(!d||!Array.isArray(d.time))return [];return d.time.map((date,i)=>({date,code:num(d.weather_code?.[i]),max:num(d.temperature_2m_max?.[i]),min:num(d.temperature_2m_min?.[i]),rain:num(d.precipitation_probability_max?.[i]),mm:num(d.precipitation_sum?.[i]),wind:num(d.wind_speed_10m_max?.[i])})).filter(x=>validDate(x.date))}
  const isWet=d=>(d.rain??0)>=50||(d.mm??0)>=1;
  function sky(c){if(c===0)return['☀️','Despejado'];if(c===1||c===2)return['🌤️','Poco nuboso'];if(c===3)return['☁️','Nublado'];if(c===45||c===48)return['🌫️','Niebla'];if(c>=51&&c<=57)return['🌦️','Llovizna'];if(c>=61&&c<=67||c>=80&&c<=82)return['🌧️','Lluvia'];if(c>=71&&c<=77||c===85||c===86)return['🌨️','Nieve'];if(c>=95)return['⛈️','Tormenta'];return['🌡️','Previsión']}
- const OUTDOOR=/\b(tender|terraza|patio|por fuera|exterior|toldos?|canaletas?|jardin|balcon|fachada)\b/;
+ const OUTDOOR=/\b(tender|terraza|patio|por fuera|exterior|toldos?|canaletas?|jardin|balcon|fachada|entrada|porche|acera|regar|riego|puerta de la calle|escalones de fuera)\b/;
  const isOutdoor=t=>OUTDOOR.test(norm(t.title));
  const isWash=t=>['lavadora-1','lavadora-2'].includes(baseKey(t.planKey))||/\blavadoras?\b/.test(norm(t.title))&&/\bponer\b/.test(norm(t.title));
  const deg=v=>Math.round(v)+' °C';
