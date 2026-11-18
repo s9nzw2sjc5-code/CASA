@@ -5,9 +5,9 @@ on:
     branches: [main, claude/deploy-app-outside-claude-ccdb78]
     paths: ['casa/**', 'index.html', '.github/workflows/pages.yml']
   workflow_dispatch:
-  # Los precios que sube «Precios de Mercadona» no lanzan esta publicación por sí solos
+  # Los precios que suben «Precios de Mercadona» y «Ofertas de Lidl» no lanzan esta publicación por sí solos
   workflow_run:
-    workflows: ['Precios de Mercadona']
+    workflows: ['Precios de Mercadona', 'Ofertas de Lidl']
     types: [completed]
 
 permissions:

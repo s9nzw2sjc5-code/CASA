@@ -1,0 +1,32 @@
+name: Ofertas de Lidl
+
+# Cada día descarga las ofertas y productos de tienda de la web de Lidl España
+# (casa/lidl.json). Lidl publica los mismos precios para toda España.
+on:
+  schedule:
+    - cron: '43 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lidl
+  cancel-in-progress: true
+
+jobs:
+  ofertas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 tools/lidl.py
+      - name: Guardar si han cambiado
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898733+github-actions[bot]@users.noreply.github.com'
+          git add casa/lidl.json
+          # Por si «Precios de Mercadona» ha subido algo mientras tanto
+          git diff --cached --quiet || (git commit -m 'Ofertas de Lidl actualizadas' && git pull --rebase && git push)

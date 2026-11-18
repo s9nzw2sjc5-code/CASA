@@ -435,16 +435,16 @@ function vCocina(){
   loadMC();
   let tab=ui.ckTab||'productos';if(tab==='menu'||tab==='lista'||tab==='recetas')tab='productos';
   const low=(S.pantry||[]).filter(pantryLow).length,ci=cartItems();
-  const sub={novedades:'Lo nuevo de Mercadona en tu código postal',productos:'Elige qué va a la cesta y qué tienes en casa',despensa:'Tus productos de un vistazo',ajustes:'Presupuesto y supermercados'}[tab];
+  const sub={novedades:'Lo nuevo de Mercadona en tu código postal',lidl:'Ofertas de Lidl',productos:'Elige qué va a la cesta y qué tienes en casa',despensa:'Tus productos de un vistazo',ajustes:'Presupuesto y supermercados'}[tab];
   let h=`<h1>${tab==='despensa'?'En casa':'Compras'}</h1><p class="sub">${sub}</p>${tab==='despensa'?'':heroStats([[ci.length,'en la cesta'],[eur0(cartTotal()),'cesta'],[(S.pantry||[]).filter(x=>x.n>0).length,'en casa'],[low,'por reponer']])}`;
   h+=ckSubTabs();
-  h+=({novedades:vCkNovedades,productos:vCkProductos,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
+  h+=({novedades:vCkNovedades,lidl:vCkLidl,productos:vCkProductos,despensa:vCkDespensa,ajustes:vCkAjustes}[tab]||vCkProductos)();
   return h+cartBar();
 }
 // Pestañas dentro de Compras
 function ckSubTabs(){
   const tab=ui.ckTab||'lista';
-  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}"><span class="ck-tab-icon" aria-hidden="true">${l.split(' ')[0]}</span><span>${l.split(' ').slice(1).join(' ')}</span>${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
+  return`<div class="chips ck-tabs">${[['lista','📝 Lista'],['productos','🛍️ Productos'],['novedades','🆕 Novedades'],['lidl','🟡 Lidl'],['despensa','🏠 En casa'],['ajustes','⚙️ Ajustes']].map(([k,l])=>{const n=k==='novedades'?novUnseen():0;return`<button class="chip ${tab===k?'on':''}" data-act="ckTab" data-v="${k}"><span class="ck-tab-icon" aria-hidden="true">${l.split(' ')[0]}</span><span>${l.split(' ').slice(1).join(' ')}</span>${n?` <span class="ck-n">${n}</span>`:''}</button>`}).join('')}</div>`;
 }
 function cartBar(){
   const ci=cartItems(),t=cartTotal();
