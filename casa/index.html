@@ -676,13 +676,19 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 .cleaning-views{margin:12px 0}.cleaning-views .chip{min-height:44px}
 
 .cleaning-views{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.cleaning-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0}.cleaning-filter-bar .link{min-height:44px}.cleaning-filter-bar small{color:var(--muted)}
 .cleaning-progress{width:100%;height:7px;accent-color:var(--accent);margin:0 0 16px}
 .cleaning-group{margin:10px 0;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:0 12px}
 .cleaning-group>summary{display:flex;justify-content:space-between;align-items:center;min-height:58px;padding:12px 0;cursor:pointer;gap:8px;list-style:none}
 .cleaning-group>summary small{display:block;color:var(--muted);font-size:.76rem;margin-top:5px}
 .cleaning-task-list .row-title{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 .cleaning-task-list .row{flex-wrap:wrap}.cleaning-task-list .row-main{min-width:120px}
+/* Presentación compacta: conserva los filtros y las vistas originales. */
+body[data-view="tareas"] .chips{gap:5px;margin-bottom:8px}
+body[data-view="tareas"] .chips .chip{font-size:.78rem;padding:8px 11px;min-height:40px;box-shadow:none}
+body[data-view="tareas"] .home-task-modes{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:12px}
+body[data-view="tareas"] .home-task-modes .chip{font-size:.85rem;font-weight:600}
+body[data-view="tareas"] .row{padding-top:9px;padding-bottom:9px}
+body[data-view="tareas"] .hero{padding:18px;margin-bottom:14px}
 </style>
 </head>
 <body>
@@ -694,28 +700,28 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=128"></script>
-<script src="sync.js?v=128"></script>
-<script src="receipts.js?v=128"></script>
-<script src="receipt-image.js?v=128"></script>
-<script src="receipt-layout.js?v=128"></script>
-<script src="receipt-ocr.js?v=128"></script>
-<script src="product-photo.js?v=128"></script>
-<script src="product-photo-ui.js?v=128"></script>
-<script src="shopping-recommendations.js?v=128"></script>
-<script src="household-insights.js?v=128"></script>
-<script src="document-files.js?v=128"></script>
-<script src="document-photo.js?v=128"></script>
-<script src="cleaning-links.js?v=128"></script>
-<script src="home-model.js?v=128"></script>
-<script src="cocina.js?v=128"></script>
-<script src="cleaning-view.js?v=128"></script>
-<script src="home-ui.js?v=128"></script>
-<script src="household-ui.js?v=128"></script>
-<script src="receipt-extras.js?v=128"></script>
-<script src="house-plan.js?v=128"></script>
-<script src="house-plan-ui.js?v=128"></script>
-<script src="lidl-ui.js?v=128"></script>
+<script src="push.js?v=129"></script>
+<script src="sync.js?v=129"></script>
+<script src="receipts.js?v=129"></script>
+<script src="receipt-image.js?v=129"></script>
+<script src="receipt-layout.js?v=129"></script>
+<script src="receipt-ocr.js?v=129"></script>
+<script src="product-photo.js?v=129"></script>
+<script src="product-photo-ui.js?v=129"></script>
+<script src="shopping-recommendations.js?v=129"></script>
+<script src="household-insights.js?v=129"></script>
+<script src="document-files.js?v=129"></script>
+<script src="document-photo.js?v=129"></script>
+<script src="cleaning-links.js?v=129"></script>
+<script src="home-model.js?v=129"></script>
+<script src="cocina.js?v=129"></script>
+<script src="cleaning-view.js?v=129"></script>
+<script src="home-ui.js?v=129"></script>
+<script src="household-ui.js?v=129"></script>
+<script src="receipt-extras.js?v=129"></script>
+<script src="house-plan.js?v=129"></script>
+<script src="house-plan-ui.js?v=129"></script>
+<script src="lidl-ui.js?v=129"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -770,7 +776,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=128;
+const APP_VERSION=129;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1099,9 +1105,26 @@ function awayTasks(days){
   return{moved:moved.length,blocked:blocked.length,back};
 }
 function vTareas(){
-  if(reorgSel===null)return vCleaning();
-  const pending=S.tasks.filter(x=>!x.done&&forPerson(x));
-  return `<h1>Reorganizar tareas</h1><p class="sub">Ajusta las fechas de tus pendientes.</p><button class="btn sec" data-act="reorgStart">Volver a tareas</button>`+reorgPanel(pending);
+  if(ui.taskMode==='routines')return vCleaning();
+  const t=today();
+  let list=S.tasks.slice();
+  if(ui.personFilter!=='all')list=list.filter(forPerson);
+  const pend=list.filter(x=>!x.done),done=list.filter(x=>x.done);
+  let h=`<h1>Tareas</h1><p class="sub">${pend.length} pendiente${pend.length===1?'':'s'}</p>${heroStats([[pend.filter(x=>x.date===t).length,'hoy'],[pend.filter(x=>x.date&&x.date<t).length,'atrasadas'],[pend.filter(x=>!x.date).length,'sin fecha'],[done.length,'hechas']])}`;
+  h+=`<div class="chips home-task-modes"><button class="chip on" data-act="taskMode" data-v="tasks">Tareas</button><button class="chip" data-act="taskMode" data-v="routines">🧹 Rutinas de limpieza</button></div>`;
+  if(reorgSel===null)h+=`<div class="chips">${[['pend','Pendientes'],['done','Hechas'],['all','Todas']].map(([k,l])=>`<button class="chip ${ui.taskFilter===k?'on':''}" data-act="tFilter" data-v="${k}">${l}</button>`).join('')}</div>`;
+  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${ui.personFilter==='all'?'on':''}" data-act="pFilter" data-v="all">Todos</button>${[...S.people,BOTH].map(p=>`<button class="chip ${ui.personFilter===p.id?'on':''}" data-act="pFilter" data-v="${p.id}">${esc(p.name)}</button>`).join('')}<button class="chip add" data-act="people">Personas</button></div>`;
+  h+=`<div class="chips" style="margin-top:6px"><button class="chip ${reorgSel!==null?'on':''}" data-act="reorgStart">${reorgSel!==null?'Cerrar reorganización':'↕ Reorganizar pendientes'}</button>${reorgSel===null?'<button class="chip" data-act="housePlan">🧽 Plan de limpieza</button><button class="chip" data-act="tipsLibrary">💡 Consejos</button>':''}</div>`;
+  if(reorgSel!==null)return h+reorgPanel(pend);
+  h+=houseWxCard();
+  h+=`<div class="quick"><input class="field" id="qNoDate" placeholder="Añadir algo sin fecha" enterkeyhint="done"><button class="btn" data-act="quickNoDate">Añadir</button></div>`;
+  const groups=[];
+  if(ui.taskFilter!=='done')groups.push(...taskSections(pend,t));
+  if(ui.taskFilter!=='pend')groups.push(['Hechas',done.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''))]);
+  const shown=groups.filter(g=>g[1].length);
+  if(!shown.length)h+=`<div class="empty" style="margin-top:16px">${ui.taskFilter==='done'?'Todavía no has completado ninguna tarea.':'No hay tareas. Pulsa + para crear la primera.'}</div>`;
+  shown.forEach(([n,a])=>{h+=`<h2>${n}</h2>`+ul(a.map(x=>taskRow(x)))});
+  return h+houseSeasonSection();
 }
 
 function stapleCard(s){
@@ -1729,8 +1752,7 @@ const find=(arr,id)=>arr.find(x=>x.id===id);
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Sin fecha»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
-  cleaningView:d=>{if(!['today','all'].includes(d.v))return;ui.cleaningView=d.v;render()},
-  cleaningFilters:()=>cleaningFilters(),
+  cleaningView:d=>{if(!['today','frequency','zone','all'].includes(d.v))return;ui.cleaningView=d.v;render()},
   homeContacts:()=>contactsHub(), newHomeContact:()=>contactEdit(),
   homeHub:()=>homeHub(), homeAppliance:d=>applianceDetail(d.id),homeDocument:d=>documentDetail(d.id),
   cleaningArchiveFilter:()=>{ui.cleaningArchived=!ui.cleaningArchived;render()},
@@ -1762,7 +1784,7 @@ const ACT={
   newGrooming:()=>eventSheet(null,today(),'Ringo: Peluquería'),
   petHygiene:d=>{if(!['Baño','Peluquería'].includes(d.v))return;petSheet(S.pet.find(x=>norm(x.name)===norm(d.v)),d.v)},
   answerNotice,
-  refreshApp:async()=>{try{const reg=await navigator.serviceWorker?.getRegistration();await reg?.update()}catch(e){}const url=new URL(location.href);url.searchParams.set('actualizar',Date.now());location.replace(url.href)},
+  refreshApp:()=>{location.reload()},
   tab:d=>{ui.view=d.v;reorgSel=null;if(d.v==='compras'){autoStaples();autoPantry();if(ui.ckTab==='novedades')ui.novCat=null}render();$('#app').scrollTop=0},
   quickTask, quickItem, quickNoDate,
   toggleTask:d=>{
