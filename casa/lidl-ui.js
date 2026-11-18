@@ -1,7 +1,7 @@
 /* Compras › Lidl: ofertas y productos de tienda con los precios de la provincia de la tienda.
    Los datos vienen de casa/lidl.json, que una tarea de GitHub descarga cada día de la web de Lidl
    (provincia en tools/lidl-region.txt). Cada oferta dice si es de esta semana, del fin de semana
-   o de la próxima, con sus fechas y el precio con Lidl Plus. */
+   o de la próxima, con sus fechas y el precio con Lidl Plus. Solo comida y limpieza. */
 let LIDL=null,lidlLoading=false,lidlError='';
 function lidlLoad(force){
  if(lidlLoading||(LIDL&&!force))return;lidlLoading=true;lidlError='';
@@ -10,10 +10,10 @@ function lidlLoad(force){
   .catch(()=>{lidlError='No se han podido cargar las ofertas de Lidl. Revisa la conexión.'})
   .finally(()=>{lidlLoading=false;if(ui.view==='compras'&&ui.ckTab==='lidl')render()});
 }
-const LIDL_FILTERS=[['semana','🏷️ Esta semana'],['finde','🎉 Fin de semana'],['proxima','⏭️ Próxima semana'],['super','🛒 Súper'],['fruta','🥬 Fruta y verdura'],['casa','🧴 Droguería'],['bazar','🛍️ Bazar']];
+const LIDL_FILTERS=[['semana','🏷️ Esta semana'],['finde','🎉 Fin de semana'],['proxima','⏭️ Próxima semana'],['super','🛒 Comida'],['fruta','🥬 Fruta y verdura'],['limpieza','🧴 Limpieza']];
 const LIDL_WHEN={semana:'Esta semana',finde:'Fin de semana',proxima:'Próxima semana','finde-proxima':'Fin de semana que viene'};
 const LIDL_PERIODS=new Set(['semana','finde','proxima']);
-const LIDL_SECTION={super:'Despensa',fruta:'Fruta y verdura',casa:'Limpieza',bazar:'Otros'};
+const LIDL_SECTION={super:'Despensa',fruta:'Fruta y verdura',limpieza:'Limpieza'};
 const lidlEur=v=>typeof v==='number'?v.toFixed(2).replace('.',',')+' €':'';
 const lidlDay=d=>{const x=new Date(d+'T12:00:00');return x.getDate()+'/'+(x.getMonth()+1)};
 const lidlMatch=(x,f)=>f==='proxima'?x.w==='proxima'||x.w==='finde-proxima':LIDL_PERIODS.has(f)?x.w===f:x.g===f;
@@ -31,11 +31,9 @@ function vCkLidl(){
  list=list.slice().sort(LIDL_PERIODS.has(f)&&!q?(a,b)=>(b.d||0)-(a.d||0)||a.n.localeCompare(b.n,'es'):(a,b)=>(a.s||'').localeCompare(b.s||'','es')||a.n.localeCompare(b.n,'es'));
  const updated=LIDL.at?relDate(LIDL.at.slice(0,10)).toLowerCase():'';
  let h=`<p class="hint">Ofertas y precios de las tiendas Lidl${LIDL.region?' de '+esc(LIDL.region):''}, con el precio Lidl Plus cuando es distinto${updated?` · actualizado ${esc(updated)}`:''}.</p>`;
- h+=`<input class="field" id="qLidl" type="search" autocomplete="off" placeholder="Buscar en Lidl (yogur, aceite, detergente…)" value="${esc(ui.lidlQ||'')}">`;
+ h+=`<input class="field" id="qLidl" type="search" autocomplete="off" placeholder="Buscar comida o limpieza (yogur, aceite, detergente…)" value="${esc(ui.lidlQ||'')}">`;
  h+=`<div class="chips lidl-filters">${LIDL_FILTERS.map(([k,l])=>`<button class="chip ${!q&&f===k?'on':''}" data-act="lidlFilter" data-v="${k}">${l} <small>${all.filter(x=>lidlMatch(x,k)).length}</small></button>`).join('')}</div>`;
  if(!list.length)return h+`<div class="empty">${q?'No hay productos de Lidl con ese nombre.':'No hay productos en este apartado ahora mismo.'}</div>`;
- // En el bazar, agrupados por tipo (ropa, cocina, bricolaje…)
- if(f==='bazar'&&!q){let cur='';h+='<div class="lidl-groups">';for(const x of list){if(x.s!==cur){if(cur)h+='</ul>';cur=x.s;h+=`<h4>${esc(cur)}</h4><ul class="lidl-grid">`}h+=lidlCard(x)}return h+'</ul></div>'}
  return h+`<ul class="lidl-grid">${list.map(lidlCard).join('')}</ul>`;
 }
 // Buscar mientras se escribe, sin perder el cursor

@@ -12,8 +12,7 @@ const fixture = {
     { c: "1", n: "MILBONA Yogur bífidus", g: "super", s: "Alimentación", w: "semana", p: 1.15, o: 1.45, d: 20, k: "4x150 g", b: "En tienda", f: "2026-11-16", e: "2026-11-22", u: "/p/yogur/p1" },
     { c: "2", n: "ALESTO Cacahuetes fritos", g: "super", s: "Alimentación", p: 0.75, k: "250 g", b: "En tienda", u: "/p/cacahuetes/p2" },
     { c: "3", n: "Naranja mesa", g: "fruta", s: "Fruta y verdura", w: "finde", p: 1.29, o: 1.89, d: 31, k: "A granel", f: "2026-11-20", e: "2026-11-22", u: "/p/naranja/p3" },
-    { c: "4", n: "FORMIL Detergente Marsella", g: "casa", s: "Droguería y hogar", w: "semana", p: 3.49, o: 4.29, d: 19, k: "40 lavados", u: "/p/detergente/p4" },
-    { c: "5", n: "SILVERCREST Yogurtera", g: "bazar", s: "Hogar y cocina", p: 24.99, o: 26.99, d: 7, b: "Desde 23.11 también en tienda", u: "/p/yogurtera/p5" },
+    { c: "4", n: "FORMIL Detergente Marsella", g: "limpieza", s: "Limpieza", w: "semana", p: 3.49, o: 4.29, d: 19, k: "40 lavados", u: "/p/detergente/p4" },
     { c: "6", n: "Caracola con uvas pasas", g: "super", s: "Alimentación", b: "En tienda", u: "/p/caracola/p6" },
     { c: "7", n: "Realvalle Pechuga de pollo fileteada", g: "super", s: "Alimentación", w: "proxima", p: 5.69, o: 7.2, d: 20, l: 5.29, k: "Aprox. 950 g", f: "2026-11-23", e: "2026-11-30", u: "/p/pollo/p7" },
     { c: "8", n: "Pan de pueblo", g: "super", s: "Alimentación", w: "finde-proxima", p: 0.99, f: "2026-11-27", e: "2026-11-29", u: "/p/pan/p8" },
@@ -61,17 +60,17 @@ const fixture = {
     assert.match(await p.locator(".lidl-card", { hasText: "Pechuga" }).innerText(), /5,69 €[\s\S]*Con Lidl Plus: 5,29 €[\s\S]*Próxima semana del 23\/11 al 30\/11/);
     assert.match(await p.locator(".lidl-card", { hasText: "Pan de pueblo" }).innerText(), /Fin de semana que viene del 27\/11 al 29\/11/);
 
-    // Filtros y bazar agrupado
+    // Comida y limpieza; sin bazar ni droguería
     await p.locator('[data-act=lidlFilter][data-v="super"]').click();
     assert.deepEqual(await names(), ["ALESTO Cacahuetes fritos", "Caracola con uvas pasas", "MILBONA Yogur bífidus", "Pan de pueblo", "Realvalle Pechuga de pollo fileteada"]);
     assert.match(await p.locator(".lidl-card", { hasText: "Caracola" }).innerText(), /Precio en tienda/);
-    await p.locator('[data-act=lidlFilter][data-v="bazar"]').click();
-    assert.equal(await p.locator(".lidl-groups h4").innerText(), "Hogar y cocina");
+    await p.locator('[data-act=lidlFilter][data-v="limpieza"]').click();
+    assert.deepEqual(await names(), ["FORMIL Detergente Marsella"]);
+    assert.equal(await p.locator('[data-act=lidlFilter][data-v="bazar"], [data-act=lidlFilter][data-v="casa"]').count(), 0);
 
     // Búsqueda en todo el surtido, sin perder el cursor
     await p.locator("#qLidl").fill("yogur");
-    await p.waitForFunction(() => document.querySelectorAll(".lidl-card").length === 2);
-    assert.deepEqual((await names()).sort(), ["MILBONA Yogur bífidus", "SILVERCREST Yogurtera"]);
+    await p.waitForFunction(() => [...document.querySelectorAll(".lidl-card .lidl-name")].map((x) => x.textContent).join() === "MILBONA Yogur bífidus");
     assert.equal(await p.evaluate(() => document.activeElement.id), "qLidl");
 
     // Añadir a la lista con precio y envase

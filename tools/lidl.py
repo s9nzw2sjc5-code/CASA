@@ -7,12 +7,13 @@ los descarga (lo ejecuta GitHub Actions cada día) y la app lee el archivo.
   y fin de semana que viene). Cada producto trae los precios
   de cada provincia, también el de Lidl Plus y las fechas.
 - Resto del surtido de tienda: buscador público de la web.
+Solo se guarda comida y limpieza (nada de bazar).
 La provincia se guarda en tools/lidl-region.txt (las tiendas de una provincia
 comparten precios).
 
 Uso: python3 tools/lidl.py [provincia]
 """
-import html, json, os, re, sys, time, urllib.request
+import html, json, os, re, sys, time, unicodedata, urllib.request
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -24,7 +25,7 @@ SEARCH = BASE + '/q/api/search?locale=es_ES&assortment=ES&version=v2.0.0&q=*&sto
 # Sin «Accept: application/json»: con esa cabecera la API responde 401
 HEADERS = {'User-Agent': 'casa-app (uso personal)'}
 MADRID = ZoneInfo('Europe/Madrid')
-MIN_ITEMS = 50  # menos que esto es un fallo de la web: no se sobrescribe el archivo
+MIN_ITEMS = 40  # menos que esto es un fallo de la web: no se sobrescribe el archivo
 # Páginas de ofertas (por orden de prioridad si un producto sale en varias) y su id conocido
 PAGES = [
     ('finde', 'super-finde', '10089450'),
@@ -68,6 +69,30 @@ def group(category):
     return 'bazar', parts[0] if parts else 'Bazar'
 
 
+# Solo comida y limpieza: el bazar y lo demás que no es súper no se guarda.
+# Lidl clasifica la limpieza del súper dentro de alimentación: se reconoce por el nombre.
+CLEANING = re.compile(r'detergent|lejia|friegasuelo|lavavajilla|suavizante|papel higienic|servillet|rollos? de cocina|'
+                      r'papel de cocina|bolsas? (de )?basura|estropajo|bayeta|fregona|quitagrasa|desengrasa|ambientador|'
+                      r'insecticida|antical|limpiador|limpiahogar|limpiacristal|vitroceramica|gel activador|quitamanchas|'
+                      r'multiusos|desinfectante|bloque wc|gel wc|toallitas? (humedas )?(de )?limpieza|lavado a mano')
+
+
+def fold(text):
+    return unicodedata.normalize('NFD', text or '').encode('ascii', 'ignore').decode().lower()
+
+
+def kind_of(category, name):
+    """(tipo, apartado) o None si no es comida ni limpieza."""
+    kind, section = group(category)
+    if kind == 'bazar':
+        return None
+    if CLEANING.search(fold(name)):
+        return 'limpieza', 'Limpieza'
+    if kind == 'casa':
+        return None
+    return kind, section
+
+
 def code_of(g, fallback=''):
     m = re.search(r'/p(\d+)$', g.get('canonicalUrl') or '')
     return m.group(1) if m else str(g.get('productId') or fallback)
@@ -105,6 +130,9 @@ def item(g, region, when='', badge_default=''):
     name = (g.get('fullTitle') or g.get('title') or '').strip()
     if not name:
         return None
+    kind_section = kind_of(g.get('category'), name)
+    if not kind_section:
+        return None  # ni comida ni limpieza
     regional = region_prices(g, region)
     if regional is None:
         return None  # no se vende en esta provincia
@@ -114,7 +142,7 @@ def item(g, region, when='', badge_default=''):
         normal = plus  # solo hay precio con Lidl Plus
         plus = None
     discount = normal.get('discount') or {}
-    kind, section = group(g.get('category'))
+    kind, section = kind_section
     badges = [b.get('text') for b in ((g.get('stockAvailability') or {}).get('badgeInfo') or {}).get('badges', []) if b.get('text')]
     out = {
         'c': code_of(g, name),
@@ -188,7 +216,7 @@ def main():
             break
         offset += 60
         time.sleep(0.5)
-    if len(items) < MIN_ITEMS:
+    if len(items) < MIN_ITEMS:  # solo comida y limpieza: suelen ser unos 200
         sys.exit('Lidl ha devuelto solo %d productos: se conserva el archivo anterior.' % len(items))
     data = {'at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'region': region, 'items': items}
     with open(OUT, 'w', encoding='utf-8') as f:

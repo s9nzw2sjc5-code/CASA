@@ -45,6 +45,17 @@ class LidlTest(unittest.TestCase):
         x = lidl.item(product(GRANADA, prices), 'Granada')
         self.assertEqual((x['p'], x['o'], x.get('l')), (0.75, 0.99, None))
 
+    def test_solo_comida_y_limpieza(self):
+        base = lambda name, category: lidl.item(product({}, {}, fullTitle=name, category=category, price={'price': 1.0}), 'Granada')
+        self.assertIsNone(base('SILVERCREST Yogurtera', 'Categorías/Hogar y cocina/Pequeños electrodomésticos'))
+        self.assertIsNone(base('LIVARNO Alfombra de yute', 'NonFood'))
+        self.assertIsNone(base('Cien BEAUTY Cepillo antitirones', 'NonFood'))
+        self.assertEqual(base('VILEDA Estropajo', 'NonFood')['g'], 'limpieza')
+        self.assertEqual(base('FORMIL Lejía densa detergente', 'Food')['g'], 'limpieza', 'Lidl la clasifica como alimentación')
+        self.assertEqual(base('SCOTTEX Papel higiénico original', 'Food')['g'], 'limpieza')
+        self.assertEqual(base('- Dorada limpia', 'Food')['g'], 'super', 'no se confunde con limpieza')
+        self.assertEqual(base('MILBONA Yogur bífidus', 'Food')['g'], 'super')
+
     def test_lee_los_productos_de_la_pagina(self):
         page = '<div data-grid-data="%s"></div><div data-grid-data="no es json"></div>' % html.escape(json.dumps(product(GRANADA, PRICES)), quote=True)
         self.assertEqual([g['fullTitle'] for g in lidl.grid_items(page)], ['Naranja mesa'])
