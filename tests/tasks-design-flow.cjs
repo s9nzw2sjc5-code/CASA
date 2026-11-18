@@ -228,6 +228,15 @@ const { chromium } = require("playwright"),
     await p.locator(".overlay [data-s=cancel]").click();
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !["tm", "tmu"].includes(t.id)); save(); });
 
+    // Hoy: lo atrasado no se lista, solo un aviso que lleva a Tareas (donde sí aparece)
+    await p.evaluate(() => { S.tasks.push({ id: "late1", title: "Tarea atrasada de prueba", date: addDays(today(), -3), repeat: "none", done: false }); save(); ui.view = "hoy"; render(); });
+    assert.doesNotMatch(await p.locator("#app").innerText(), /Tarea atrasada de prueba/);
+    assert.match(await p.locator("#app .late-note").innerText(), /Tareas atrasadas · \d/);
+    await p.locator("#app .late-note").click();
+    assert.equal(await p.evaluate(() => document.body.dataset.view), "tareas");
+    assert.match(await p.locator("#app").innerText(), /Tarea atrasada de prueba/);
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => t.id !== "late1"); save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {
