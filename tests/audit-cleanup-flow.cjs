@@ -76,7 +76,24 @@ const { chromium } = require("playwright"),
 
     // 2) Importantes: documentos, teléfonos y notas; sin recordatorios, mantenimientos ni botón +
     const imp = await p.locator("#app").innerText();
-    assert.match(imp, /Documentos, teléfonos y notas/);
+    assert.match(imp, /Fechas, documentos, teléfonos y notas/);
+    // Fechas importantes a la vista: los recordatorios pasados a Tareas salen aquí; los mantenimientos, no
+    const impDates = await p.locator(".imp-dates").innerText();
+    assert.match(impDates, /Pagar la luz/);
+    assert.match(impDates, /Comprar regalo/);
+    assert.doesNotMatch(impDates, /caldera|campana/);
+    await p.locator("[data-act=newImportant]").click();
+    assert.equal(await p.locator("#f_imp").isChecked(), true);
+    await p.locator("#f_t").fill("ITV del coche");
+    await ok();
+    assert.match(await p.locator(".imp-dates").innerText(), /ITV del coche/);
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.title === "ITV del coche").important), true, "es una tarea más (Tareas y Calendario)");
+    // Desmarcar «En Importantes» la quita de aquí sin borrarla
+    await p.locator(".imp-dates .row-main", { hasText: "Comprar regalo" }).click();
+    await p.locator("#f_imp").uncheck();
+    await ok();
+    assert.doesNotMatch(await p.locator(".imp-dates").innerText(), /Comprar regalo/);
+    assert.equal(await p.evaluate(() => S.tasks.some((t) => t.title === "Comprar regalo")), true);
     assert.doesNotMatch(imp, /Mantenimiento de casa|⏰ Recordatorios/);
     assert.equal(await p.locator("#fab").isHidden(), true);
     // La ficha del aparato muestra su mantenimiento como tarea y crea otras vinculadas

@@ -61,7 +61,7 @@ const { chromium } = require("playwright"),
     assert.doesNotMatch(await p.locator(".tz-list").first().innerText(), /Juanma|Mari|Conjunto/, "sin quién se encarga");
     assert.match(await p.locator(".tz-row", { hasText: "fuente" }).innerText(), /Ringo/);
     assert.match(await p.locator(".tz-done summary").innerText(), /Hechas hoy · 1/);
-    assert.equal(await p.locator(".tz-done ~ .wx, .wx").count(), 1, "el tiempo y sus consejos siguen en Para hoy");
+    assert.equal(await p.locator("#app .wx").count(), 1, "los consejos según el tiempo (o pedir la ubicación), en Para hoy");
     // Marcar desde aquí
     await p.locator('.tz-row [data-act=toggleTask][data-id="luz"]').click();
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "luz").done), true);

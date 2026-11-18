@@ -72,7 +72,7 @@ function vTasksToday(){
  else{const next=mine.filter(x=>!x.done&&x.date>t).sort(byDateTime)[0];h+=`<div class="empty tz-empty">Nada pendiente para hoy 🎉${next?`<br><small>Lo próximo: ${esc(next.title)} · ${esc(relDate(next.date).toLowerCase())}</small>`:''}</div>`}
  if(doneToday.length)h+=`<details class="tz-done"${ui.tzDoneOpen?' open':''}><summary data-act="tzDoneToggle"><span>Hechas hoy · ${doneToday.length}</span><span class="tz-caret" aria-hidden="true">⌄</span></summary>${tzList(doneToday.map(x=>tzRow(x,{done:true})))}</details>`;
  // El tiempo y sus consejos (no tender ni barrer fuera si llueve, calefacción, radiadores…)
- return h+houseWxCard()+organizeButton();
+ return h+houseWxCard('tips')+organizeButton();
 }
 // Estado de cada zona en esta semana (de lunes a domingo; lo atrasado cuenta como pendiente)
 function zoneStats(){

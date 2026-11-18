@@ -23,19 +23,22 @@ function houseWxRefresh(force){
 }
 const houseWxLink=place=>'https://www.eltiempo.es/'+(CasaHousePlan.norm(place.name).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'')+'.html';
 const houseTipButton=id=>`<button class="tip-inline" data-act="taskTip" data-id="${esc(id)}" aria-label="Cómo hacerlo" title="Cómo hacerlo">💡</button>`;
-function houseWxCard(){
+// mode: 'forecast' = solo la previsión (Hoy) · 'tips' = solo los consejos de tareas según el tiempo (Tareas) · sin mode = todo
+function houseWxCard(mode){
  const place=houseWxPlace();
  if(!place)return`<section class="wx"><div class="wx-h"><b>🌦️ Tiempo y recomendaciones</b></div><p class="hint">Indica dónde está la casa para ver la previsión y qué conviene hacer cada día: no tender si va a llover, preparar la calefacción cuando llega el frío…</p><button class="btn sec" data-act="wxPlace">Añadir ubicación</button></section>`;
  houseWxRefresh(false);
  const c=houseWxFor(place),t=today(),days=c?c.days.filter(d=>d.date>=t).slice(0,5):[],temp=v=>v===null?'–':Math.round(v)+'°';
- let h=`<section class="wx" aria-label="Tiempo y recomendaciones"><div class="wx-h"><b>🌦️ ${esc(place.name)}</b><button class="link" data-act="wxPlace">Cambiar</button></div>`;
+ let h=mode==='tips'?`<section class="wx wx-tips" aria-label="Consejos según el tiempo"><div class="wx-h"><b>🌦️ Consejos según el tiempo</b></div>`:`<section class="wx" aria-label="Tiempo y recomendaciones"><div class="wx-h"><b>🌦️ ${esc(place.name)}</b><button class="link" data-act="wxPlace">Cambiar</button></div>`;
  if(!days.length)h+=`<p class="hint">${houseWx.busy?'Cargando la previsión…':esc(houseWx.error||'Todavía no hay previsión.')}</p>${houseWx.busy?'':'<button class="btn sec" data-act="wxRetry">Reintentar</button>'}`;
  else{
-  h+=`<div class="wx-days">${days.map(d=>{const[ic,label]=CasaHousePlan.sky(d.code);return`<div class="wx-day${CasaHousePlan.isWet(d)?' wet':''}"><small>${d.date===t?'Hoy':esc(parse(d.date).toLocaleDateString('es-ES',{weekday:'short'}))}</small><span role="img" aria-label="${esc(label)}">${ic}</span><b>${temp(d.max)}</b><small>${temp(d.min)} · ${d.rain??0}%</small></div>`}).join('')}</div>`;
+  if(mode!=='tips')h+=`<div class="wx-days">${days.map(d=>{const[ic,label]=CasaHousePlan.sky(d.code);return`<div class="wx-day${CasaHousePlan.isWet(d)?' wet':''}"><small>${d.date===t?'Hoy':esc(parse(d.date).toLocaleDateString('es-ES',{weekday:'short'}))}</small><span role="img" aria-label="${esc(label)}">${ic}</span><b>${temp(d.max)}</b><small>${temp(d.min)} · ${d.rain??0}%</small></div>`}).join('')}</div>`;
   const recs=CasaHousePlan.recommendations(S,c.days,t,{relDate,laundry:S.cook?.houseLaundry});
-  if(recs.length)h+=`<ul class="wx-recs">${recs.map(r=>{const tipTask=r.tip&&S.tasks.find(x=>x.id===r.tip);return`<li><span aria-hidden="true">${r.icon}</span><div><p>${esc(r.text)}</p>${r.actions.map(a=>`<button class="btn sec" data-act="wxMove" data-id="${esc(a.id)}" data-date="${esc(a.date)}">${esc(a.label)}</button>`).join('')}${tipTask&&CasaHousePlan.tipFor(tipTask)?houseTipButton(tipTask.id):''}</div></li>`}).join('')}</ul>`;
+  if(mode==='tips'&&!recs.length)h+=`<p class="hint">Hoy el tiempo no cambia nada de tus tareas.</p>`;
+  if(recs.length&&mode!=='forecast')h+=`<ul class="wx-recs">${recs.map(r=>{const tipTask=r.tip&&S.tasks.find(x=>x.id===r.tip);return`<li><span aria-hidden="true">${r.icon}</span><div><p>${esc(r.text)}</p>${r.actions.map(a=>`<button class="btn sec" data-act="wxMove" data-id="${esc(a.id)}" data-date="${esc(a.date)}">${esc(a.label)}</button>`).join('')}${tipTask&&CasaHousePlan.tipFor(tipTask)?houseTipButton(tipTask.id):''}</div></li>`}).join('')}</ul>`;
   if(houseWx.error)h+=`<p class="hint">${esc(houseWx.error)}</p>`;
  }
+ if(mode==='tips')return h+'</section>';
  return h+`<p class="wx-src">Previsión de <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="${esc(houseWxLink(place))}" target="_blank" rel="noopener">Ver en eltiempo.es</a></p></section>`;
 }
 function houseWxPlaceSheet(){

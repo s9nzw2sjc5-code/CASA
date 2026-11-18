@@ -56,7 +56,7 @@ const P = require("../casa/house-plan.js");
     const ok = () => p.locator(".overlay [data-s=ok]").last().click();
 
     // 1) Ubicación: se busca, se elige y queda en los datos de la casa (redondeada)
-    await p.evaluate(() => { ui.taskView = "hoy"; render(); }); // el tiempo y sus consejos se ven en «Para hoy»
+    await p.evaluate(() => { ui.taskView = "todas"; ui.taskOptsOpen = true; render(); }); // la tarjeta completa está en Todas › Más opciones
     assert.match(await p.locator(".wx").innerText(), /Indica dónde está la casa/);
     assert.equal(forecastCalls, 0);
     await p.locator("[data-act=wxPlace]").click();
@@ -77,6 +77,15 @@ const P = require("../casa/house-plan.js");
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tender").date), tomorrow);
     await p.locator(".toast-undo").click();
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "tender").date), await p.evaluate(() => today()));
+
+    // Hoy: solo la previsión · Tareas › Para hoy: solo los consejos según el tiempo
+    await p.evaluate(() => { ui.view = "hoy"; render(); });
+    assert.equal(await p.locator("#app .wx-day").count(), 5);
+    assert.equal(await p.locator("#app .wx-recs").count(), 0);
+    await p.evaluate(() => { ui.view = "tareas"; ui.taskView = "hoy"; render(); });
+    assert.equal(await p.locator("#app .wx-day").count(), 0);
+    assert.match(await p.locator("#app .wx-tips").innerText(), /Consejos según el tiempo[\s\S]*no tiendas fuera/);
+    await p.evaluate(() => { ui.taskView = "todas"; render(); });
 
     // 3) Plan de limpieza: zonas, recuento, creación, deshacer y sin duplicados
     await p.evaluate(() => { ui.taskView = "todas"; render(); });

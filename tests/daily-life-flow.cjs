@@ -356,16 +356,15 @@ const { chromium } = require("playwright"),
       "PASS Ringo appointment deduplication, care completion, history correction/deletion and coherent next date",
     );
     // Reminders, notes and board messages, still inside Important after the rename.
+    // En Hoy ya no está el cuadro de notas: sale el tiempo; un mensaje recibido se sigue viendo
     await tab("hoy");
-    await p.locator("#qNote").fill("Nota de auditoría con acentos");
-    await p.locator("[data-act=saveNote][data-v=qNote]").click();
-    await p.locator("#qNote").fill("Mensaje de auditoría");
-    await p.locator("[data-act=sendMsg]").click();
-    assert.equal(
-      await p.evaluate(() => S.board.cur.text),
-      "Mensaje de auditoría",
-    );
+    assert.equal(await p.locator("#qNote, [data-act=sendMsg]").count(), 0);
+    assert.equal(await p.locator("#app .wx:not(.wx-tips)").count(), 1, "el tiempo, en Hoy");
+    await p.evaluate(() => { S.board.cur = { text: "Mensaje de auditoría", from: "juanma", at: Date.now() }; save(); });
+    assert.match(await p.locator("#app .msg").innerText(), /Mensaje de auditoría/);
     await tab("recordar");
+    await p.locator("#qNoteR").fill("Nota de auditoría con acentos");
+    await p.locator("[data-act=saveNote][data-v=qNoteR]").click();
     assert.equal(await p.locator("#app h1").innerText(), "Importantes");
     assert(
       await p

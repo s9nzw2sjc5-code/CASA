@@ -235,6 +235,7 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.imp-check{margin-left:8px;border-color:var(--line)!important}.imp-check span{font-size:.92rem;font-weight:600}.imp-dates{margin:6px 0 16px}
 .tz-error{color:var(--danger);margin:0 0 10px}
 .tz-h2{font-size:1.45rem!important;margin:22px 0 10px!important}.tz-h2::before{display:none!important}
 .tz-done summary{display:flex;justify-content:space-between;align-items:center;list-style:none}.tz-done summary::-webkit-details-marker{display:none}.tz-caret{font-size:1.2rem;color:var(--muted);transition:transform .2s}.tz-done[open] .tz-caret{transform:rotate(180deg)}
@@ -776,29 +777,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=138"></script>
-<script src="sync.js?v=138"></script>
-<script src="receipts.js?v=138"></script>
-<script src="receipt-image.js?v=138"></script>
-<script src="receipt-layout.js?v=138"></script>
-<script src="receipt-ocr.js?v=138"></script>
-<script src="product-photo.js?v=138"></script>
-<script src="product-photo-ui.js?v=138"></script>
-<script src="shopping-recommendations.js?v=138"></script>
-<script src="household-insights.js?v=138"></script>
-<script src="document-files.js?v=138"></script>
-<script src="document-photo.js?v=138"></script>
-<script src="cleaning-links.js?v=138"></script>
-<script src="home-model.js?v=138"></script>
-<script src="cocina.js?v=138"></script>
-<script src="cleaning-view.js?v=138"></script>
-<script src="home-ui.js?v=138"></script>
-<script src="household-ui.js?v=138"></script>
-<script src="receipt-extras.js?v=138"></script>
-<script src="house-plan.js?v=138"></script>
-<script src="house-plan-ui.js?v=138"></script>
-<script src="lidl-ui.js?v=138"></script>
-<script src="tasks-ui.js?v=138"></script>
+<script src="push.js?v=141"></script>
+<script src="sync.js?v=141"></script>
+<script src="receipts.js?v=141"></script>
+<script src="receipt-image.js?v=141"></script>
+<script src="receipt-layout.js?v=141"></script>
+<script src="receipt-ocr.js?v=141"></script>
+<script src="product-photo.js?v=141"></script>
+<script src="product-photo-ui.js?v=141"></script>
+<script src="shopping-recommendations.js?v=141"></script>
+<script src="household-insights.js?v=141"></script>
+<script src="document-files.js?v=141"></script>
+<script src="document-photo.js?v=141"></script>
+<script src="cleaning-links.js?v=141"></script>
+<script src="home-model.js?v=141"></script>
+<script src="cocina.js?v=141"></script>
+<script src="cleaning-view.js?v=141"></script>
+<script src="home-ui.js?v=141"></script>
+<script src="household-ui.js?v=141"></script>
+<script src="receipt-extras.js?v=141"></script>
+<script src="house-plan.js?v=141"></script>
+<script src="house-plan-ui.js?v=141"></script>
+<script src="lidl-ui.js?v=141"></script>
+<script src="tasks-ui.js?v=141"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -853,7 +854,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=138;
+const APP_VERSION=141;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1097,7 +1098,9 @@ function vHoy(){
     <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span></div>
     <div class="hoy-stats">${stat(now.length+late.length,'tareas','tareas')}${stat(evs.length,'eventos','semana')}${stat(rems.length,'avisos','recordar')}${stat(pend,'compras','compras')}</div>
     <p class="hoy-msg">${msg}</p></div>`;
-  h+=noteBox();
+  // El tiempo y sus consejos en lugar del cuadro de notas (las notas se apuntan en Importantes);
+  // un mensaje que haya llegado se sigue viendo
+  h+=boardMsgCard()+houseWxCard('forecast');
   if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${impN}</span></div>${ul([...urgentTasks.map(x=>taskRow(x)),...urgentPets.map(petRow),...imp.map(remRow),...tmRows])}</section>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;
   const sec=(ic,title,color,body,extra)=>`<section class="hsec" style="--sc:${color}"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">${ic}</span><h2>${title}</h2>${extra||''}</div>${body}</section>`;
@@ -1251,9 +1254,14 @@ function vMes(){
   return h+houseMonthSection(mStart.slice(0,7));
 }
 
+// Fecha importante: marcada en la ficha, o un recordatorio de antes pasado a Tareas (salvo que se haya desmarcado)
+function isImportantTask(t){if(!t)return false;if(t.important===true)return true;if(t.important===false||t.maintenance||t.planKey)return false;return String(t.id||'').startsWith('rem-')||!!t.fromReminder}
 function vRecordar(){
   // Importantes guarda la información de la casa; todo lo que hay que hacer está en Tareas
-  let h=`<h1>Importantes</h1><p class="sub">Documentos, teléfonos y notas</p>${heroStats([[(S.documents||[]).filter(d=>!d.archived).length,'documentos'],[(S.contacts||[]).length,'teléfonos'],[S.notes.length,'notas']])}`;
+  const imp=S.tasks.filter(t=>!t.done&&isImportantTask(t)).sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999'))||String(a.time||'99').localeCompare(String(b.time||'99')));
+  let h=`<h1>Importantes</h1><p class="sub">Fechas, documentos, teléfonos y notas</p>${heroStats([[imp.length,'fechas'],[(S.documents||[]).filter(d=>!d.archived).length,'documentos'],[(S.contacts||[]).length,'teléfonos'],[S.notes.length,'notas']])}`;
+  // Fechas importantes: son tareas (salen también en Tareas y en el Calendario) marcadas «📅 En Importantes»
+  h+=`<section class="imp-dates"><div class="head-row"><h2>📅 Fechas importantes</h2><button type="button" class="link" data-act="newImportant">+ Añadir</button></div>${imp.length?ul(imp.map(x=>taskRow(x))):'<p class="hint">Apunta aquí lo que no se puede olvidar: pagos, citas, ITV, cumpleaños… También saldrá en Tareas y en el Calendario.</p>'}</section>`;
   h+=`<button type="button" class="btn sec home-entry" data-act="homeHub">🗂️ Electrodomésticos y documentos</button>`;
   h+=contactsSection();
   h+=notesSection();
@@ -1646,6 +1654,7 @@ function taskSheet(t,date,extra){
     <div id="calcRep" class="summary" style="margin-top:10px;display:none"></div>
     ${(tip=>tip?`<details class="tipbox"><summary>💡 Cómo hacerlo: ${esc(tip.title)}</summary>${houseTipSteps(tip)}</details>`:'')(CasaHousePlan.tipFor(t))}
     <label class="urgent-check" title="Urgente"><input type="checkbox" id="f_u" aria-label="Urgente" ${t.urgent?'checked':''}><span aria-hidden="true">❗</span></label>
+    <label class="urgent-check imp-check" title="Verla en Importantes"><input type="checkbox" id="f_imp" aria-label="Fecha importante: verla en Importantes" ${isImportantTask(t)?'checked':''}><span>📅 En Importantes</span></label>
     <label for="f_n">Notas</label><textarea class="field" id="f_n">${esc(t.notes)}</textarea>`,
   {onSave:ov=>{
     const title=val(ov,'f_t');if(!title){toast('Escribe el nombre de la tarea');return false}
@@ -1654,7 +1663,7 @@ function taskSheet(t,date,extra){
     const urgent=ov.querySelector('#f_u').checked;
     // Si sigue siendo urgente, no se puede posponer (quitar la fecha también sería posponerla)
     if(!n&&urgent&&t.urgent&&t.date&&(!d||CasaHousePlan.blocksPostpone(t,d,today()))){toast('Es urgente ❗: no se puede posponer. Desmarca «Urgente» si de verdad hay que cambiarla.');return false}
-    const o={title,date:d,time:d?val(ov,'f_h'):'',who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),urgent,...cus};
+    const o={title,date:d,time:d?val(ov,'f_h'):'',who:val(ov,'f_w'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,...cus};
     if(n)S.tasks.push({id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o});else{const x=find(S.tasks,t.id);if(x)Object.assign(x,o)}
     save();toast(n?'Tarea creada':'Tarea guardada');
   },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')}});
@@ -1766,6 +1775,12 @@ function savePrefs(){if(prefRef)prefRef.set({navPos:ui.navPos||'',me:ui.me||'',a
 const meName=()=>{const p=person(ui.me);return p?p.name:''};
 const partner=()=>S.people.find(p=>p.id!==ui.me&&['yo','juanma'].includes(p.id))||S.people.find(p=>p.id!==ui.me);
 function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return'ahora mismo';if(m<60)return'hace '+m+' min';const h=Math.round(m/60);if(h<24)return'hace '+h+' h';return new Date(ts).toLocaleDateString('es-ES',{day:'numeric',month:'short'})}
+function boardMsgCard(){
+  const m=S.board&&S.board.cur;if(!m||!m.text)return'';
+  const mine=ui.me&&m.from===ui.me,fp=person(m.from),pp=partner();
+  const who=mine?`Tu mensaje para ${esc(pp?pp.name:'tu pareja')}`:`${esc(fp?fp.name:'Mensaje')} te dice`;
+  return`<div class="msg ${mine?'mine':''}"><div class="msg-h"><span>💌 ${who}</span><small>${ago(m.at)}</small></div><p>${esc(m.text)}</p><button class="msg-x" data-act="delMsg" aria-label="Borrar mensaje">✕</button></div>`;
+}
 function noteBox(){
   const m=S.board.cur;let card='';
   if(m&&m.text){
@@ -1871,6 +1886,7 @@ const ACT={
     Object.assign(task,CasaCleaningLinks.advanceTask(task,today(),Date.now(),meName(),nextOcc));save();if(repeating)toast('Hecha. Próxima: '+relDate(task.date));
   },
   editTask:d=>taskSheet(find(S.tasks,d.id)),
+  newImportant:()=>taskSheet(null,today(),{important:true}),
   newTask:d=>taskSheet(null,d.date),
   tFilter:d=>{ui.taskFilter=d.v;render()},
   pFilter:d=>{ui.personFilter=d.v;render()},
