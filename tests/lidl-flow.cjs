@@ -120,6 +120,12 @@ const fixture = {
       assert.equal(await p.evaluate(() => new Set([...document.querySelectorAll(".ck-tabs .chip")].map((c) => Math.round(c.getBoundingClientRect().top))).size), 1, tab + ": una sola fila");
     }
 
+    // Las listas salen primero Mercadona y luego Lidl (aunque Lidl se creara la última y el súper se llamara «Súper»)
+    await p.evaluate(() => { const lidl = S.lists.find((l) => l.id === "lidl"); S.lists = S.lists.filter((l) => l !== lidl).concat(lidl); S.lists.find((l) => l.id === "super").name = "Súper"; ui.ckTab = "lista"; render(); });
+    const chips = await p.evaluate(() => [...document.querySelectorAll(".shop-lists .chip")].map((c) => c.textContent));
+    assert.deepEqual(chips.slice(0, 2), ["Mercadona", "Lidl"]);
+    await p.evaluate(() => { S.lists = S.lists.filter((l) => l.id !== "lidl"); lidlList(); });
+    assert.deepEqual(await p.evaluate(() => S.lists.map((l) => l.id).slice(0, 2)), ["super", "lidl"], "Lidl nueva va justo detrás");
     assert.deepEqual(errors, [], "errores de página");
     console.log("lidl-flow: OK");
   } finally {

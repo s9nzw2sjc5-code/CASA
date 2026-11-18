@@ -677,27 +677,27 @@ body[data-shopping=list] main{padding-top:10px}body[data-shopping=list] .hero{pa
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=118"></script>
-<script src="sync.js?v=118"></script>
-<script src="receipts.js?v=118"></script>
-<script src="receipt-image.js?v=118"></script>
-<script src="receipt-layout.js?v=118"></script>
-<script src="receipt-ocr.js?v=118"></script>
-<script src="product-photo.js?v=118"></script>
-<script src="product-photo-ui.js?v=118"></script>
-<script src="shopping-recommendations.js?v=118"></script>
-<script src="household-insights.js?v=118"></script>
-<script src="document-files.js?v=118"></script>
-<script src="document-photo.js?v=118"></script>
-<script src="cleaning-links.js?v=118"></script>
-<script src="home-model.js?v=118"></script>
-<script src="cocina.js?v=118"></script>
-<script src="home-ui.js?v=118"></script>
-<script src="household-ui.js?v=118"></script>
-<script src="receipt-extras.js?v=118"></script>
-<script src="house-plan.js?v=118"></script>
-<script src="house-plan-ui.js?v=118"></script>
-<script src="lidl-ui.js?v=118"></script>
+<script src="push.js?v=119"></script>
+<script src="sync.js?v=119"></script>
+<script src="receipts.js?v=119"></script>
+<script src="receipt-image.js?v=119"></script>
+<script src="receipt-layout.js?v=119"></script>
+<script src="receipt-ocr.js?v=119"></script>
+<script src="product-photo.js?v=119"></script>
+<script src="product-photo-ui.js?v=119"></script>
+<script src="shopping-recommendations.js?v=119"></script>
+<script src="household-insights.js?v=119"></script>
+<script src="document-files.js?v=119"></script>
+<script src="document-photo.js?v=119"></script>
+<script src="cleaning-links.js?v=119"></script>
+<script src="home-model.js?v=119"></script>
+<script src="cocina.js?v=119"></script>
+<script src="home-ui.js?v=119"></script>
+<script src="household-ui.js?v=119"></script>
+<script src="receipt-extras.js?v=119"></script>
+<script src="house-plan.js?v=119"></script>
+<script src="house-plan-ui.js?v=119"></script>
+<script src="lidl-ui.js?v=119"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -752,12 +752,12 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=118;
+const APP_VERSION=119;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
   tasks:[],
-  lists:[{id:'super',name:'Súper'},{id:'farmacia',name:'Farmacia'},{id:'casa',name:'Para la casa'}],
+  lists:[{id:'super',name:'Mercadona'},{id:'farmacia',name:'Farmacia'},{id:'casa',name:'Para la casa'}],
   sections:['Despensa','Fruta y verdura','Frescos','Congelados','Limpieza','Higiene','Otros'],
   contacts:[],appliances:[],documents:[],routines:[],routineRuns:[],shopLater:[],items:[],staples:[],reminders:[],recipes:[],menu:{},secMem:{},pet:[],petLog:[],events:[],notes:[],board:{},pantry:[],cook:{},prodMap:{},prices:{},buys:[]}}
 let S=fresh();
@@ -1591,7 +1591,7 @@ function itemSheet(i){
     <div class="grid2"><div><label for="f_pr">Precio estimado (€)</label><input class="field" id="f_pr" type="number" inputmode="decimal" step="0.01" min="0" value="${i.price?Math.round(i.price*100)/100:''}" ${i.mid?'disabled':''}></div>
     <div><label for="f_st">Supermercado</label><select class="field" id="f_st"><option value="">—</option>${opt(ck().stores.map(x=>[x,x]),i.store||'')}</select></div></div>
     <div class="grid2"><div><label for="f_s">Sección</label><select class="field" id="f_s">${opt(S.sections.map(s=>[s,s]),i.section)}</select></div>
-    <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(S.lists.map(l=>[l.id,l.name]),i.listId)}</select></div></div>
+    <div><label for="f_l">Lista</label><select class="field" id="f_l">${opt(orderedLists().map(l=>[l.id,listName(l)]),i.listId)}</select></div></div>
     <label for="f_b">Lo pidió</label><input class="field" id="f_b" value="${esc(i.by)}" placeholder="Nombre">
 </details>`,
   {autoFocus:false,onSave:ov=>{

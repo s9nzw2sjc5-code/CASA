@@ -375,6 +375,10 @@ function lastMade(r){const a=r.made||[];return a.length?a[a.length-1]:''}
 
 /* ---------- cesta (lista «Súper» de Compras) ---------- */
 const cartList=()=>(S.lists.find(l=>l.id==='super')||S.lists[0]).id;
+// Orden de las listas: primero Mercadona (la del súper), luego Lidl y después el resto en su orden.
+const listRank=l=>l.id==='super'?0:l.id==='lidl'?1:2;
+const orderedLists=()=>S.lists.map((l,i)=>[l,i]).sort((a,b)=>listRank(a[0])-listRank(b[0])||a[1]-b[1]).map(x=>x[0]);
+const listName=l=>l.id==='super'&&/^s[úu]per$/i.test(l.name||'')?'Mercadona':l.name;
 const cartItems=()=>S.items.filter(i=>i.listId===cartList()&&!i.done);
 const cartOf=mid=>cartItems().find(i=>i.mid===mid);
 const cartTotal=()=>cartItems().reduce((a,i)=>a+(i.price||0),0);
@@ -1060,7 +1064,7 @@ function habSection(L){
     return`<div class="ck-hab ${inL?'in':''}"><button type="button" class="link" style="width:100%" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Ver habitual ${esc(name)}">${info.img?`<img data-habit-img src="${imgUrl(info.img,120)}" alt="" loading="eager">`:''}<span class="ck-hab0" role="img" aria-label="Sin imagen" ${info.img?'hidden':''}>🛍️</span></button><button class="link" data-act="habitSchedule" data-v="${esc(k)}" data-lid="${esc(L.id)}" aria-label="Configurar reposición de ${esc(name)}"><b>${esc(name)}</b></button>${p?`<small>${eur(p[3])}</small>`:!info.manual?`<small>${info.known?'Fuera del catálogo actual':'Toca para identificarlo'}</small>`:''}${!p&&info.known&&!info.manual?`<button class="link" data-act="repairHabit" data-v="${esc(k)}" data-lid="${esc(L.id)}">Buscar sustituto</button>`:''}
       ${inL?`<button class="ck-hb on" data-act="itemStep" data-id="${inL.id}" data-v="1" aria-label="Uno más de ${esc(name)}">✓ ${inL.units||1} · +</button>`:`<button class="ck-hb" data-act="habAdd" data-v="${esc(k)}" data-lid="${esc(L.id)}">${info.known?'+ Añadir':'Identificar'}</button>`}</div>`});
   const st=S.staples.filter(s=>s.listId===L.id&&!fv.some(k=>matchesStaple(s,{listId:L.id,mid:k.startsWith('n:')?'':k,name:k.startsWith('n:')?k.slice(2):MC?.byId.get(k)?.[1]||''}))).sort((a,b)=>stapleLeft(a)-stapleLeft(b));
-  if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">${L.id===cartList()?'Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.':'Marca con ☆ un producto de «'+esc(L.name)+'» para guardarlo entre los habituales de esta lista.'}</p>`;
+  if(!cards.length&&!st.length)return`<div class="head-row"><h2>⭐ Habituales</h2></div><p class="hint">${L.id===cartList()?'Marca con ☆ los productos que compras siempre (en 🛍️ Productos o tocando un producto de la lista) y aparecerán aquí para añadirlos de un toque.':'Marca con ☆ un producto de «'+esc(listName(L))+'» para guardarlo entre los habituales de esta lista.'}</p>`;
   return`<div class="head-row"><h2>⭐ Habituales</h2>${L.id===cartList()?'<button class="link" data-act="ckTab" data-v="productos">+ Buscar</button>':''}</div><div class="staples ck-habs">${cards.join('')}${st.map(stapleCard).join('')}<button class="staple new" data-act="newStaple">+ Habitual</button></div>`;
 }
 function shopLaterSection(L){
@@ -1147,8 +1151,8 @@ function shoppingLearningSheet(){
 function vCompras(){
   loadMC();
   const L=curList(),items=S.items.filter(i=>i.listId===L.id),pend=items.filter(i=>!i.done),dn=items.filter(i=>i.done),total=items.reduce((n,i)=>n+(Number(i.price)||0),0);
-  let h=`<h1>Compras</h1><p class="sub">${esc(L.name)}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
-  h+=`<div class="chips shop-lists">${S.lists.map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(l.name)}</button>`).join('')}</div>`;
+  let h=`<h1>Compras</h1><p class="sub">${esc(listName(L))}: ${pend.length} por comprar${dn.length?' · '+dn.length+' en el carro':''}</p>`+ckSubTabs();
+  h+=`<div class="chips shop-lists">${orderedLists().map(l=>`<button class="chip ${l.id===L.id?'on':''}" data-act="pickList" data-v="${l.id}">${esc(listName(l))}</button>`).join('')}</div>`;
   h+=`<div class="shop-current"><div><small>Cesta actual · estimación</small><strong>≈ ${eur(total)}</strong>${dn.length?`<small>En el carro: ${eur(dn.reduce((n,i)=>n+(Number(i.price)||0),0))}</small>`:''}</div><button type="button" class="link" data-act="shopAddFocus">+ Añadir</button>${dn.length?`<button class="btn" data-act="clearDone">Terminar (${dn.length})</button>`:''}</div>`;
   h+=shoppingReminderCard();
   h+=habSection(L);
@@ -1242,7 +1246,7 @@ function buyDetail(b){
   const inList=x=>S.items.some(i=>i.listId===L.id&&!i.done&&sameItem(i,repeatBuyItem(x)));
   const ov=sheet((b.store||'Compra')+' · '+parse(b.date).toLocaleDateString('es-ES',{day:'numeric',month:'long'}),`
     <div class="ck-total"><span>Pagado</span><b>${b.total?eur(b.total):'sin importe'}</b><small>${b.manual?'Gasto añadido a mano':b.ticket?'Registrado con tique':'Registrado al terminar la compra'}${b.by?' · '+esc(b.by):''}${b.note?' · '+esc(b.note):''}</small></div>
-    ${its.length?`<h4>Productos de la compra</h4><p class="hint" style="margin-top:0">Toca un producto para añadirlo a la cesta o guardarlo en Habituales. Usa las casillas para repetir varios en «${esc(L.name)}».</p>
+    ${its.length?`<h4>Productos de la compra</h4><p class="hint" style="margin-top:0">Toca un producto para añadirlo a la cesta o guardarlo en Habituales. Usa las casillas para repetir varios en «${esc(listName(L))}».</p>
       <div class="ck-box">${its.map((x,k)=>{const p=x.mid&&MC&&MC.byId.get(x.mid),dup=inList(x),canRepeat=repeatableBuyItem(x);return`<div class="ing-row history-product-row">${canRepeat?`<input type="checkbox" data-r="${k}" aria-label="Repetir ${esc(x.name)}" ${dup?'disabled':'checked'}>`:''}<${canRepeat?'button type="button"':'div'} class="history-product-pick" ${canRepeat?`data-history-product="${k}" aria-label="Ver opciones de ${esc(x.name)}"`:''}>${p?`<img class="ck-th" src="${imgUrl(p[9],72)}" alt="">`:''}<span>${esc(x.name)}${x.units>1?' <small>× '+x.units+'</small>':''}<br><small>${x.price!==undefined?eur(x.price)+' pagado · ':''}<span data-history-meta="${k}">${dup?'Ya está en la cesta':canRepeat?(p?eur(p[3])+' hoy':''):'Ajuste del ticket'}</span></small></span>${canRepeat?'<b aria-hidden="true">›</b>':''}</${canRepeat?'button':'div'}></div>`}).join('')}</div>`:'<p class="hint">Esta compra no tiene productos apuntados.</p>'}
     ${b.receiptPending?'<button type="button" class="btn" data-k="receipt">📷 Comprobar con el ticket</button>':''}${b.ticket?`<details><summary>Ver foto del ticket</summary><p class="hint">Guardada en el dispositivo donde se subió.</p><div data-receipt-photo>Cargando foto…</div></details>${b.voided?'<p>Compra anulada: no cuenta como gasto.</p>':''}`:''}<div class="ck-actions" style="margin-top:12px">${!b.voided?'<button type="button" class="btn sec" data-k="edit">✏️ Editar gasto</button>':''}${b.ticket&&b.undoJournal&&!b.voided?'<button type="button" class="btn sec" data-k="undo">Deshacer importación</button>':''}${its.length?`<button type="button" class="btn" data-k="again">🔁 Añadir a la lista</button>`:''}</div>`,{});
   if(b.ticket)receiptHistoryPhoto(b,ov);

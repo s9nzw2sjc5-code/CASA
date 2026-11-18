@@ -50,7 +50,7 @@ function vCkLidl(){
 }
 // Lista propia para Lidl (id fijo: si los dos móviles la crean a la vez, es la misma)
 const LIDL_LIST={id:'lidl',name:'Lidl'};
-function lidlList(){if(!S.lists.some(l=>l.id===LIDL_LIST.id))S.lists.push({...LIDL_LIST});return LIDL_LIST.id}
+function lidlList(){if(!S.lists.some(l=>l.id===LIDL_LIST.id))S.lists.splice(S.lists.some(l=>l.id==='super')?S.lists.findIndex(l=>l.id==='super')+1:0,0,{...LIDL_LIST});return LIDL_LIST.id}
 const lidlMisplaced=()=>S.items.filter(i=>i.listId!==LIDL_LIST.id&&(i.store==='Lidl'||/ \(Lidl\)$/.test(i.name||'')));
 // Lo que se añadió de Lidl a la lista del súper (antes de la 115) pasa a la lista Lidl.
 // Devuelve true si ha guardado (y, por tanto, ya se ha vuelto a pintar).
