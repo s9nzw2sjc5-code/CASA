@@ -37,7 +37,7 @@ const { chromium } = require("playwright"),
     await p.goto("http://127.0.0.1:" + server.address().port + "/casa/", { waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined" && ACT.houseJoin);
     await p.evaluate(() => {
-      S = fresh();
+      S = fresh(); ui.taskView = "todas"; // la vista completa de siempre (pestaña «Todas»)
       const t = today(), add = (n) => addDays(t, n);
       S.tasks = [
         { id: "plantas", title: "Revisar plantas", date: add(1), repeat: "weekly", who: "yo", notes: "", done: false },

@@ -56,7 +56,7 @@ const { chromium } = require("playwright"),
 
     // Estado sintético: una tarea por sección, varias de la misma rutina vinculada y una hecha.
     await p.evaluate(() => {
-      S = fresh();
+      S = fresh(); ui.taskView = "todas"; // la vista completa de siempre (pestaña «Todas»)
       const t = today(), add = (n) => addDays(t, n);
       S.tasks = [
         { id: "late", title: "Pasar la aspiradora", date: add(-2), who: "yo", repeat: "none", notes: "Salón y pasillo", done: false },

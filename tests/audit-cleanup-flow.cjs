@@ -33,7 +33,7 @@ const { chromium } = require("playwright"),
     await p.goto("http://127.0.0.1:" + server.address().port + "/casa/", { waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined" && ACT.housePlan);
     await p.evaluate(() => {
-      S = fresh();
+      S = fresh(); ui.taskView = "todas"; // la vista completa de siempre (pestaña «Todas»)
       const t = today(), add = (n) => addDays(t, n), at = (d) => new Date(d + "T10:00:00").getTime();
       S.reminders = [
         { id: "r1", title: "Pagar la luz", date: add(2), time: "09:00", repeat: "monthly", notes: "Domiciliado", done: false },

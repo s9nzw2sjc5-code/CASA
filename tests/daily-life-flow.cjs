@@ -75,7 +75,7 @@ const { chromium } = require("playwright"),
     );
     await p.evaluate(async () => {
       await loadMC();
-      S = fresh();
+      S = fresh(); ui.taskView = "todas"; // la vista completa de siempre (pestaña «Todas»)
       ui.view = "hoy";
       ui.me = "yo";
       save();

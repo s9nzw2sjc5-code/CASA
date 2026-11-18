@@ -48,7 +48,7 @@ const P = require("../casa/house-plan.js");
     await p.goto(base, { waitUntil: "domcontentloaded" });
     await p.waitForFunction(() => typeof ACT !== "undefined" && typeof CasaHousePlan !== "undefined" && ACT.housePlan);
     await p.evaluate(() => {
-      S = fresh();
+      S = fresh(); ui.taskView = "todas"; // la vista completa de siempre (pestaña «Todas»)
       S.tasks = [{ id: "tender", title: "Tender la ropa", date: today(), who: "yo", repeat: "none", notes: "", done: false }];
       ui.view = "tareas"; ui.taskMode = "tasks"; ui.personFilter = "all"; ui.taskFilter = "pend";
       save();
