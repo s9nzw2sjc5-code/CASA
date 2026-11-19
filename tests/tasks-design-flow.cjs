@@ -294,6 +294,25 @@ const { chromium } = require("playwright"),
     assert.match(await p.locator("#toast").innerText(), /Añadida a la rutina «Limpieza semanal»/);
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !/^sl/.test(t.id) && t.title !== "fregar todo el salón"); S.routines = []; save(); });
 
+    // «Vincular a» en la ficha: elegir una zona mete la tarea en la rutina de esa zona (Por zonas)
+    await p.evaluate(() => { S.tasks.push({ id: "vz", title: "fregar todo", date: today(), repeat: "none", who: "yo", notes: "", done: false }); save(); ui.view = "tareas"; ui.taskView = "hoy"; ui.taskZone = null; render(); });
+    assert.match(await p.locator('.tz-row:has([data-id="vz"])').innerText(), /Toda la casa/);
+    await p.locator('.tz-main[data-id="vz"]').click();
+    assert.match(await p.locator("#f_zone option").first().innerText(), /Automático · Toda la casa/);
+    await p.locator("#f_zone").selectOption("salon");
+    await p.locator(".overlay [data-s=ok]").click();
+    assert.match(await p.locator("#toast").innerText(), /vinculada a Salón y entrada/);
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "vz").tzZone), "salon");
+    await p.locator('[data-act=taskView][data-v=zonas]').click();
+    await p.locator('.tz-zone[data-v="salon"]').click();
+    assert.match(await p.locator(".tz-page").innerText(), /fregar todo/);
+    // Volver a «Automático» la quita de esa zona
+    await p.locator('.tz-page .tz-main[data-id="vz"]').click();
+    await p.locator("#f_zone").selectOption("");
+    await p.locator(".overlay [data-s=ok]").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "vz").tzZone), "");
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => t.id !== "vz"); ui.taskZone = null; save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

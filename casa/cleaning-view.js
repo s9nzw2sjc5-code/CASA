@@ -16,8 +16,8 @@
   const templates=plan.ITEMS||[],zones=new Map(plan.ZONES||[]);
   const entries=(state.tasks||[]).map(task=>{
    const key=String(task.planKey||'').replace(/:\d+$/,''),template=templates.find(x=>x.key===key);
-   const explicit=task.planZone||task.zone;
-   const zone=explicit?(zones.get(explicit)||String(explicit)):template?(template.zone?zones.get(template.zone)||template.zone:'Toda la casa'):'Sin clasificar';
+   const explicit=task.planZone||task.zone,picked=task.tzZone&&typeof TASK_ZONES!=='undefined'&&TASK_ZONES.find(z=>z.id===task.tzZone);
+   const zone=picked?picked.name:explicit?(zones.get(explicit)||String(explicit)):template?(template.zone?zones.get(template.zone)||template.zone:'Toda la casa'):'Sin clasificar';
    return {task,zone,frequency:frequency(task,template),due:!task.done&&!!task.date&&task.date<=today,doneToday:task.doneAt===today||task.lastDone===today};
   });
   const group=field=>{const groups=new Map();for(const e of entries){if(!groups.has(e[field]))groups.set(e[field],[]);groups.get(e[field]).push(e)}return groups};

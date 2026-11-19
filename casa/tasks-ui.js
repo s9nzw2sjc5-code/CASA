@@ -32,6 +32,8 @@ const TZ_SVG={
 const tzIcon=id=>`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TZ_SVG[id]||TZ_SVG.otras}</svg>`;
 const taskNorm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function taskZone(t){
+ // Zona elegida a mano en la ficha («Vincular a»): manda sobre la automática
+ if(t&&t.tzZone){const z=TASK_ZONES.find(z=>z.id===t.tzZone);if(z)return z}
  const item=t&&t.plan==='casa'&&t.planKey&&CasaHousePlan.ITEMS.find(i=>i.key===String(t.planKey).split(':')[0]);
  if(item){const z=TASK_ZONES.find(z=>z.plan.includes(item.zone));if(z)return z}
  const title=taskNorm(t&&t.title);
@@ -230,3 +232,9 @@ function tzSuggestFor(input){
  box.innerHTML=tzSuggestHtml(q,list,routines);
 }
 document.addEventListener('input',e=>{if(e.target&&TZ_ADD_INPUTS[e.target.id])tzSuggestFor(e.target)});
+
+// Desplegable «Vincular a» de la ficha: Automático (según el nombre) o una zona; la tarea entra en la rutina de esa zona (Por zonas)
+function tzZoneSelectHtml(t){
+ const auto=taskZone({...t,tzZone:''});
+ return`<div class="ts-full"><label for="f_zone">Vincular a</label><select class="field" id="f_zone"><option value="">Automático · ${esc(auto.name)}</option>${TASK_ZONES.map(z=>`<option value="${z.id}" ${t.tzZone===z.id?'selected':''}>${z.icon} ${esc(z.name)}</option>`).join('')}</select></div>`;
+}
