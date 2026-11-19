@@ -275,6 +275,25 @@ const { chromium } = require("playwright"),
     await p.locator(".overlay [data-s=cancel]").click();
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !/^sb|baño pequeño|baño de arriba/i.test(t.id + " " + t.title)); S.routines = []; save(); });
 
+    // «fregar todo el salón»: se reconoce por la zona (salón) y propone la rutina que tiene tareas del salón
+    await p.evaluate(() => {
+      const t = today(), a = (n) => addDays(t, n);
+      S.tasks.push({ id: "sl1", title: "Salón: aspirar el sofá y bajo los muebles", date: a(1), repeat: "weekly", who: "yo", notes: "", done: false, plan: "casa", planKey: "salon" }, { id: "sl2", title: "Cocina: encimera", date: a(2), repeat: "weekly", who: "yo", notes: "", done: false, plan: "casa", planKey: "cocina-semanal" });
+      S.routines = [CasaCleaningLinks.link(S, null, "rsl", "Limpieza semanal", ["sl1", "sl2"], 1)];
+      save(); ui.view = "hoy"; render();
+    });
+    await p.locator("#qTask").fill("fregar todo el salón");
+    await p.locator("#qTask").dispatchEvent("input");
+    const sugTxt = await p.locator(".tz-sug").innerText();
+    assert.match(sugTxt, /Rutinas de limpieza[\s\S]*Limpieza semanal/);
+    assert.match(sugTxt, /Salón: aspirar el sofá/);
+    assert.doesNotMatch(sugTxt, /Cocina: encimera/);
+    await p.locator('.tz-sug [data-sug="toRoutine"][data-id="rsl"]').click();
+    const nr = await p.evaluate(() => { const r = S.routines.find((r) => r.id === "rsl"), n = S.tasks.find((t) => t.title === "fregar todo el salón"); return n && [r.taskIds.includes(n.id), n.repeat, n.date === today()]; });
+    assert.deepEqual(nr, [true, "weekly", true], "entra en la rutina, cada semana, desde hoy");
+    assert.match(await p.locator("#toast").innerText(), /Añadida a la rutina «Limpieza semanal»/);
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !/^sl/.test(t.id) && t.title !== "fregar todo el salón"); S.routines = []; save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

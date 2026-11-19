@@ -168,12 +168,21 @@ function taskDatesRepair(){
 
 /* ---------- Al añadir una tarea: ¿se parece a alguna que ya tienes? ---------- */
 // Palabras que cuentan para comparar (sin artículos ni preposiciones); se compara por la raíz (5 primeras letras)
-const TZ_STOP=new Set(['de','la','el','los','las','del','al','y','a','en','con','por','para','un','una','que','mi','tu','su','lo','le','se','o']);
+const TZ_STOP=new Set(['de','la','el','los','las','del','al','y','a','en','con','por','para','un','una','que','mi','tu','su','lo','le','se','o','todo','toda','todos','todas','hacer','poner','bien','muy','hoy','otra','otro']);
 const tzWords=s=>taskNorm(s).split(/[^a-z0-9ñ]+/).filter(w=>w.length>=3&&!TZ_STOP.has(w)).map(w=>w.slice(0,5));
+// Zona concreta de lo escrito (salón, baños, cocina, colada…); «Toda la casa» y «Otras» no cuentan como zona
+const tzSpecificZone=t=>{const z=taskZone(t);return z.id==='otras'||z.id==='casa'?null:z.id};
+// Parecidas: por palabras o, si lo escrito es de una zona, las tareas de esa misma zona
 function taskSimilar(q,limit=5){
  const qw=new Set(tzWords(q));if(!qw.size)return[];
- return (S.tasks||[]).filter(t=>t&&!t.done&&t.title).map(t=>{const tw=tzWords(t.title);const hits=tw.filter(w=>qw.has(w)).length;return{t,score:hits/Math.max(1,Math.min(qw.size,tw.length))}})
-  .filter(x=>x.score>=.5).sort((a,b)=>b.score-a.score||String(a.t.date||'9').localeCompare(String(b.t.date||'9'))).slice(0,limit).map(x=>x.t);
+ const qz=tzSpecificZone({title:q});
+ return (S.tasks||[]).filter(t=>t&&!t.done&&t.title).map(t=>{const tw=tzWords(t.title);const hits=tw.filter(w=>qw.has(w)).length;const words=hits/Math.max(1,Math.min(qw.size,tw.length));const zone=qz&&tzSpecificZone(t)===qz;return{t,hits,score:Math.max(words,zone?.5:0)}})
+  .filter(x=>x.score>=.5).sort((a,b)=>b.hits-a.hits||b.score-a.score||String(a.t.date||'9').localeCompare(String(b.t.date||'9'))).slice(0,limit).map(x=>x.t);
+}
+// Rutinas de limpieza que encajan con lo escrito: por su nombre o porque tienen tareas de esa zona
+function tzRoutinesFor(q){
+ const qw=new Set(tzWords(q)),qz=tzSpecificZone({title:q});if(!qw.size)return[];
+ return (S.routines||[]).filter(r=>r.linkedTasks&&!r.archived).map(r=>{const ts=(r.taskIds||[]).map(id=>find(S.tasks,id)).filter(Boolean);const byName=tzWords(r.title).some(w=>qw.has(w));const zoneN=qz?ts.filter(t=>tzSpecificZone(t)===qz).length:0;return{r,n:(byName?100:0)+zoneN}}).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,2).map(x=>x.r);
 }
 const tzRoutineOf=t=>(S.routines||[]).find(r=>r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(t.id));
 // Marcar hecha hoy una tarea que estaba para otro día: queda en «Hechas hoy»; si se repite, la siguiente vez cuenta desde aquí
@@ -184,16 +193,21 @@ function taskDoneToday(id){
  save();toastUndo(`«${x.title}» hecha hoy${x.done?'':' · próxima: '+relDate(x.date).toLowerCase()}`,6000);return true;
 }
 // Añadir la tarea nueva a la rutina de la parecida (con su misma repetición, desde hoy)
-function taskAddToRoutine(title,similarId){
- const sim=find(S.tasks,similarId),r=sim&&tzRoutineOf(sim);if(!r)return false;
+function taskAddToRoutineId(title,routineId){
+ const r=(S.routines||[]).find(x=>x.id===routineId&&x.linkedTasks&&!x.archived);if(!r)return false;
+ const model=(r.taskIds||[]).map(id=>find(S.tasks,id)).find(t=>t&&!t.done&&t.repeat&&t.repeat!=='none');
+ return taskAddToRoutine(title,null,r,model);
+}
+function taskAddToRoutine(title,similarId,rIn,modelIn){
+ const sim=modelIn||find(S.tasks,similarId)||{repeat:'none'},r=rIn||(sim.id&&tzRoutineOf(sim));if(!r)return false;
  const nt={id:uid(),title,date:today(),who:'ambos',repeat:sim.repeat||'none',notes:'',done:false,...(sim.repeat==='custom'?{every:sim.every,unit:sim.unit}:{})};
  S.tasks.push(nt);
  try{const next=CasaCleaningLinks.link(S,r,r.id,r.title,[...r.taskIds,nt.id],Date.now());S.routines=S.routines.map(x=>x.id===r.id?next:x)}
  catch(e){S.tasks=S.tasks.filter(x=>x.id!==nt.id);toast(String(e.message||e));return false}
  save();toastUndo(`Añadida a la rutina «${r.title}»`,6000);return true;
 }
-function tzSuggestHtml(q,list){
- return`<div class="tz-sug" role="listbox" aria-label="Tareas parecidas"><p class="tz-sug-h">¿Es alguna de estas?</p>${list.map(t=>{const r=tzRoutineOf(t),when=t.date?relDate(t.date)+(t.repeat&&t.repeat!=='none'?' · '+repLabel(t).toLowerCase():''):'Sin fecha';
+function tzSuggestHtml(q,list,routines){
+ return`<div class="tz-sug" role="listbox" aria-label="Tareas parecidas">${routines.length?`<p class="tz-sug-h">🧹 Rutinas de limpieza</p>${routines.map(r=>`<div class="tz-sug-row"><span class="tz-sug-t"><b>${esc(r.title)}</b><small>${(r.taskIds||[]).length} tareas</small></span><span class="tz-sug-b"><button type="button" class="btn sec" data-sug="toRoutine" data-id="${esc(r.id)}">+ Añadir a esta rutina</button></span></div>`).join('')}`:''}${list.length?'<p class="tz-sug-h">¿Es alguna de estas?</p>':''}${list.map(t=>{const r=tzRoutineOf(t),when=t.date?relDate(t.date)+(t.repeat&&t.repeat!=='none'?' · '+repLabel(t).toLowerCase():''):'Sin fecha';
   return`<div class="tz-sug-row"><span class="tz-sug-t"><b>${esc(t.title)}</b><small>${esc(when)}${r?' · rutina «'+esc(r.title)+'»':''}</small></span><span class="tz-sug-b">${t.date!==today()||t.repeat!=='none'?`<button type="button" class="btn sec" data-sug="done" data-id="${esc(t.id)}">✓ Hecha hoy</button>`:''}${r?`<button type="button" class="btn sec" data-sug="routine" data-id="${esc(t.id)}">+ A su rutina</button>`:''}</span></div>`}).join('')}
   <button type="button" class="tz-sug-apart" data-sug="apart">➕ Añadir «${esc(q)}» aparte</button></div>`;
 }
@@ -204,14 +218,15 @@ function tzSuggestFor(input){
  const ov=input.closest('.overlay');if(cfg.sheet&&!(ov&&ov.dataset.newTask))return;
  const anchor=cfg.sheet?input:(input.closest('.quick')||input);
  let box=anchor.nextElementSibling&&anchor.nextElementSibling.matches('.tz-sug-box')?anchor.nextElementSibling:null;
- const q=input.value.trim(),list=q.length>=3?taskSimilar(q):[];
- if(!list.length){if(box)box.remove();return}
+ const q=input.value.trim(),list=q.length>=3?taskSimilar(q):[],routines=q.length>=3?tzRoutinesFor(q):[];
+ if(!list.length&&!routines.length){if(box)box.remove();return}
  if(!box){box=document.createElement('div');box.className='tz-sug-box';anchor.after(box);
   box.addEventListener('click',e=>{const b=e.target.closest('[data-sug]');if(!b)return;e.stopPropagation();const title=input.value.trim();let ok=false;
    if(b.dataset.sug==='done')ok=taskDoneToday(b.dataset.id);
    else if(b.dataset.sug==='routine')ok=title&&taskAddToRoutine(title,b.dataset.id);
+   else if(b.dataset.sug==='toRoutine')ok=title&&taskAddToRoutineId(title,b.dataset.id);
    else{box.remove();if(cfg.add)cfg.add();return}
    if(ok){input.value='';box.remove();if(cfg.sheet&&ov)ov.remove()}})}
- box.innerHTML=tzSuggestHtml(q,list);
+ box.innerHTML=tzSuggestHtml(q,list,routines);
 }
 document.addEventListener('input',e=>{if(e.target&&TZ_ADD_INPUTS[e.target.id])tzSuggestFor(e.target)});
