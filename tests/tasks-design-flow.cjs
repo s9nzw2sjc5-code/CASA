@@ -313,6 +313,31 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "vz").tzZone), "");
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => t.id !== "vz"); ui.taskZone = null; save(); });
 
+    // Marcar sin querer una tarea que se repite: «Deshacer» en el aviso y se puede desmarcar en «Hechas hoy»
+    await p.evaluate(() => { S.tasks.push({ id: "rep1", title: "Repetida de prueba", date: today(), repeat: "weekly", who: "yo", notes: "", done: false }); save(); ui.view = "tareas"; ui.taskView = "hoy"; ui.taskZone = null; render(); });
+    const orig = await p.evaluate(() => JSON.stringify(S.tasks.find((t) => t.id === "rep1")));
+    await p.locator('.tz-row [data-act=toggleTask][data-id="rep1"]').first().click();
+    assert.match(await p.locator("#toast").innerText(), /Hecha\. Próxima/);
+    await p.locator(".toast-undo").click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "rep1").date), await p.evaluate(() => today()), "Deshacer en el aviso");
+    await p.locator('.tz-row [data-act=toggleTask][data-id="rep1"]').first().click();
+    await p.evaluate(() => { document.querySelector("#toast").classList.remove("show"); document.querySelector(".tz-done").open = true; });
+    await p.locator('.tz-done [data-act=undoDone][data-id="rep1"]').click();
+    const back = await p.evaluate(() => S.tasks.find((t) => t.id === "rep1"));
+    assert.equal(back.date, await p.evaluate(() => today()), "desmarcada desde Hechas hoy");
+    assert.equal(back.undoPrev, undefined);
+    assert.equal(await p.evaluate(() => S.tasks.filter((t) => t.title === "Repetida de prueba").length), 1, "sin duplicar");
+    // Añadir a una rutina una tarea que ya existe suelta con el mismo nombre: se usa esa, no se crea otra
+    await p.evaluate(() => {
+      S.tasks.push({ id: "sl1b", title: "Salón: aspirar el sofá", date: addDays(today(), 1), repeat: "weekly", who: "yo", notes: "", done: false }, { id: "loose", title: "fregar todo el salón", date: today(), repeat: "none", who: "yo", notes: "", done: false });
+      S.routines = [CasaCleaningLinks.link(S, null, "rsl2", "Limpieza semanal", ["sl1b"], 1)]; save(); ui.view = "hoy"; render();
+    });
+    await p.locator("#qTask").fill("fregar todo el salón");
+    await p.locator("#qTask").dispatchEvent("input");
+    await p.locator('.tz-sug [data-sug="toRoutine"][data-id="rsl2"]').click();
+    assert.deepEqual(await p.evaluate(() => [S.tasks.filter((t) => t.title === "fregar todo el salón").length, S.routines[0].taskIds.includes("loose"), S.tasks.find((t) => t.id === "loose").repeat]), [1, true, "weekly"]);
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !["rep1", "sl1b", "loose"].includes(t.id)); S.routines = []; save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

@@ -799,29 +799,29 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=157"></script>
-<script src="sync.js?v=157"></script>
-<script src="receipts.js?v=157"></script>
-<script src="receipt-image.js?v=157"></script>
-<script src="receipt-layout.js?v=157"></script>
-<script src="receipt-ocr.js?v=157"></script>
-<script src="product-photo.js?v=157"></script>
-<script src="product-photo-ui.js?v=157"></script>
-<script src="shopping-recommendations.js?v=157"></script>
-<script src="household-insights.js?v=157"></script>
-<script src="document-files.js?v=157"></script>
-<script src="document-photo.js?v=157"></script>
-<script src="cleaning-links.js?v=157"></script>
-<script src="home-model.js?v=157"></script>
-<script src="cocina.js?v=157"></script>
-<script src="cleaning-view.js?v=157"></script>
-<script src="home-ui.js?v=157"></script>
-<script src="household-ui.js?v=157"></script>
-<script src="receipt-extras.js?v=157"></script>
-<script src="house-plan.js?v=157"></script>
-<script src="house-plan-ui.js?v=157"></script>
-<script src="lidl-ui.js?v=157"></script>
-<script src="tasks-ui.js?v=157"></script>
+<script src="push.js?v=158"></script>
+<script src="sync.js?v=158"></script>
+<script src="receipts.js?v=158"></script>
+<script src="receipt-image.js?v=158"></script>
+<script src="receipt-layout.js?v=158"></script>
+<script src="receipt-ocr.js?v=158"></script>
+<script src="product-photo.js?v=158"></script>
+<script src="product-photo-ui.js?v=158"></script>
+<script src="shopping-recommendations.js?v=158"></script>
+<script src="household-insights.js?v=158"></script>
+<script src="document-files.js?v=158"></script>
+<script src="document-photo.js?v=158"></script>
+<script src="cleaning-links.js?v=158"></script>
+<script src="home-model.js?v=158"></script>
+<script src="cocina.js?v=158"></script>
+<script src="cleaning-view.js?v=158"></script>
+<script src="home-ui.js?v=158"></script>
+<script src="household-ui.js?v=158"></script>
+<script src="receipt-extras.js?v=158"></script>
+<script src="house-plan.js?v=158"></script>
+<script src="house-plan-ui.js?v=158"></script>
+<script src="lidl-ui.js?v=158"></script>
+<script src="tasks-ui.js?v=158"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -876,7 +876,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=157;
+const APP_VERSION=158;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1907,6 +1907,19 @@ function answerNotice(d){
 
 /* ---------- acciones ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
+// Marcar hecha (o desmarcar una tarea suelta). Si se repite, se guarda cómo estaba para poder desmarcarla hoy
+function markTaskDone(task){
+  const repeating=!task.done&&task.repeat&&task.repeat!=='none',prev={date:task.date||'',lastDone:task.lastDone||'',lastDoneAt:task.lastDoneAt||0,lastDoneBy:task.lastDoneBy||'',day:today()};
+  Object.assign(task,CasaCleaningLinks.advanceTask(task,today(),Date.now(),meName(),nextOcc));
+  if(repeating)task.undoPrev=prev;else delete task.undoPrev;
+  (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(task.id))r.date=CasaCleaningLinks.effectiveDate(S,r)});
+}
+function undoTaskDone(t){
+  const p=t.undoPrev;if(!p)return;Object.assign(t,{date:p.date,lastDone:p.lastDone,lastDoneAt:p.lastDoneAt,lastDoneBy:p.lastDoneBy});delete t.undoPrev;
+  (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(t.id))r.date=CasaCleaningLinks.effectiveDate(S,r)});
+}
+// Se puede desmarcar hoy: una tarea suelta hecha, o una que se repite marcada hoy
+const canUndoDone=t=>!!t&&(t.done||!!(t.undoPrev&&t.undoPrev.day===today()&&t.lastDone===today()));
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Sin fecha»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
@@ -1950,8 +1963,10 @@ const ACT={
   quickTask, quickItem, quickNoDate,
   toggleTask:d=>{
     const task=find(S.tasks,d.id);if(!task)return;const repeating=!task.done&&task.repeat&&task.repeat!=='none';
-    Object.assign(task,CasaCleaningLinks.advanceTask(task,today(),Date.now(),meName(),nextOcc));save();if(repeating)toast('Hecha. Próxima: '+relDate(task.date));
+    markTaskDone(task);save();if(repeating)toastUndo('Hecha. Próxima: '+relDate(task.date),6000);
   },
+  // Desmarcar una tarea que se repite y se marcó hecha hoy: vuelve a su fecha de antes
+  undoDone:d=>{const t=find(S.tasks,d.id);if(!t||!t.undoPrev)return;undoTaskDone(t);save();toast('Desmarcada: vuelve a '+relDate(t.date).toLowerCase())},
   editTask:d=>taskSheet(find(S.tasks,d.id)),
   newImportant:()=>taskSheet(null,today(),{important:true}),
   newTask:d=>taskSheet(null,d.date),

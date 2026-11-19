@@ -54,13 +54,13 @@ const progressBar=(done,total,label)=>`<div class="tz-bar" role="progressbar" ar
 
 // Fila con casilla: hecha, por hacer o solo informativa (lo repetido ya hecho no se desmarca desde aquí)
 function tzRow(t,{done=false,showDate=false,simple=false}={}){
- const z=taskZone(t),min=CasaHousePlan.minutesFor(t),late=!done&&t.date&&t.date<today(),canToggle=done?!!t.done:true;
+ const z=taskZone(t),min=CasaHousePlan.minutesFor(t),late=!done&&t.date&&t.date<today(),canToggle=done?canUndoDone(t):true;
  const wet=!done&&!t.urgent&&t.date&&t.date<=today()&&CasaHousePlan.isOutdoor(t)&&tzWetToday();
  const meta=[t.urgent&&!done?'<span class="urgent-tag" title="Urgente">❗</span>':'',wet?'<span class="tz-wet">🌧️ mejor en día seco</span>':'',`<span>${esc(z.name)}</span>`,min?`<span class="tz-min">${min} min</span>`:'',
   late?`<span class="late">Atrasada · ${esc(relDate(t.date))}</span>`:showDate&&t.date&&!done?`<span>${esc(relDate(t.date))}</span>`:'',
   done?`<span>Hecha ${taskDoneDay(t)===today()?'hoy':esc(relDate(taskDoneDay(t)).toLowerCase())}</span>`:'',
   ].filter(Boolean).join('<i aria-hidden="true">·</i>');
- const check=`<button class="check round ${done?'on':''}" ${canToggle?`data-act="toggleTask" data-id="${esc(t.id)}" aria-label="${esc((done?'Desmarcar ':'Completar ')+t.title)}"`:`disabled aria-label="Hecha"`}></button>`;
+ const check=`<button class="check round ${done?'on':''}" ${canToggle?`data-act="${done&&!t.done?'undoDone':'toggleTask'}" data-id="${esc(t.id)}" aria-label="${esc((done?'Desmarcar ':'Completar ')+t.title)}"`:`disabled aria-label="Hecha"`}></button>`;
  return`<li class="row tz-row ${done?'is-done':''} ${t.urgent&&!done?'is-urgent':''}">${check}<button class="tz-main" data-act="editTask" data-id="${esc(t.id)}"><span class="tz-title">${esc(t.title)}</span>${simple&&!(t.urgent&&!done)&&!late?'':`<span class="tz-meta">${meta}</span>`}</button><span class="tz-go" aria-hidden="true">›</span></li>`;
 }
 const tzList=rows=>`<ul class="list tz-list">${rows.join('')}</ul>`;
@@ -190,8 +190,7 @@ const tzRoutineOf=t=>(S.routines||[]).find(r=>r.linkedTasks&&!r.archived&&(r.tas
 // Marcar hecha hoy una tarea que estaba para otro día: queda en «Hechas hoy»; si se repite, la siguiente vez cuenta desde aquí
 function taskDoneToday(id){
  const x=find(S.tasks,id);if(!x||x.done)return false;
- Object.assign(x,CasaCleaningLinks.advanceTask(x,today(),Date.now(),meName(),nextOcc));
- (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(id))r.date=CasaCleaningLinks.effectiveDate(S,r)});
+ markTaskDone(x);
  save();toastUndo(`«${x.title}» hecha hoy${x.done?'':' · próxima: '+relDate(x.date).toLowerCase()}`,6000);return true;
 }
 // Añadir la tarea nueva a la rutina de la parecida (con su misma repetición, desde hoy)
@@ -202,10 +201,14 @@ function taskAddToRoutineId(title,routineId){
 }
 function taskAddToRoutine(title,similarId,rIn,modelIn){
  const sim=modelIn||find(S.tasks,similarId)||{repeat:'none'},r=rIn||(sim.id&&tzRoutineOf(sim));if(!r)return false;
- const nt={id:uid(),title,date:today(),who:'ambos',repeat:sim.repeat||'none',notes:'',done:false,...(sim.repeat==='custom'?{every:sim.every,unit:sim.unit}:{})};
- S.tasks.push(nt);
+ // Si ya hay una tarea pendiente con ese mismo nombre (fuera de rutinas), se usa esa en vez de crear otra igual
+ const same=(S.tasks||[]).find(x=>!x.done&&taskNorm(x.title)===taskNorm(title)&&!tzRoutineOf(x));
+ const rep=sim.repeat&&sim.repeat!=='none'?{repeat:sim.repeat,...(sim.repeat==='custom'?{every:sim.every,unit:sim.unit}:{})}:{};
+ let nt,created=false,backup=null;
+ if(same){backup={...same};nt=same;Object.assign(nt,{date:nt.date||today()},nt.repeat&&nt.repeat!=='none'?{}:rep)}
+ else{nt={id:uid(),title,date:today(),who:'ambos',repeat:'none',notes:'',done:false,...rep};S.tasks.push(nt);created=true}
  try{const next=CasaCleaningLinks.link(S,r,r.id,r.title,[...r.taskIds,nt.id],Date.now());S.routines=S.routines.map(x=>x.id===r.id?next:x)}
- catch(e){S.tasks=S.tasks.filter(x=>x.id!==nt.id);toast(String(e.message||e));return false}
+ catch(e){if(created)S.tasks=S.tasks.filter(x=>x.id!==nt.id);else Object.keys(nt).forEach(k=>{if(!(k in backup))delete nt[k]}),Object.assign(nt,backup);toast(String(e.message||e));return false}
  save();toastUndo(`Añadida a la rutina «${r.title}»`,6000);return true;
 }
 function tzSuggestHtml(q,list,routines){

@@ -2,7 +2,7 @@
 // la última versión) y, si no hay, usa la copia guardada.
 const CACHE = 'casa-v158';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['cleaning-view.js?v=157','push.js?v=157','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=157', 'shopping-recommendations.js?v=157', 'household-insights.js?v=157', 'household-ui.js?v=157', 'document-files.js?v=157', 'document-photo.js?v=157', 'home-model.js?v=157', 'cleaning-links.js?v=157', 'home-ui.js?v=157', 'cocina.js?v=157', 'product-photo.js?v=157', 'product-photo-ui.js?v=157', 'receipts.js?v=157', 'receipt-image.js?v=157', 'receipt-layout.js?v=157', 'receipt-ocr.js?v=157', 'receipt-extras.js?v=157', 'house-plan.js?v=157', 'house-plan-ui.js?v=157', 'lidl-ui.js?v=157', 'tasks-ui.js?v=157', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['cleaning-view.js?v=158','push.js?v=158','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=158', 'shopping-recommendations.js?v=158', 'household-insights.js?v=158', 'household-ui.js?v=158', 'document-files.js?v=158', 'document-photo.js?v=158', 'home-model.js?v=158', 'cleaning-links.js?v=158', 'home-ui.js?v=158', 'cocina.js?v=158', 'product-photo.js?v=158', 'product-photo-ui.js?v=158', 'receipts.js?v=158', 'receipt-image.js?v=158', 'receipt-layout.js?v=158', 'receipt-ocr.js?v=158', 'receipt-extras.js?v=158', 'house-plan.js?v=158', 'house-plan-ui.js?v=158', 'lidl-ui.js?v=158', 'tasks-ui.js?v=158', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
