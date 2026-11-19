@@ -307,6 +307,7 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .hsec .empty{background:var(--surface);border-color:transparent}
 .hsec.imp{margin:0 0 16px;background:color-mix(in srgb,var(--c-recordar) 24%,var(--bg));box-shadow:inset 0 0 0 2px var(--c-recordar),0 8px 22px color-mix(in srgb,var(--c-recordar) 30%,transparent)}
 .hsec.imp h2{font-size:1.15rem}
+.acuerdate>summary{list-style:none;cursor:pointer;min-height:44px}.acuerdate>summary::-webkit-details-marker{display:none}.acuerdate>summary .tz-caret{margin-left:auto}.acuerdate[open]>summary .tz-caret{transform:rotate(180deg)}.acu-sub{margin:0 0 8px;font-size:.84rem;color:var(--muted)}
 .hsec.imp .row-title{font-weight:700}
 .notebox{background:var(--surface);border-radius:22px;padding:12px;margin:0 0 14px;box-shadow:var(--shadow)}
 .notebox textarea{resize:none;min-height:46px;max-height:140px;field-sizing:content}
@@ -1089,6 +1090,28 @@ const ul=rows=>`<ul class="list">${rows.join('')}</ul>`;
 
 /* ---------- vistas ---------- */
 function heroStats(a){return`<div class="hero-stats">${a.map(([n,l])=>`<span class="hstat"><b>${n}</b><small>${l}</small></span>`).join('')}</div>`}
+// Cita: evento puntual, que se repite cada año (cumpleaños) o de Ringo; los que se repiten a menudo no se avisan
+function isAppointmentEvent(e){return !isRep(e)||e.repeat==='yearly'||!!e.petAppointment||norm(e.title||'')==='ringo: peluqueria'}
+// Tarea con fecha que conviene recordar: importante, urgente o puntual (no limpieza, rutina, plan ni mantenimiento)
+function isRememberTask(x){
+  if(!x||x.done||!x.date)return false;
+  if(x.urgent||isImportantTask(x))return true;
+  if(isRep(x)||x.planKey||x.maintenance||x.tzZone)return false;
+  return !(S.routines||[]).some(r=>!r.archived&&(r.taskIds||[]).includes(x.id));
+}
+// Lo de los próximos `days` días (sin contar hoy): eventos-cita, tareas, recordatorios puntuales y citas de Ringo
+function upcomingAppointments(t,days){
+  const out=[];
+  for(let i=1;i<=days;i++){
+    const d=addDays(t,i),lbl=i===1?'Mañana':i===2?'Pasado mañana':'En '+i+' días';
+    S.events.filter(e=>isAppointmentEvent(e)&&occursOn(e,d)).forEach(e=>out.push({k:d+(e.time||'00:00'),row:eventRow(e,d,lbl+' · '+parse(d).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'}))}));
+    S.tasks.filter(x=>x.date===d&&isRememberTask(x)).forEach(x=>out.push({k:d+(x.time||'99:99'),row:taskRow(x)}));
+    S.reminders.filter(r=>!r.done&&!isRep(r)&&r.date===d).forEach(r=>out.push({k:d+(r.time||'99:99'),row:remRow(r)}));
+    // Citas de Ringo con fecha apuntada, salvo las que ya están como evento ese día
+    S.pet.filter(x=>x.next===d&&!S.events.some(e=>e.petAppointment&&e.date===d&&(e.time||'')===(x.time||''))).forEach(x=>out.push({k:d+(x.time||'99:99'),row:petRow(x)}));
+  }
+  return out.sort((a,b)=>a.k.localeCompare(b.k));
+}
 function vHoy(){
   const t=today(),d=new Date(),hr=d.getHours(),nowHM=pad(hr)+':'+pad(d.getMinutes());
   const greet=hr>=6&&hr<13?'Buenos días':hr>=13&&hr<21?'Buenas tardes':'Buenas noches';
@@ -1102,12 +1125,16 @@ function vHoy(){
   const imp=rems.filter(r=>!isRep(r)),repRems=rems.filter(r=>isRep(r));
   // Lo de mañana, para tenerlo presente el día de antes: recordatorios con fecha concreta y eventos del calendario
   // (los eventos que se repiten cada día no se avisan)
-  const tmRows=[...S.reminders.filter(r=>!r.done&&!isRep(r)&&r.date===tm).map(r=>[r.time||'99:99',remRow(r)]),
-    ...S.events.filter(e=>e.repeat!=='daily'&&occursOn(e,tm)).map(e=>[e.time||'00:00',eventRow(e,tm,'Mañana')])]
-    .sort((a,b)=>a[0].localeCompare(b[0])).map(x=>x[1]);
+  // Las citas con fecha (eventos puntuales, peluquería de Ringo, fechas importantes…) salen en Importante el mismo día
+  const apEvs=evs0=>evs0.filter(isAppointmentEvent);
+  const todayAppts=apEvs(S.events.filter(e=>occursOn(e,t))).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
+  const todayImpTasks=S.tasks.filter(x=>!x.done&&!x.urgent&&x.date===t&&isImportantTask(x));
+  const todayPetAppts=S.pet.filter(x=>!x.urgent&&x.next===t);
+  // «¡Acuérdate!»: lo de los próximos 3 días, para tenerlo presente con antelación
+  const soon=upcomingAppointments(t,3);
   // Lo urgente (❗) que toca hoy o está atrasado va arriba, en Importante, y no se repite más abajo
   const urgentTasks=S.tasks.filter(x=>x.urgent&&!x.done&&x.date&&x.date<=t).sort((a,b)=>a.date.localeCompare(b.date)),urgentPets=S.pet.filter(x=>{const dd=petDue(x);return x.urgent&&dd&&dd<=t});
-  const impN=imp.length+tmRows.length+urgentTasks.length+urgentPets.length;
+  const impN=imp.length+todayAppts.length+todayImpTasks.length+todayPetAppts.length+urgentTasks.length+urgentPets.length;
   const low=S.staples.filter(s=>stapleLow(s)&&!stapleInList(s));
   const pend=S.items.filter(i=>!i.done).length;
   const evs=S.events.filter(e=>occursOn(e,t)).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
@@ -1124,20 +1151,21 @@ function vHoy(){
   // El tiempo y sus consejos en lugar del cuadro de notas (las notas se apuntan en Importantes);
   // un mensaje que haya llegado se sigue viendo
   h+=boardMsgCard()+houseWxCard('forecast');
-  if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante</h2><span class="imp-n">${impN}</span></div>${ul([...urgentTasks.map(x=>taskRow(x)),...urgentPets.map(petRow),...imp.map(remRow),...tmRows])}</section>`;
+  if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante hoy</h2><span class="imp-n">${impN}</span></div>${ul([...todayAppts.map(e=>eventRow(e,t,'Hoy')),...urgentTasks.map(x=>taskRow(x)),...todayImpTasks.map(x=>taskRow(x,t)),...urgentPets.map(petRow),...todayPetAppts.map(petRow),...imp.map(remRow)])}</section>`;
+  if(soon.length)h+=`<details class="hsec imp acuerdate" style="--sc:var(--c-recordar)"${ui.acuClosed?'':' open'}><summary class="hsec-h" data-act="acuToggle"><span class="hsec-ic" aria-hidden="true">🔔</span><h2>¡Acuérdate!!</h2><span class="imp-n">${soon.length}</span><span class="tz-caret" aria-hidden="true">⌄</span></summary><p class="acu-sub">Citas importantes de los próximos 3 días</p>${ul(soon.map(x=>x.row))}</details>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;
   const sec=(ic,title,color,body,extra)=>`<section class="hsec" style="--sc:${color}"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">${ic}</span><h2>${title}</h2>${extra||''}</div>${body}</section>`;
-  const nextEv=evs.find(e=>!e.time||(e.end||e.time)>=nowHM);
+  const nextEv=evs.find(e=>!todayAppts.includes(e)&&(!e.time||(e.end||e.time)>=nowHM));
   if(nextEv)h+=`<button class="next-ev" data-act="editEvent" data-id="${nextEv.id}"><span class="ne-k">${nextEv.time?'Próximo evento · '+nextEv.time+(nextEv.end?'–'+nextEv.end:''):'Hoy · todo el día'}</span><b>${esc(nextEv.title)}</b>${nextEv.place?`<span>📍 ${esc(nextEv.place)}</span>`:''}</button>`;
-  const otherEv=evs.filter(e=>e!==nextEv);
+  const otherEv=evs.filter(e=>e!==nextEv&&!todayAppts.includes(e));
   if(otherEv.length)h+=sec('📅',nextEv?'Más eventos hoy':'Eventos de hoy','var(--c-evento)',ul(otherEv.map(e=>eventRow(e,t))));
-  const lateRows=late.filter(x=>!x.urgent),nowRows=[...now.filter(x=>!x.urgent),...doneToday];
+  const lateRows=late.filter(x=>!x.urgent),nowRows=[...now.filter(x=>!x.urgent&&!todayImpTasks.includes(x)),...doneToday];
   // Lo atrasado no se lista en Hoy: solo un aviso que lleva a Tareas, donde sí aparece
   if(lateRows.length)h+=`<button class="late-note" data-act="tab" data-v="tareas"><span aria-hidden="true">⚠️</span><span><b>Tareas atrasadas · ${lateRows.length}</b><small>Están en Tareas</small></span><span aria-hidden="true">›</span></button>`;
   h+=sec('✅','Para hoy','var(--c-tareas)',nowRows.length?ul(nowRows.map(x=>taskRow(x,x.done?null:t))):`<div class="empty">${total?'Lo de hoy está arriba, en Importante.':'Nada pendiente para hoy.'}</div>`);
   h+=cleaningSection(true);
   if(repRems.length)h+=sec('⏰','Recordatorios','var(--c-recordar)',ul(repRems.map(remRow)));
-  const petSoon=S.pet.filter(x=>{const dd=petDue(x);return dd&&dd<=addDays(t,3)&&!(x.urgent&&dd<=t)}).sort((a,b)=>petDue(a).localeCompare(petDue(b)));
+  const petSoon=S.pet.filter(x=>{const dd=petDue(x);return dd&&dd<=addDays(t,3)&&!(x.urgent&&dd<=t)&&!todayPetAppts.includes(x)}).sort((a,b)=>petDue(a).localeCompare(petDue(b)));
   if(petSoon.length)h+=sec('🐶','Ringo','var(--c-ringo)',ul(petSoon.map(petRow)),'<button class="link" data-act="tab" data-v="ringo">Ver todo</button>');
   const nd=S.tasks.filter(x=>!x.done&&!x.date),pnd=S.pet.filter(x=>!petDue(x));
   if(nd.length||pnd.length)h+=sec('📌','Sin fecha','var(--c-hoy)',ul([...nd.slice(0,5).map(x=>taskRow(x)),...pnd.map(petRow)]),nd.length>5?`<button class="link" data-act="tab" data-v="tareas">Ver las ${nd.length}</button>`:'');
@@ -1917,6 +1945,7 @@ const ACT={
   answerNotice,
   refreshApp:()=>{location.reload()},
   // Al entrar en Tareas desde otra pestaña, siempre «Para hoy» (no la zona, Por zonas, Todas ni Rutinas de antes)
+  acuToggle:()=>{ui.acuClosed=!!$('.acuerdate')?.open},
   tab:d=>{if(d.v==='tareas'&&ui.view!=='tareas'){ui.taskView='hoy';ui.taskZone=null;ui.taskMode='tasks'}ui.view=d.v;reorgSel=null;if(d.v==='compras'){autoStaples();autoPantry();if(ui.ckTab==='novedades')ui.novCat=null}render();$('#app').scrollTop=0},
   quickTask, quickItem, quickNoDate,
   toggleTask:d=>{
