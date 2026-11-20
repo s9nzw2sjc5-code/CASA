@@ -72,6 +72,7 @@ function vTasksToday(){
  const t=today(),mine=taskMine(),due=mine.filter(x=>!x.done&&x.date&&x.date<=t).sort(byDateTime),doneToday=mine.filter(x=>taskDoneDay(x)===t);
  const urgentFirst=due.filter(x=>x.urgent).concat(due.filter(x=>!x.urgent));
  let h=personNote()+`<p class="tz-count">${plural(due.length,'pendiente','pendientes')} · ${plural(doneToday.length,'hecha','hechas')}</p>${progressBar(doneToday.length,due.length+doneToday.length,'Hecho hoy')}`;
+ if(due.filter(x=>!x.urgent).length>=4||due.some(x=>x.date<t&&!x.urgent))h+=`<button class="btn sec tz-prio" data-act="taskPriority">⚡ Reorganizar por prioridad</button>`;
  h+=`<h2 class="tz-h2">Para hoy</h2>`;
  if(urgentFirst.length)h+=tzList(urgentFirst.map(x=>tzRow(x)));
  else{const next=mine.filter(x=>!x.done&&x.date>t).sort(byDateTime)[0];h+=`<div class="empty tz-empty">Nada pendiente para hoy 🎉${next?`<br><small>Lo próximo: ${esc(next.title)} · ${esc(relDate(next.date).toLowerCase())}</small>`:''}</div>`}
@@ -135,11 +136,12 @@ function vTareasNew(){
 }
 // «Organizar limpieza»: todo lo que había arriba de Tareas, reunido en un sitio
 function taskOrganizeSheet(){
- const opts=[['reorg','↕','Reorganizar pendientes','Mover varias a la vez o «Estoy fuera»'],['plan','🧽','Plan de limpieza','Zonas, días y unir tus tareas'],['routines','🧹','Limpieza por frecuencia','Diarias, semanales, por estación y tus rutinas'],['tips','💡','Consejos de limpieza','Cómo hacer cada tarea'],['people','👥','Personas','Quién hace cada cosa']];
+ const opts=[['prio','⚡','Reorganizar por prioridad','Repartir lo acumulado en los próximos días'],['reorg','↕','Reorganizar pendientes','Mover varias a la vez o «Estoy fuera»'],['plan','🧽','Plan de limpieza','Zonas, días y unir tus tareas'],['routines','🧹','Limpieza por frecuencia','Diarias, semanales, por estación y tus rutinas'],['tips','💡','Consejos de limpieza','Cómo hacer cada tarea'],['people','👥','Personas','Quién hace cada cosa']];
  const ov=sheet('Organizar limpieza',`<div class="tz-org">${opts.map(([k,i,t,d])=>`<button type="button" data-org="${k}"><span aria-hidden="true">${i}</span><span><b>${t}</b><small>${d}</small></span><span aria-hidden="true">›</span></button>`).join('')}</div>`,{autoFocus:false});
  ov.querySelector('[data-s=ok]')?.remove();ov.querySelector('[data-s=cancel]').textContent='Cerrar';
  ov.addEventListener('click',e=>{const b=e.target.closest('[data-org]');if(!b)return;ov.remove();const k=b.dataset.org;
-  if(k==='reorg'){ui.taskZone=null;reorgSel=new Set();render();$('#app').scrollTop=0}
+  if(k==='prio')taskPrioritySheet();
+  else if(k==='reorg'){ui.taskZone=null;reorgSel=new Set();render();$('#app').scrollTop=0}
   else if(k==='plan')ACT.housePlan();else if(k==='routines')ACT.taskMode({v:'routines'});else if(k==='tips')ACT.tipsLibrary();else if(k==='people')ACT.people()});
  return ov;
 }
@@ -147,6 +149,7 @@ const TASKS_ACT={
  taskView:d=>{ui.taskView=d.v;ui.taskZone=null;render();$('#app').scrollTop=0},
  taskZone:d=>{ui.taskZone=d.v||null;render();$('#app').scrollTop=0},
  taskOrganize:()=>taskOrganizeSheet(),
+ taskPriority:()=>taskPrioritySheet(),
  tzDoneToggle:()=>{ui.tzDoneOpen=!ui.tzDoneOpen},
  // Lo de hoy y atrasado de esta zona pasa a mañana (las urgentes ❗ no se posponen); se puede deshacer
  taskZoneLater:d=>{const t=today(),ids=taskMine().filter(x=>!x.done&&x.date&&x.date<=t&&taskZone(x).id===d.v).map(x=>x.id);if(!ids.length)return;const was=reorgSel;moveTasks(ids,addDays(t,1));if(was===null&&reorgSel!==null){reorgSel=null;render()}},
@@ -240,4 +243,35 @@ document.addEventListener('input',e=>{if(e.target&&TZ_ADD_INPUTS[e.target.id])tz
 function tzZoneSelectHtml(t){
  const auto=taskZone({...t,tzZone:''});
  return`<div class="ts-full"><label for="f_zone">Vincular a</label><select class="field" id="f_zone"><option value="">Automático · ${esc(auto.name)}</option>${TASK_ZONES.map(z=>`<option value="${z.id}" ${t.tzZone===z.id?'selected':''}>${z.icon} ${esc(z.name)}</option>`).join('')}</select></div>`;
+}
+
+/* ---------- Reorganizar por prioridad: repartir lo acumulado sin sobrecargar ningún día ---------- */
+// Minutos por día: entre semana poco, el fin de semana más (como el plan de limpieza)
+const PRIO_CAP=d=>{const w=taskWeekday(d);return w<5?50:w===5?90:120};
+const prioMinutes=x=>CasaHousePlan.minutesFor(x)||15;
+const prioFreq=x=>x.repeat==='daily'?0:x.repeat==='weekly'?1:x.repeat==='custom'&&x.unit==='w'&&Number(x.every)<=2?2:x.repeat==='custom'&&x.unit==='d'?1:x.repeat&&x.repeat!=='none'?3:4;
+function priorityPlan(){
+ const t=today(),mine=taskMine(),movable=mine.filter(x=>!x.done&&x.date&&x.date<=t&&!x.urgent);
+ // Orden: 📅 importantes, más atrasadas, más frecuentes, más cortas
+ movable.sort((a,b)=>(isImportantTask(b)?1:0)-(isImportantTask(a)?1:0)||a.date.localeCompare(b.date)||prioFreq(a)-prioFreq(b)||prioMinutes(a)-prioMinutes(b)||String(a.title).localeCompare(String(b.title),'es'));
+ const ids=new Set(movable.map(x=>x.id)),load={};
+ // Lo que ya hay cada día (y lo urgente de hoy) ocupa su sitio
+ for(const x of mine)if(!x.done&&x.date&&!ids.has(x.id)){const d=x.date<t?t:x.date;load[d]=(load[d]||0)+prioMinutes(x)}
+ const plan=[];
+ for(const x of movable){const m=prioMinutes(x);let d=t,guard=0;while((load[d]||0)>0&&(load[d]||0)+m>PRIO_CAP(d)&&guard++<60)d=addDays(d,1);load[d]=(load[d]||0)+m;plan.push({id:x.id,title:x.title,from:x.date,to:d,min:m,important:isImportantTask(x)})}
+ return {plan,load};
+}
+function taskPrioritySheet(){
+ const {plan,load}=priorityPlan(),t=today();
+ if(!plan.length){toast('No hay tareas acumuladas que reorganizar');return}
+ const days=[...new Set(plan.map(p=>p.to))].sort(),moved=plan.filter(p=>p.to!==p.from).length;
+ const body=`<p class="hint">Lo importante y lo más atrasado, primero. Cada día, como mucho unos ${PRIO_CAP(t)} min entre semana y más el fin de semana. Las urgentes ❗ se quedan hoy.</p>
+  <div class="prio-days">${days.map(d=>`<div class="prio-day"><h4>${esc(tzDay(d))} <small>· ${load[d]||0} min</small></h4><ul>${plan.filter(p=>p.to===d).map(p=>`<li>${p.important?'📅 ':''}${esc(p.title)} <small>${p.min} min${p.from<t?' · atrasada':''}</small></li>`).join('')}</ul></div>`).join('')}</div>`;
+ const ov=sheet('⚡ Reorganizar por prioridad',body,{saveLabel:moved?`Aplicar (${moved})`:'Aplicar',autoFocus:false,onSave:()=>{
+  const by=new Map(plan.map(p=>[p.id,p.to]));let n=0;
+  for(const x of S.tasks)if(by.has(x.id)&&x.date!==by.get(x.id)){x.date=by.get(x.id);n++}
+  (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>by.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)});
+  save();toastUndo(n?`${n} ${n===1?'tarea reorganizada':'tareas reorganizadas'} por prioridad`:'Ya estaba todo en su sitio',7000);
+ }});
+ return ov;
 }

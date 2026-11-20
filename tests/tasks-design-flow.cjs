@@ -101,7 +101,7 @@ const { chromium } = require("playwright"),
 
     // 4) Organizar limpieza reúne Reorganizar (con «Estoy fuera»), plan, rutinas, consejos y personas
     await p.locator("[data-act=taskOrganize]").click();
-    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll(".tz-org b")].map((b) => b.textContent)), ["Reorganizar pendientes", "Plan de limpieza", "Limpieza por frecuencia", "Consejos de limpieza", "Personas"]);
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll(".tz-org b")].map((b) => b.textContent)), ["Reorganizar por prioridad", "Reorganizar pendientes", "Plan de limpieza", "Limpieza por frecuencia", "Consejos de limpieza", "Personas"]);
     await p.locator('[data-org="reorg"]').click();
     assert.equal(await p.locator(".reorg-away").count(), 1);
     await p.locator("[data-act=reorgStart]").click();
@@ -337,6 +337,33 @@ const { chromium } = require("playwright"),
     await p.locator('.tz-sug [data-sug="toRoutine"][data-id="rsl2"]').click();
     assert.deepEqual(await p.evaluate(() => [S.tasks.filter((t) => t.title === "fregar todo el salón").length, S.routines[0].taskIds.includes("loose"), S.tasks.find((t) => t.id === "loose").repeat]), [1, true, "weekly"]);
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !["rep1", "sl1b", "loose"].includes(t.id)); S.routines = []; save(); });
+
+    // ⚡ Reorganizar por prioridad: reparte lo acumulado sin pasar del tiempo de cada día; importantes primero; urgentes se quedan
+    await p.evaluate(() => {
+      const t = today(), a = (n) => addDays(t, n), base = { who: "yo", notes: "", done: false, repeat: "weekly" };
+      const keys = ["cocina-semanal", "bano-principal", "dormitorio", "salon", "escaleras", "lavadero", "doblar-1", "entrada", "patio", "nevera", "horno"];
+      keys.forEach((k, i) => S.tasks.push({ ...base, id: "pr" + i, title: "Acumulada " + i, date: a(-1 - (i % 4)), plan: "casa", planKey: k }));
+      S.tasks.push({ ...base, id: "prImp", title: "Pagar el seguro", date: a(-1), repeat: "none", important: true }, { ...base, id: "prUrg", title: "Fuente urgente", date: a(-2), urgent: true });
+      save(); ui.view = "tareas"; ui.taskView = "hoy"; ui.taskZone = null; ui.personFilter = "all"; render();
+    });
+    await p.locator("[data-act=taskPriority]").click();
+    assert.match(await p.locator(".overlay").last().innerText(), /Reorganizar por prioridad[\s\S]*Hoy/);
+    const before = await p.evaluate(() => JSON.stringify(S.tasks.map((t) => [t.id, t.date])));
+    await p.locator(".overlay [data-s=ok]").last().click();
+    const res = await p.evaluate(() => {
+      const t = today(), mine = S.tasks.filter((x) => /^pr/.test(x.id)), load = {};
+      for (const x of S.tasks) if (!x.done && x.date) load[x.date] = (load[x.date] || 0) + (CasaHousePlan.minutesFor(x) || 15);
+      const over = Object.entries(load).filter(([d, m]) => d >= t && m > PRIO_CAP(d) && S.tasks.filter((x) => x.date === d && !x.done).length > 1);
+      return { none_overdue: mine.filter((x) => x.id !== "prUrg").every((x) => x.date >= t), imp: mine.find((x) => x.id === "prImp").date === t, urg: mine.find((x) => x.id === "prUrg").date < t, over };
+    });
+    assert.equal(res.none_overdue, true, "nada atrasado");
+    assert.equal(res.imp, true, "lo importante, hoy");
+    assert.equal(res.urg, true, "la urgente no se mueve");
+    assert.deepEqual(res.over, [], "ningún día por encima de su tiempo");
+    assert.match(await p.locator("#toast").innerText(), /tareas reorganizadas por prioridad/);
+    await p.locator(".toast-undo").click();
+    assert.equal(await p.evaluate(() => JSON.stringify(S.tasks.map((t) => [t.id, t.date]))), before, "se puede deshacer");
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !/^pr/.test(t.id)); save(); });
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
