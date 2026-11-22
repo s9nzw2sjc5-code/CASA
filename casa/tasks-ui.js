@@ -288,7 +288,7 @@ function mamaInput(day,hour){
   hasRoutines:(S.tasks||[]).some(t=>t.mamaKey)||!!(S.cook&&S.cook.mamaNoRoutines)};
 }
 // Lo que necesitan los avisos del móvil para calcularse
-const avisosCtx=()=>({today:today(),addDays,me:ui.me||'',timers:(S.cook&&S.cook.timers)||[],tasks:S.tasks||[],events:(S.events||[]).filter(e=>e&&!e.done),
+const avisosCtx=()=>({today:today(),addDays,me:ui.me||'',houseKey:(S.cook&&S.cook.avisosKey)||'',timers:(S.cook&&S.cook.timers)||[],tasks:S.tasks||[],events:(S.events||[]).filter(e=>e&&!e.done),
  pets:(S.pet||[]).map(x=>({id:x.id,name:x.name,due:petDue(x),time:x.time||''})),
  nudges:day=>CasaMama.nudges({...mamaInput(day,9),tasks:(S.tasks||[]).filter(t=>t&&!t.done)}),minutes:prioMinutes});
 function mamaCard(){
@@ -311,67 +311,120 @@ Object.assign(TASKS_ACT,{mamaRoutines:()=>mamaAddRoutines()});
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.mama')){ui.mamaOpen=e.target.open;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(err){}}},true);
 
 /* ---------- Avisos en el móvil: activar, ajustar horas, probar y desactivar ---------- */
+// Clave privada de la casa (para que solo vuestros móviles puedan mandaros avisos); se guarda con los datos de Casa
+function avisosHouseKey(){
+ S.cook=S.cook||{};if(S.cook.avisosKey)return S.cook.avisosKey;
+ const b=new Uint8Array(24);crypto.getRandomValues(b);S.cook.avisosKey=btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');save();return S.cook.avisosKey;
+}
 async function avisosOn(){
+ if(!ui.me){whoAmI(()=>avisosOn());return}
+ avisosHouseKey();
  try{await CasaAvisos.enable(avisosCtx());toast('Avisos activados en este móvil');render()}
  catch(e){toast(String(e&&e.message||e))}
 }
-const AVISO_TYPES=[['resumen','Resumen del día'],['urgente','Lo urgente'],['hora','Tareas con hora'],['citas','Citas (30 min antes)'],['ringo','Ringo'],['manana','Lo de mañana'],['timers','Temporizadores (lavadora, secadora…)']];
+const AVISO_TYPES=[['resumen','Resumen del día'],['urgente','Lo urgente'],['hora','Tareas con hora'],['citas','Citas (30 min antes)'],['ringo','Ringo'],['manana','Lo de mañana'],['timers','Temporizadores (lavadora, secadora…)'],['alarma','Avisos a una hora'],['mensaje','Mensajes del otro («… dice»)']];
 function avisosSheet(){
  const h=CasaAvisos.hours(),P=CasaAvisos.prefs(),me=meName();
  const ov=sheet(`🔔 Avisos${me?' de '+esc(me):''} en este móvil`,`<p class="hint">Cada persona los activa o quita en su móvil. Llegan aunque Casa esté cerrada.</p>
   <div class="av-types">${AVISO_TYPES.map(([k,l])=>`<label class="av-type"><input type="checkbox" data-av-type="${k}" ${P.types[k]!==false?'checked':''}><span>${l}</span></label>`).join('')}</div>
   <label class="av-type"><input type="checkbox" id="av_mine" ${P.mine?'checked':''}><span>Solo mis tareas y las de los dos</span></label>
-  <label class="av-type"><input type="checkbox" id="av_tall" ${P.timersAll?'checked':''}><span>Temporizadores que ponga cualquiera de los dos</span></label>
+
   <div class="grid2"><div><label for="av_m">Resumen del día</label><input class="field" type="time" id="av_m" value="${esc(h.morning)}"></div>
   <div><label for="av_n">Lo urgente</label><input class="field" type="time" id="av_n" value="${esc(h.noon)}"></div>
   <div><label for="av_e">Lo de mañana</label><input class="field" type="time" id="av_e" value="${esc(h.evening)}"></div></div>
   <p class="hint">Además: las tareas con hora a su hora, y las citas 30 minutos antes.</p>
   <div class="avisos-actions"><button type="button" class="btn sec" data-av-test>Enviar una prueba</button><button type="button" class="btn sec" data-av-off>Desactivar en este móvil</button></div>`,
-  {saveLabel:'Guardar',autoFocus:false,onSave:ov=>{CasaAvisos.setHours({morning:val(ov,'av_m')||'09:00',noon:val(ov,'av_n')||'13:00',evening:val(ov,'av_e')||'21:00'});CasaAvisos.setPrefs({types:Object.fromEntries([...ov.querySelectorAll('[data-av-type]')].map(i=>[i.dataset.avType,i.checked])),mine:ov.querySelector('#av_mine').checked,timersAll:ov.querySelector('#av_tall').checked});CasaAvisos.syncNow(avisosCtx()).catch(()=>{});toast('Avisos de este móvil guardados')}});
+  {saveLabel:'Guardar',autoFocus:false,onSave:ov=>{CasaAvisos.setHours({morning:val(ov,'av_m')||'09:00',noon:val(ov,'av_n')||'13:00',evening:val(ov,'av_e')||'21:00'});CasaAvisos.setPrefs({types:Object.fromEntries([...ov.querySelectorAll('[data-av-type]')].map(i=>[i.dataset.avType,i.checked])),mine:ov.querySelector('#av_mine').checked});CasaAvisos.syncNow(avisosCtx()).catch(()=>{});toast('Avisos de este móvil guardados')}});
  ov.querySelector('[data-av-test]').onclick=async()=>{try{await CasaAvisos.test();toast('Prueba enviada: debería llegar en unos segundos')}catch(e){toast(String(e&&e.message||e))}};
  ov.querySelector('[data-av-off]').onclick=async()=>{await CasaAvisos.disable();ov.remove();toast('Avisos desactivados en este móvil');render()};
  return ov;
 }
 Object.assign(TASKS_ACT,{avisosOn:()=>avisosOn(),avisosSheet:()=>avisosSheet()});
 
-/* ---------- Temporizadores: lavadora, secadora, lavavajillas… (se comparten entre los dos móviles) ---------- */
-const TIMER_DEFAULTS={Lavadora:90,Secadora:120,Lavavajillas:150,Horno:45};
+/* ---------- Temporizadores y avisos a una hora (se comparten entre los dos móviles) ---------- */
+// Programas habituales de cada aparato (minutos); siempre se puede poner otro tiempo
+const TIMER_PROGRAMS={
+ lavadora:[['Rápido',30],['Delicado',60],['Diario',90],['Mixto',105],['Algodón',150],['Eco',210]],
+ secadora:[['Rápido',45],['Sintético',75],['Algodón',120],['Armario',150]],
+ lavavajillas:[['Rápido',30],['Diario',90],['Intensivo',150],['Eco',210]],
+ horno:[['30 min',30],['45 min',45],['1 h',60]],
+};
+const timerKind=l=>/lavadora/i.test(l)?'lavadora':/secadora/i.test(l)?'secadora':/lavavajillas/i.test(l)?'lavavajillas':/horno/i.test(l)?'horno':'';
 function timerPresets(){
  const L=(S.cook&&S.cook.houseLaundry)||{},washers=L.twoWashers?CasaHousePlan.washerNames(L):['Lavadora'];
  return [...washers,...(L.dryer!==false?['Secadora']:[]),'Lavavajillas','Horno'];
 }
-const timerMins=l=>Number((S.cook&&S.cook.timerMins||{})[l])||TIMER_DEFAULTS[l]||(/lavadora/i.test(l)?90:/secadora/i.test(l)?120:30);
+const timerMins=l=>Number((S.cook&&S.cook.timerMins||{})[l])||({lavadora:90,secadora:120,lavavajillas:150,horno:45}[timerKind(l)])||30;
 const timersActive=()=>((S.cook&&S.cook.timers)||[]).filter(t=>t&&t.end>Date.now()-15*60e3);
-const timerLeft=t=>{const m=Math.ceil((t.end-Date.now())/60e3);return m<=0?'✅ Lista':m>=60?`quedan ${Math.floor(m/60)} h ${m%60} min`:`quedan ${m} min`};
+const alarmsActive=()=>((S.cook&&S.cook.alarms)||[]).filter(a=>a&&a.at>Date.now()-5*60e3);
+const hm=m=>m>=60?`${Math.floor(m/60)} h${m%60?' '+(m%60)+' min':''}`:`${m} min`;
+const timerLeft=t=>{const m=Math.ceil((t.end-Date.now())/60e3);return m<=0?'✅ Lista':'quedan '+hm(m)};
+const clock=ms=>new Date(ms).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+const personName=id=>id==='ambos'?'los dos':((S.people||[]).find(p=>p.id===id)||{name:id}).name;
+// Para quién: yo, el otro o los dos (personas de la casa)
+function whoOptions(sel){const me=ui.me||'yo',other=(partner()||{}).id||'juanma';return[[me,'Para mí'],[other,'Para '+personName(other)],['ambos','Para los dos']].map(([v,l])=>`<option value="${v}" ${v===sel?'selected':''}>${esc(l)}</option>`).join('')}
+const whoTo=v=>v==='ambos'?[...new Set([(ui.me||'yo'),((partner()||{}).id||'juanma')])]:[v];
 function timerCard(){
- const ts=timersActive();
- return`<section class="timers">${ts.map(t=>`<div class="timer-row ${t.end<=Date.now()?'done':''}"><span aria-hidden="true">⏲️</span><span class="timer-t"><b>${esc(t.label)}</b><small>${esc(timerLeft(t))} · a las ${new Date(t.end).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</small></span><button class="timer-x" data-act="timerStop" data-id="${esc(t.id)}" aria-label="Quitar temporizador ${esc(t.label)}">✕</button></div>`).join('')}<button class="btn sec timer-add" data-act="timerSheet">⏲️ ${ts.length?'Otro temporizador':'Temporizador (lavadora, secadora…)'}</button></section>`;
+ const ts=timersActive(),as=alarmsActive();
+ return`<section class="timers">${ts.map(t=>`<div class="timer-row ${t.end<=Date.now()?'done':''}"><span aria-hidden="true">⏲️</span><span class="timer-t"><b>${esc(t.label)}${t.program?' · '+esc(t.program):''}</b><small>${esc(timerLeft(t))} · a las ${clock(t.end)}</small></span><button class="timer-x" data-act="timerStop" data-id="${esc(t.id)}" aria-label="Quitar temporizador ${esc(t.label)}">✕</button></div>`).join('')}
+  ${as.map(a=>`<div class="timer-row alarm"><span aria-hidden="true">${a.to.length>1||a.to[0]!==(ui.me||'yo')?'💬':'🔔'}</span><span class="timer-t"><b>${esc(a.text)}</b><small>${new Date(a.at).toDateString()===new Date().toDateString()?'Hoy':new Date(a.at).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})} a las ${clock(a.at)} · ${esc(a.to.length>1?'para los dos':'para '+(a.to[0]===(ui.me||'yo')?'mí':personName(a.to[0])))}</small></span><button class="timer-x" data-act="alarmStop" data-id="${esc(a.id)}" aria-label="Quitar aviso">✕</button></div>`).join('')}
+  <div class="timer-btns"><button class="btn sec" data-act="timerSheet">⏲️ Temporizador</button><button class="btn sec" data-act="alarmSheet">🔔 Aviso a una hora</button></div></section>`;
 }
 function timerSheet(){
- const rows=timerPresets().map(l=>`<div class="timer-pre"><span>${esc(l)}</span><input class="field" type="number" inputmode="numeric" min="1" max="600" value="${timerMins(l)}" data-tm-min="${esc(l)}" aria-label="Minutos de ${esc(l)}"><small>min</small><button type="button" class="btn" data-tm-start="${esc(l)}">Empezar</button></div>`).join('');
- const ov=sheet('⏲️ Temporizador',`<p class="hint">Avisa al móvil cuando termine (con los avisos activados). Los minutos se recuerdan para la próxima vez.</p>${rows}
-  <div class="timer-pre"><input class="field" id="tm_other" placeholder="Otro…" maxlength="40"><input class="field" type="number" inputmode="numeric" min="1" max="600" value="30" id="tm_other_min" aria-label="Minutos"><small>min</small><button type="button" class="btn" data-tm-start="">Empezar</button></div>`,{autoFocus:false});
- ov.querySelector('[data-s=ok]')?.remove();
- ov.addEventListener('click',e=>{const b=e.target.closest('[data-tm-start]');if(!b)return;const preset=b.dataset.tmStart;
-  const label=preset||val(ov,'tm_other')||'Temporizador',mins=Number(preset?ov.querySelector(`[data-tm-min="${CSS.escape(preset)}"]`).value:val(ov,'tm_other_min'));
-  if(!(mins>=1&&mins<=600)){toast('Pon los minutos (de 1 a 600)');return}
-  ov.remove();timerStart(label,mins,!!preset)});
- return ov;
+ const ap=timerPresets();
+ const ov=sheet('⏲️ Temporizador',`<label for="tm_ap">Aparato</label><select class="field" id="tm_ap">${ap.map(l=>`<option>${esc(l)}</option>`).join('')}<option value="">Otro…</option></select>
+  <input class="field" id="tm_other" placeholder="¿Qué es?" maxlength="40" hidden style="margin-top:8px">
+  <div class="tm-progs" data-tm-progs></div>
+  <div class="grid2"><div><label for="tm_h">Horas</label><input class="field" type="number" inputmode="numeric" min="0" max="12" id="tm_h"></div><div><label for="tm_m">Minutos</label><input class="field" type="number" inputmode="numeric" min="0" max="59" id="tm_m"></div></div>
+  <label for="tm_to">Avisar</label><select class="field" id="tm_to">${whoOptions(ui.me||'yo')}</select>`,{saveLabel:'Empezar',autoFocus:false,onSave:ov=>{
+  const ap=val(ov,'tm_ap'),label=ap||val(ov,'tm_other')||'Temporizador',mins=(Number(val(ov,'tm_h'))||0)*60+(Number(val(ov,'tm_m'))||0);
+  if(!(mins>=1&&mins<=720)){toast('Pon cuánto dura (horas y minutos)');return false}
+  timerStart(label,mins,!!ap,ov.dataset.prog||'',whoTo(val(ov,'tm_to')));
+ }});
+ const setT=m=>{ov.querySelector('#tm_h').value=Math.floor(m/60);ov.querySelector('#tm_m').value=m%60};
+ const draw=()=>{const l=val(ov,'tm_ap'),k=timerKind(l||val(ov,'tm_other'));ov.querySelector('#tm_other').hidden=!!l;
+  ov.querySelector('[data-tm-progs]').innerHTML=(TIMER_PROGRAMS[k]||[]).map(([n,m])=>`<button type="button" class="chip" data-tm-prog="${m}" data-name="${esc(n)}">${esc(n)} · ${hm(m)}</button>`).join('');
+  delete ov.dataset.prog;setT(l?timerMins(l):30)};
+ ov.querySelector('#tm_ap').onchange=draw;ov.querySelector('#tm_other').oninput=()=>{const k=timerKind(val(ov,'tm_other'));if(k)draw()};
+ ov.addEventListener('click',e=>{const b=e.target.closest('[data-tm-prog]');if(!b)return;ov.querySelectorAll('[data-tm-prog]').forEach(x=>x.classList.toggle('on',x===b));ov.dataset.prog=b.dataset.name;setT(Number(b.dataset.tmProg))});
+ draw();return ov;
 }
-function timerStart(label,mins,remember){
+function timerStart(label,mins,remember,program,to){
  S.cook=S.cook||{};
  if(remember)S.cook.timerMins={...(S.cook.timerMins||{}),[label]:mins};
- const t={id:uid(),label,end:Date.now()+mins*60e3,by:ui.me||''};
+ const t={id:uid(),label,program,end:Date.now()+mins*60e3,by:ui.me||'',to};
  S.cook.timers=[...timersActive(),t];save();timerLocal(t);
- if(typeof CasaAvisos!=='undefined'&&CasaAvisos.on()){CasaAvisos.syncNow(avisosCtx()).then(()=>toast(`⏲️ ${label}: te aviso a las ${new Date(t.end).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`)).catch(()=>toast('Temporizador puesto, pero no se ha podido avisar al servicio. Revisa la conexión.'))}
- else toast(`⏲️ ${label} en marcha. Activa «Recibir avisos en el móvil» para que te avise aunque cierres Casa.`);
+ CasaAvisos.send(avisosCtx(),{to,id:'tm-'+t.id,at:new Date(t.end).toISOString(),title:'⏲️ '+label+' lista',body:CasaAvisos.timerBody(label),tag:'casa-timer-'+t.id,type:'timers'})
+  .then(r=>toast(r.devices?`⏲️ ${label}: aviso a las ${clock(t.end)}`:`⏲️ ${label} en marcha hasta las ${clock(t.end)}. Para que avise al móvil, activa «Recibir avisos» en él.`))
+  .catch(()=>toast(`⏲️ ${label} en marcha hasta las ${clock(t.end)} (aviso al móvil: activa «Recibir avisos»).`));
 }
-function timerStop(id){S.cook.timers=timersActive().filter(t=>t.id!==id);save();if(typeof CasaAvisos!=='undefined'&&CasaAvisos.on())CasaAvisos.syncNow(avisosCtx()).catch(()=>{})}
-// Con Casa abierta: aviso al terminar aquí mismo y la cuenta atrás se actualiza sola
+function timerStop(id){S.cook.timers=timersActive().filter(t=>t.id!==id);save();CasaAvisos.cancel(avisosCtx(),'tm-'+id)}
+function alarmSheet(){
+ const now=new Date(Date.now()+30*60e3),d=now.toISOString().slice(0,10),h=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ const ov=sheet('🔔 Aviso',`<input class="field" id="al_t" placeholder="¿De qué aviso? Ej.: sacar el pollo del congelador" maxlength="200" aria-label="Texto del aviso">
+  <label for="al_to">Para</label><select class="field" id="al_to">${whoOptions(ui.me||'yo')}</select>
+  <label class="av-type"><input type="checkbox" id="al_now"><span>Ahora mismo</span></label>
+  <div class="grid2" data-al-when><div><label for="al_d">Día</label><input class="field" type="date" id="al_d" value="${d}"></div><div><label for="al_h">Hora</label><input class="field" type="time" id="al_h" value="${h}"></div></div>`,{saveLabel:'Enviar',autoFocus:false,onSave:ov=>{
+  const text=val(ov,'al_t');if(!text){toast('Escribe de qué es el aviso');return false}
+  const now=ov.querySelector('#al_now').checked,at=now?Date.now():new Date(val(ov,'al_d')+'T'+(val(ov,'al_h')||'09:00')).getTime();
+  if(!now&&!(at>Date.now()+30e3)){toast('Elige un día y una hora que aún no hayan pasado');return false}
+  const to=whoTo(val(ov,'al_to')),forOther=to.some(p=>p!==(ui.me||'yo')),me=meName()||'Casa';
+  const a={id:'al-'+uid(),text,at,to,by:ui.me||''};
+  if(!now){S.cook=S.cook||{};S.cook.alarms=[...alarmsActive(),a];save()}
+  CasaAvisos.send(avisosCtx(),{to,id:a.id,at:new Date(at).toISOString(),title:forOther?'💬 '+me+' dice':'🔔 Aviso',body:text,tag:'casa-'+a.id,type:forOther?'mensaje':'alarma'})
+   .then(r=>toast(!r.devices?`Aviso guardado, pero ${forOther?personName(to.find(p=>p!==(ui.me||'yo'))):'este móvil'} aún no tiene activados los avisos.`:now?'Aviso enviado':`Aviso programado para las ${clock(at)}`))
+   .catch(e=>toast(String(e&&e.message||e)));
+ }});
+ const sync=()=>{ov.querySelector('[data-al-when]').style.display=ov.querySelector('#al_now').checked?'none':''};ov.querySelector('#al_now').onchange=sync;
+ ov.querySelector('#al_to').onchange=()=>{if(val(ov,'al_to')!==(ui.me||'yo')&&!val(ov,'al_t'))ov.querySelector('#al_now').checked=true;sync()};
+ sync();return ov;
+}
+function alarmStop(id){S.cook.alarms=alarmsActive().filter(a=>a.id!==id);save();CasaAvisos.cancel(avisosCtx(),id)}
+// Con Casa abierta: aviso en pantalla al terminar y la cuenta atrás se actualiza sola
 const timerLocalSet=new Set();
 function timerLocal(t){
  if(!t||timerLocalSet.has(t.id)||t.end<=Date.now())return;timerLocalSet.add(t.id);
- setTimeout(()=>{if(!timersActive().some(x=>x.id===t.id))return;toast(`⏲️ ${t.label} lista`);try{if(Notification.permission==='granted'&&!CasaAvisos.on())navigator.serviceWorker.ready.then(r=>r.showNotification('⏲️ '+t.label+' lista',{body:CasaAvisos.timerBody(t.label),icon:'icons/icon-192.png',tag:'casa-timer-'+t.id}))}catch(e){}if(ui.view==='hoy')render()},t.end-Date.now());
+ setTimeout(()=>{if(!timersActive().some(x=>x.id===t.id))return;toast(`⏲️ ${t.label} lista`);if(ui.view==='hoy')render()},t.end-Date.now());
 }
-setInterval(()=>{try{if(ui.view!=='hoy'||document.querySelector('.overlay')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement&&document.activeElement.tagName))return;if(timersActive().length)render();timersActive().forEach(timerLocal)}catch(e){}},30000);
-Object.assign(TASKS_ACT,{timerSheet:()=>timerSheet(),timerStop:d=>timerStop(d.id)});
+setInterval(()=>{try{if(ui.view!=='hoy'||document.querySelector('.overlay')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement&&document.activeElement.tagName))return;if(timersActive().length||alarmsActive().length)render();timersActive().forEach(timerLocal)}catch(e){}},30000);
+Object.assign(TASKS_ACT,{timerSheet:()=>{if(!ui.me){whoAmI(()=>timerSheet());return}timerSheet()},timerStop:d=>timerStop(d.id),alarmSheet:()=>{if(!ui.me){whoAmI(()=>alarmSheet());return}alarmSheet()},alarmStop:d=>alarmStop(d.id)});

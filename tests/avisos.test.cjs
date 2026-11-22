@@ -33,20 +33,18 @@ test('no programa nada del pasado', () => {
   const past = { ...ctx, today: '2020-01-01', tasks: [{ id: 'a', title: 'Vieja', date: '2020-01-01', time: '10:00' }], events: [], pets: [] };
   assert.deepEqual(A.build(past), []);
 });
-test('preferencias del móvil: tipos apagados, solo lo mío y temporizadores', () => {
+test('preferencias del móvil: tipos apagados y solo lo mío', () => {
   const store = {}; globalThis.localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
-  const c = { ...ctx, me: 'yo', tasks: [...ctx.tasks, { id: 'j', title: 'Tarea de Juanma', date: D, time: '18:00', who: 'juanma' }, { id: 'b', title: 'De los dos', date: D, time: '19:00', who: 'ambos' }], timers: [{ id: 't1', label: 'Lavadora de arriba', end: Date.now() + 90 * 60e3, by: 'juanma' }] };
+  const c = { ...ctx, me: 'yo', tasks: [...ctx.tasks, { id: 'j', title: 'Tarea de Juanma', date: D, time: '18:00', who: 'juanma' }, { id: 'b', title: 'De los dos', date: D, time: '19:00', who: 'ambos' }] };
   let items = A.build(c);
   assert.ok(!items.some((x) => /Tarea de Juanma/.test(x.title)), 'solo lo mío y lo de los dos');
   assert.ok(items.some((x) => /De los dos/.test(x.title)));
-  const tm = items.find((x) => x.tag === 'casa-timer-t1');
-  assert.ok(tm && /Lavadora de arriba lista/.test(tm.title) && /tender/.test(tm.body));
-  A.setPrefs({ types: { resumen: false, timers: true }, timersAll: false });
+  A.setPrefs({ types: { resumen: false } });
   items = A.build(c);
   assert.ok(!items.some((x) => /^casa-manana-/.test(x.tag)), 'sin resumen');
-  assert.ok(!items.some((x) => x.tag === 'casa-timer-t1'), 'temporizador del otro, fuera');
-  A.setPrefs({ mine: false, types: { resumen: true }, timersAll: true });
+  A.setPrefs({ mine: false, types: { resumen: true } });
   assert.ok(A.build(c).some((x) => /Tarea de Juanma/.test(x.title)), 'todo');
   assert.match(A.timerBody('Secadora'), /Saca la ropa/);
+  assert.match(A.timerBody('Lavadora de arriba'), /tender/);
   delete globalThis.localStorage;
 });

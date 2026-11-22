@@ -383,12 +383,14 @@ const { chromium } = require("playwright"),
     await p.evaluate(() => {
       Object.defineProperty(Notification, "permission", { get: () => "granted", configurable: true }); // en el móvil: permiso concedido
       window.CasaPush.enable = async ({ publicKey, register }) => { if (!publicKey || publicKey.length < 80) throw Error("sin clave"); await register({ endpoint: "https://fcm.googleapis.com/fcm/send/prueba", keys: { p256dh: "a", auth: "b" } }); };
+      ui.me = "yo"; // este móvil es de Mari
       S.tasks.push({ id: "av1", title: "Cita con hora", date: addDays(today(), 1), time: "17:00", repeat: "none", done: false }); save(); ui.view = "hoy"; ui.mamaOpen = true; render();
     });
     await p.locator("[data-act=avisosOn]").click();
     await p.waitForFunction(() => /Avisos activados/.test(document.querySelector("#toast").textContent));
     const sub = avisosCalls.find((c) => c[0] === "/subscribe");
     assert.ok(sub && sub[1].sub.endpoint.includes("fcm") && sub[1].items.some((x) => /Cita con hora/.test(x.title)), "alta con sus avisos");
+    assert.ok(sub[1].person === "yo" && sub[1].houseKey && sub[1].houseKey.length >= 20, "de quién es y clave de la casa");
     assert.equal(await p.locator("[data-act=avisosSheet]").count(), 1);
     await p.locator("[data-act=avisosSheet]").click();
     await p.locator("#av_m").fill("08:30");
@@ -396,35 +398,51 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => CasaAvisos.hours().morning), "08:30");
     await p.evaluate(() => { localStorage.removeItem("casa-avisos"); S.tasks = S.tasks.filter((t) => t.id !== "av1"); save(); });
 
-    // Temporizador: lavadora → cuenta atrás en Hoy y aviso programado al terminar; se puede quitar
+    // Temporizador: lavadora con su programa (horas y minutos) → cuenta atrás y aviso al terminar; se puede quitar
     await p.evaluate(() => { const fakeSub = { endpoint: "https://fcm.googleapis.com/fcm/send/prueba", toJSON() { return { endpoint: this.endpoint, keys: { p256dh: "a", auth: "b" } }; } }; Object.defineProperty(navigator.serviceWorker, "ready", { value: Promise.resolve({ pushManager: { getSubscription: async () => fakeSub } }), configurable: true }); });
-    await p.evaluate(() => { localStorage.setItem("casa-avisos", "1"); S.cook = { ...S.cook, houseLaundry: { twoWashers: true, dryer: true, names: ["Lavadora de arriba", "Lavadora de abajo"] } }; save(); ui.view = "hoy"; render(); });
+    await p.evaluate(() => { ui.me = "yo"; localStorage.setItem("casa-avisos", "1"); S.cook = { ...S.cook, avisosKey: "clave-de-prueba-0123456789abc", houseLaundry: { twoWashers: true, dryer: true, names: ["Lavadora de arriba", "Lavadora de abajo"] } }; save(); ui.view = "hoy"; render(); });
     avisosCalls.length = 0;
     await p.locator("[data-act=timerSheet]").first().click();
-    assert.match(await p.locator(".overlay").last().innerText(), /Lavadora de arriba[\s\S]*Lavadora de abajo[\s\S]*Secadora[\s\S]*Lavavajillas/);
-    await p.locator('.overlay [data-tm-min="Lavadora de arriba"]').fill("75");
-    await p.locator('.overlay [data-tm-start="Lavadora de arriba"]').click();
-    await p.waitForFunction(() => /te aviso a las/.test(document.querySelector("#toast").textContent));
-    const sched = avisosCalls.filter((c) => c[0] === "/schedule").pop();
-    const tmItem = sched && sched[1].items.find((x) => /Lavadora de arriba lista/.test(x.title));
-    assert.ok(tmItem, "aviso al terminar");
-    assert.ok(Math.abs(Date.parse(tmItem.at) - Date.now() - 75 * 60e3) < 120e3, "a los 75 min");
-    assert.match(await p.locator(".timer-row").innerText(), /Lavadora de arriba[\s\S]*quedan 1 h 1[45] min/);
-    assert.equal(await p.evaluate(() => S.cook.timerMins["Lavadora de arriba"]), 75, "recuerda los minutos");
-    const before2 = avisosCalls.length;
-    await p.locator(".timer-x").click();
-    assert.equal(await p.locator(".timer-row").count(), 0);
-    await p.waitForFunction((n) => window.__n === undefined, before2);
-    for (let i = 0; i < 20 && avisosCalls.length === before2; i++) await p.waitForTimeout(100);
-    const sched2 = avisosCalls.filter((c) => c[0] === "/schedule").pop();
-    assert.ok(!sched2[1].items.some((x) => /Lavadora de arriba lista/.test(x.title)), "al quitarlo, sin aviso");
+    assert.match(await p.locator("#tm_ap").innerText(), /Lavadora de arriba[\s\S]*Lavadora de abajo[\s\S]*Secadora[\s\S]*Lavavajillas/);
+    await p.locator(".overlay [data-tm-prog]", { hasText: "Algodón" }).click();
+    assert.deepEqual([await p.locator("#tm_h").inputValue(), await p.locator("#tm_m").inputValue()], ["2", "30"], "programa Algodón: 2 h 30");
+    await p.locator("#tm_h").fill("4"); await p.locator("#tm_m").fill("0");
+    await p.locator(".overlay [data-s=ok]").click();
+    await p.waitForFunction(() => /aviso a las|en marcha/.test(document.querySelector("#toast").textContent));
+    const sent = avisosCalls.filter((c) => c[0] === "/send").pop();
+    assert.ok(sent && /Lavadora de arriba lista/.test(sent[1].title) && sent[1].type === "timers" && sent[1].houseKey && sent[1].to.join() === "yo", "aviso a mí al terminar");
+    assert.ok(Math.abs(Date.parse(sent[1].at) - Date.now() - 4 * 3600e3) < 120e3, "a las 4 horas");
+    assert.match(await p.locator(".timer-row").first().innerText(), /Lavadora de arriba · Algodón[\s\S]*quedan [34] h/);
+    await p.locator(".timer-row .timer-x").first().click();
+    for (let i = 0; i < 20 && !avisosCalls.some((c) => c[0] === "/cancel"); i++) await p.waitForTimeout(100);
+    assert.ok(avisosCalls.some((c) => c[0] === "/cancel" && /^tm-/.test(c[1].id)), "al quitarlo, se cancela el aviso");
+    // Aviso a una hora para mí, y «Mari dice…» a Juanma ahora mismo
+    await p.locator("[data-act=alarmSheet]").click();
+    await p.locator("#al_t").fill("Sacar el pollo del congelador");
+    const later = await p.evaluate(() => { const d = new Date(Date.now() + 3 * 3600e3); return [d.toISOString().slice(0, 10), String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")]; });
+    await p.locator("#al_d").fill(later[0]); await p.locator("#al_h").fill(later[1]);
+    await p.locator(".overlay [data-s=ok]").click();
+    await p.waitForFunction(() => /Aviso programado|aún no tiene/.test(document.querySelector("#toast").textContent));
+    const al = avisosCalls.filter((c) => c[0] === "/send").pop();
+    assert.deepEqual([al[1].title, al[1].body, al[1].to.join(), al[1].type], ["🔔 Aviso", "Sacar el pollo del congelador", "yo", "alarma"]);
+    assert.match(await p.locator(".timer-row.alarm").innerText(), /Sacar el pollo[\s\S]*para mí/);
+    await p.locator("[data-act=alarmSheet]").click();
+    await p.locator("#al_to").selectOption("juanma");
+    assert.equal(await p.locator("#al_now").isChecked(), true, "a otra persona: ahora mismo por defecto");
+    await p.locator("#al_t").fill("haz la cena");
+    await p.locator(".overlay [data-s=ok]").click();
+    await p.waitForFunction(() => /Aviso enviado|aún no tiene/.test(document.querySelector("#toast").textContent));
+    const msg = avisosCalls.filter((c) => c[0] === "/send").pop();
+    assert.deepEqual([msg[1].title, msg[1].body, msg[1].to.join(), msg[1].type], ["💬 Mari dice", "haz la cena", "juanma", "mensaje"]);
+    await p.locator(".timer-row.alarm .timer-x").click();
+    assert.equal(await p.locator(".timer-row.alarm").count(), 0);
     // Ajustar: avisos de cada persona en su móvil (tipos y «solo lo mío»)
     await p.evaluate(() => render());
     await p.locator("[data-act=avisosSheet]").click();
     await p.locator('[data-av-type="resumen"]').uncheck();
     await p.locator(".overlay [data-s=ok]").click();
     assert.equal(await p.evaluate(() => CasaAvisos.prefs().types.resumen), false);
-    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-prefs"); S.cook.timers = []; save(); });
+    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-prefs"); S.cook.timers = []; S.cook.alarms = []; save(); });
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");

@@ -10,7 +10,7 @@
  const on=()=>{try{return localStorage.getItem(LSK)==='1'&&'Notification' in root&&Notification.permission==='granted'}catch(e){return false}};
  function hours(){try{return Object.assign({morning:'09:00',noon:'13:00',evening:'21:00'},JSON.parse(localStorage.getItem(hoursKey)||'{}'))}catch(e){return{morning:'09:00',noon:'13:00',evening:'21:00'}}}
  // Preferencias de este móvil (cada persona en el suyo): qué tipos de aviso y si solo lo suyo
- const prefsKey='casa-avisos-prefs',TYPES=['resumen','urgente','hora','citas','ringo','manana','timers'];
+ const prefsKey='casa-avisos-prefs',TYPES=['resumen','urgente','hora','citas','ringo','manana','timers','alarma','mensaje'];
  function prefs(){const d={types:Object.fromEntries(TYPES.map(k=>[k,true])),mine:true,timersAll:true};try{const p=JSON.parse(localStorage.getItem(prefsKey)||'{}');return{...d,...p,types:{...d.types,...(p.types||{})}}}catch(e){return d}}
  // Texto del aviso al terminar un temporizador
  const timerBody=l=>/lavadora/i.test(l)?'Ya ha terminado. A tender antes de que coja olor.':/secadora/i.test(l)?'Ya ha terminado. Saca la ropa y dóblala ahora, que se arruga menos.':/lavavajillas/i.test(l)?'Ya ha terminado. Ábrelo para que se sequen los platos.':/horno/i.test(l)?'Ya está. Cuidado al sacarlo.':'Tiempo cumplido.';
@@ -22,8 +22,7 @@
   // «Solo lo mío»: las tareas de esta persona y las de los dos
   const mine=t=>!P.mine||!ctx.me||!t.who||t.who===ctx.me||t.who==='ambos';
   const pending=(ctx.tasks||[]).filter(t=>t&&!t.done&&typeof t.date==='string'&&mine(t));
-  // Temporizadores (lavadora, secadora…): aviso justo al terminar
-  for(const tm of (ctx.timers||[]))if(tm&&tm.end>now&&(P.timersAll||!ctx.me||tm.by===ctx.me)&&on('timers'))out.push({at:new Date(tm.end).toISOString(),title:'⏲️ '+String(tm.label||'Temporizador')+' lista',body:timerBody(String(tm.label||'')),tag:'casa-timer-'+tm.id});
+
   for(const day of days){
    const dayTasks=pending.filter(t=>t.date===day),late=pending.filter(t=>t.date<day),urgent=pending.filter(t=>t.urgent&&t.date<=day);
    // Mañana: resumen del día (lo mismo que «Recordatorios de hoy»)
@@ -44,10 +43,12 @@
  }
  async function subscription(){const sw=await navigator.serviceWorker.ready;return sw.pushManager.getSubscription()}
  let timer=null,lastSent='';
+ // Lo que el servicio necesita saber de este móvil: de quién es, de qué casa y qué avisos no quiere
+ const meta=ctx=>({person:ctx.me||'',houseKey:ctx.houseKey||'',mute:TYPES.filter(k=>prefs().types[k]===false)});
  async function sync(ctx,force){
   if(!on())return;const sub=await subscription();if(!sub)return;
-  const items=build(ctx),sig=JSON.stringify(items);if(!force&&sig===lastSent)return;
-  await post('/schedule',{sub:sub.toJSON(),items});lastSent=sig;
+  const items=build(ctx),body={sub:sub.toJSON(),items,...meta(ctx)},sig=JSON.stringify(body);if(!force&&sig===lastSent)return;
+  await post('/schedule',body);lastSent=sig;
  }
  const api={
   URL:URL_AVISOS,on,hours,build,prefs,TYPES,timerBody,
@@ -56,10 +57,13 @@
   async syncNow(ctx){await sync(ctx,true)},
   setHours(h){try{localStorage.setItem(hoursKey,JSON.stringify(Object.assign(hours(),h)))}catch(e){}lastSent=''},
   async enable(ctx){
-   await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:sub=>post('/subscribe',{sub,items:build(ctx)})});
+   await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:sub=>post('/subscribe',{sub,items:build(ctx),...meta(ctx)})});
    localStorage.setItem(LSK,'1');lastSent='';
   },
   async disable(){await root.CasaPush.disable(sub=>post('/unsubscribe',{endpoint:sub.endpoint})).catch(()=>{});try{localStorage.removeItem(LSK)}catch(e){}},
+  // Avisos para una persona (o las dos): a una hora, «Mari dice…» o el fin de un temporizador
+  send(ctx,o){if(!ctx.houseKey)return Promise.reject(Error('Activa los avisos en algún móvil primero.'));return post('/send',{houseKey:ctx.houseKey,...o})},
+  cancel(ctx,id){if(!ctx.houseKey)return Promise.resolve();return post('/cancel',{houseKey:ctx.houseKey,id}).catch(()=>{})},
   async test(){const sub=await subscription();if(!sub)throw Error('Activa primero los avisos en este móvil.');const r=await post('/test',{endpoint:sub.endpoint});if(!r.ok)throw Error('El servicio de avisos no ha podido llegar a este móvil.');},
   // Se llama al pintar la app: sube los avisos un rato después del último cambio
   schedule(ctxFn){if(!on())return;clearTimeout(timer);timer=setTimeout(()=>{sync(ctxFn()).catch(e=>console.warn('avisos',e))},8000)},

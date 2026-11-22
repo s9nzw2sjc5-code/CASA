@@ -1,32 +1,39 @@
 // Servicio de avisos de CASA (Cloudflare Worker «casa-avisos»).
-// Cada móvil sube los avisos de las próximas 48 h (y sus temporizadores); cada minuto se envían los que tocan.
-// El aviso viaja sin contenido (solo un toque); el móvil pide el texto aquí y lo muestra.
+// - Cada móvil sube sus avisos de las próximas 48 h (/schedule) y se envían a su hora (revisión cada minuto).
+// - Además, cualquiera de la casa puede mandar un aviso a una persona (/send): a ella misma a una hora,
+//   «Mari dice: …» al otro, o el fin de un temporizador. Va al buzón de los móviles de esa persona.
+// - Solo puede mandar quien tiene la clave privada de la casa (se guarda en los datos de Casa, no aquí).
+// El aviso viaja sin contenido (solo un toque); el móvil pide el texto (/pending) y lo muestra.
 // Secretos (no están en el repositorio): VAPID_JWK (clave privada) y VAPID_PUBLIC. Datos: KV «AVISOS».
 const ORIGIN = 'https://s9nzw2sjc5-code.github.io';
 const SUBJECT = 'https://s9nzw2sjc5-code.github.io/CASA/';
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)$/;
-const MAX_ITEMS = 80, MAX_QUEUE = 20;
+const TYPES = ['resumen', 'urgente', 'hora', 'citas', 'ringo', 'manana', 'timers', 'alarma', 'mensaje'];
+const MAX_ITEMS = 80, MAX_INBOX = 50, MAX_QUEUE = 20;
 
 const cors = { 'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', Vary: 'Origin' };
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const text = (s, n) => String(s || '').replace(/[\u0000-\u001f]/g, ' ').slice(0, n);
+const person = (p) => /^[a-z0-9_-]{1,30}$/i.test(String(p || '')) ? String(p) : '';
+const hex = async (s) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+const deviceKey = async (endpoint) => 'd:' + (await hex(endpoint)).slice(0, 32);
+const houseOf = async (k) => (typeof k === 'string' && k.length >= 20 && k.length <= 200 ? (await hex('casa:' + k)).slice(0, 32) : '');
 
-async function deviceKey(endpoint) {
-  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
-  return 'd:' + [...new Uint8Array(h)].slice(0, 16).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 function validSub(sub) {
   try {
     const u = new URL(sub.endpoint);
     return u.protocol === 'https:' && PUSH_HOSTS.test(u.hostname) && sub.endpoint.length < 1000 && sub.keys && typeof sub.keys.p256dh === 'string' && typeof sub.keys.auth === 'string';
   } catch { return false; }
 }
-function cleanItems(items) {
+function cleanItem(x) {
+  return { id: text(x && x.id, 60), at: Date.parse(x && x.at), title: text(x && x.title, 120), body: text(x && x.body, 300), tag: text(x && x.tag, 80), type: TYPES.includes(x && x.type) ? x.type : '' };
+}
+function cleanItems(items, max) {
   const now = Date.now();
-  return (Array.isArray(items) ? items : []).map((x) => ({ at: Date.parse(x && x.at), title: text(x && x.title, 120), body: text(x && x.body, 300), tag: text(x && x.tag, 80) }))
-    .filter((x) => Number.isFinite(x.at) && x.at > now - 600e3 && x.at < now + 3 * 864e5 && x.title)
-    .sort((a, b) => a.at - b.at).slice(0, MAX_ITEMS);
+  return (Array.isArray(items) ? items : []).map(cleanItem)
+    .filter((x) => Number.isFinite(x.at) && x.at > now - 600e3 && x.at < now + 60 * 864e5 && x.title)
+    .sort((a, b) => a.at - b.at).slice(0, max);
 }
 
 async function vapidAuth(env, endpoint) {
@@ -37,29 +44,41 @@ async function vapidAuth(env, endpoint) {
   const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(unsigned));
   return `vapid t=${unsigned}.${b64u(sig)}, k=${env.VAPID_PUBLIC}`;
 }
-// Toque sin contenido: el móvil pregunta luego qué mostrar (/pending)
 async function poke(env, sub) {
-  const res = await fetch(sub.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, sub.endpoint), TTL: '86400', Urgency: 'normal', 'Content-Length': '0' } });
+  const res = await fetch(sub.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, sub.endpoint), TTL: '86400', Urgency: 'high', 'Content-Length': '0' } });
   return res.status;
 }
 
 async function index(env) { return (await env.AVISOS.get('idx', 'json')) || []; }
 async function setIndex(env, keys) { await env.AVISOS.put('idx', JSON.stringify([...new Set(keys)].slice(0, 50))); }
+async function dropDevice(env, key) { await env.AVISOS.delete(key); await setIndex(env, (await index(env)).filter((x) => x !== key)); }
+
+// Pasa a la cola lo que ya toca (de sus avisos y de su buzón) y avisa al móvil
+async function flush(env, key, dev) {
+  const now = Date.now(), mute = new Set(dev.mute || []);
+  const due = [...(dev.items || []), ...(dev.inbox || [])].filter((x) => x.at <= now && !mute.has(x.type));
+  const dueIds = new Set(due);
+  dev.items = (dev.items || []).filter((x) => x.at > now);
+  dev.inbox = (dev.inbox || []).filter((x) => x.at > now);
+  if (!due.length) { await env.AVISOS.put(key, JSON.stringify(dev)); return; }
+  dev.queue = [...(dev.queue || []), ...due].slice(-MAX_QUEUE);
+  const status = await poke(env, dev.sub).catch(() => 0);
+  if (status === 404 || status === 410) await dropDevice(env, key);
+  else await env.AVISOS.put(key, JSON.stringify(dev));
+  return dueIds;
+}
 async function deliver(env) {
-  {
-    const page = { keys: (await index(env)).map((name) => ({ name })) };
-    for (const k of page.keys) {
-      const dev = await env.AVISOS.get(k.name, 'json');
-      if (!dev || !dev.sub) continue;
-      const now = Date.now(), due = (dev.items || []).filter((x) => x.at <= now);
-      if (!due.length) continue;
-      dev.items = dev.items.filter((x) => x.at > now);
-      dev.queue = [...(dev.queue || []), ...due].slice(-MAX_QUEUE);
-      const status = await poke(env, dev.sub).catch(() => 0);
-      if (status === 404 || status === 410) { await env.AVISOS.delete(k.name); await setIndex(env, (await index(env)).filter((x) => x !== k.name)); }
-      else await env.AVISOS.put(k.name, JSON.stringify(dev));
-    }
+  const now = Date.now();
+  for (const key of await index(env)) {
+    const dev = await env.AVISOS.get(key, 'json');
+    if (!dev || !dev.sub) continue;
+    if ([...(dev.items || []), ...(dev.inbox || [])].some((x) => x.at <= now)) await flush(env, key, dev);
   }
+}
+async function houseDevices(env, house) {
+  const out = [];
+  for (const key of await index(env)) { const dev = await env.AVISOS.get(key, 'json'); if (dev && dev.house === house) out.push([key, dev]); }
+  return out;
 }
 
 export default {
@@ -73,6 +92,30 @@ export default {
     let body;
     try { body = await req.json(); } catch { return json({ error: 'JSON no válido' }, 400); }
     if (!body || typeof body !== 'object') return json({ error: 'Datos no válidos' }, 400);
+
+    // Avisos entre la casa: necesitan la clave de la casa
+    if (path === '/send' || path === '/cancel') {
+      const house = await houseOf(body.houseKey);
+      if (!house) return json({ error: 'Falta la clave de la casa' }, 403);
+      const devs = await houseDevices(env, house);
+      if (path === '/cancel') {
+        const id = text(body.id, 60); let n = 0;
+        for (const [key, dev] of devs) { const before = (dev.inbox || []).length; dev.inbox = (dev.inbox || []).filter((x) => x.id !== id); if (dev.inbox.length !== before) { n++; await env.AVISOS.put(key, JSON.stringify(dev)); } }
+        return json({ ok: true, devices: n });
+      }
+      const to = (Array.isArray(body.to) ? body.to : [body.to]).map(person).filter(Boolean);
+      const item = cleanItems([{ ...body, at: body.at || new Date().toISOString() }], 1)[0];
+      if (!to.length || !item) return json({ error: 'Aviso no válido' }, 400);
+      let n = 0;
+      for (const [key, dev] of devs) {
+        if (!to.includes(dev.person)) continue;
+        dev.inbox = [...(dev.inbox || []).filter((x) => x.id !== item.id || !item.id), item].sort((a, b) => a.at - b.at).slice(-MAX_INBOX);
+        n++;
+        if (item.at <= Date.now()) await flush(env, key, dev); else await env.AVISOS.put(key, JSON.stringify(dev));
+      }
+      return json({ ok: true, devices: n });
+    }
+
     const endpoint = String((body.sub && body.sub.endpoint) || body.endpoint || '');
     if (!endpoint) return json({ error: 'Falta la suscripción' }, 400);
     const key = await deviceKey(endpoint);
@@ -80,11 +123,13 @@ export default {
       const old = (await env.AVISOS.get(key, 'json')) || {};
       const sub = body.sub || old.sub;
       if (!sub || !validSub(sub)) return json({ error: 'Suscripción no válida' }, 400);
-      await env.AVISOS.put(key, JSON.stringify({ sub, items: cleanItems(body.items), queue: old.queue || [], at: Date.now() }));
+      const house = (await houseOf(body.houseKey)) || old.house || '';
+      const mute = (Array.isArray(body.mute) ? body.mute : old.mute || []).filter((t) => TYPES.includes(t));
+      await env.AVISOS.put(key, JSON.stringify({ sub, person: person(body.person) || old.person || '', house, mute, items: cleanItems(body.items, MAX_ITEMS), inbox: old.inbox || [], queue: old.queue || [], at: Date.now() }));
       const idx = await index(env); if (!idx.includes(key)) await setIndex(env, [...idx, key]);
       return json({ ok: true });
     }
-    if (path === '/unsubscribe') { await env.AVISOS.delete(key); await setIndex(env, (await index(env)).filter((x) => x !== key)); return json({ ok: true }); }
+    if (path === '/unsubscribe') { await dropDevice(env, key); return json({ ok: true }); }
     if (path === '/pending') {
       const dev = await env.AVISOS.get(key, 'json');
       const queue = (dev && dev.queue) || [];
