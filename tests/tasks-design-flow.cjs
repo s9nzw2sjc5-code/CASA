@@ -396,6 +396,36 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => CasaAvisos.hours().morning), "08:30");
     await p.evaluate(() => { localStorage.removeItem("casa-avisos"); S.tasks = S.tasks.filter((t) => t.id !== "av1"); save(); });
 
+    // Temporizador: lavadora → cuenta atrás en Hoy y aviso programado al terminar; se puede quitar
+    await p.evaluate(() => { const fakeSub = { endpoint: "https://fcm.googleapis.com/fcm/send/prueba", toJSON() { return { endpoint: this.endpoint, keys: { p256dh: "a", auth: "b" } }; } }; Object.defineProperty(navigator.serviceWorker, "ready", { value: Promise.resolve({ pushManager: { getSubscription: async () => fakeSub } }), configurable: true }); });
+    await p.evaluate(() => { localStorage.setItem("casa-avisos", "1"); S.cook = { ...S.cook, houseLaundry: { twoWashers: true, dryer: true, names: ["Lavadora de arriba", "Lavadora de abajo"] } }; save(); ui.view = "hoy"; render(); });
+    avisosCalls.length = 0;
+    await p.locator("[data-act=timerSheet]").first().click();
+    assert.match(await p.locator(".overlay").last().innerText(), /Lavadora de arriba[\s\S]*Lavadora de abajo[\s\S]*Secadora[\s\S]*Lavavajillas/);
+    await p.locator('.overlay [data-tm-min="Lavadora de arriba"]').fill("75");
+    await p.locator('.overlay [data-tm-start="Lavadora de arriba"]').click();
+    await p.waitForFunction(() => /te aviso a las/.test(document.querySelector("#toast").textContent));
+    const sched = avisosCalls.filter((c) => c[0] === "/schedule").pop();
+    const tmItem = sched && sched[1].items.find((x) => /Lavadora de arriba lista/.test(x.title));
+    assert.ok(tmItem, "aviso al terminar");
+    assert.ok(Math.abs(Date.parse(tmItem.at) - Date.now() - 75 * 60e3) < 120e3, "a los 75 min");
+    assert.match(await p.locator(".timer-row").innerText(), /Lavadora de arriba[\s\S]*quedan 1 h 1[45] min/);
+    assert.equal(await p.evaluate(() => S.cook.timerMins["Lavadora de arriba"]), 75, "recuerda los minutos");
+    const before2 = avisosCalls.length;
+    await p.locator(".timer-x").click();
+    assert.equal(await p.locator(".timer-row").count(), 0);
+    await p.waitForFunction((n) => window.__n === undefined, before2);
+    for (let i = 0; i < 20 && avisosCalls.length === before2; i++) await p.waitForTimeout(100);
+    const sched2 = avisosCalls.filter((c) => c[0] === "/schedule").pop();
+    assert.ok(!sched2[1].items.some((x) => /Lavadora de arriba lista/.test(x.title)), "al quitarlo, sin aviso");
+    // Ajustar: avisos de cada persona en su móvil (tipos y «solo lo mío»)
+    await p.evaluate(() => render());
+    await p.locator("[data-act=avisosSheet]").click();
+    await p.locator('[data-av-type="resumen"]').uncheck();
+    await p.locator(".overlay [data-s=ok]").click();
+    assert.equal(await p.evaluate(() => CasaAvisos.prefs().types.resumen), false);
+    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-prefs"); S.cook.timers = []; save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

@@ -236,7 +236,12 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
-.mama .avisos-on{width:100%;margin-top:12px;min-height:44px}.mama .avisos-link{display:block;margin:10px auto 0;font-size:.85rem}.avisos-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.avisos-actions .btn{flex:1 1 140px}
+.timers{margin:0 0 12px;display:grid;gap:8px}.timer-add{width:100%;min-height:44px}
+.timer-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface)}.timer-row.done{border-color:color-mix(in srgb,var(--c-compras) 60%,var(--line));background:color-mix(in srgb,var(--c-compras) 10%,var(--surface))}.timer-row>span:first-child{font-size:1.3rem}.timer-t{flex:1;display:grid}.timer-t small{color:var(--muted);font-size:.8rem}.timer-x{width:40px;height:40px;border-radius:50%;color:var(--muted)}
+.timer-pre{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.timer-pre>span{flex:1;font-weight:600;min-width:0}.timer-pre input[type=number]{width:74px;flex:none;text-align:center}.timer-pre #tm_other{flex:1;min-width:0}.timer-pre small{color:var(--muted)}.timer-pre .btn{min-height:40px;padding:6px 12px}
+.av-types{display:grid;gap:2px;margin:8px 0}.av-type{display:flex;align-items:center;gap:10px;min-height:40px;font-size:.92rem}.av-type input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+
+.mama .avisos-on{display:block;width:100%;box-sizing:border-box;margin:12px 0 0;min-height:44px}.mama .avisos-link{display:block;margin:10px auto 0;font-size:.85rem}.avisos-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.avisos-actions .btn{flex:1 1 140px}
 
 .mama{margin:0 0 14px;padding:12px 14px;border-radius:18px;border:1px solid color-mix(in srgb,var(--c-hoy) 35%,var(--line));background:color-mix(in srgb,var(--c-hoy) 7%,var(--surface))}
 .mama>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:36px;font-size:1rem}.mama>summary::-webkit-details-marker{display:none}.mama[open] .tz-caret{transform:rotate(180deg)}
@@ -808,31 +813,31 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=162"></script>
-<script src="sync.js?v=162"></script>
-<script src="receipts.js?v=162"></script>
-<script src="receipt-image.js?v=162"></script>
-<script src="receipt-layout.js?v=162"></script>
-<script src="receipt-ocr.js?v=162"></script>
-<script src="product-photo.js?v=162"></script>
-<script src="product-photo-ui.js?v=162"></script>
-<script src="shopping-recommendations.js?v=162"></script>
-<script src="household-insights.js?v=162"></script>
-<script src="document-files.js?v=162"></script>
-<script src="document-photo.js?v=162"></script>
-<script src="cleaning-links.js?v=162"></script>
-<script src="home-model.js?v=162"></script>
-<script src="cocina.js?v=162"></script>
-<script src="cleaning-view.js?v=162"></script>
-<script src="home-ui.js?v=162"></script>
-<script src="household-ui.js?v=162"></script>
-<script src="receipt-extras.js?v=162"></script>
-<script src="house-plan.js?v=162"></script>
-<script src="house-plan-ui.js?v=162"></script>
-<script src="lidl-ui.js?v=162"></script>
-<script src="mama.js?v=162"></script>
-<script src="avisos.js?v=162"></script>
-<script src="tasks-ui.js?v=162"></script>
+<script src="push.js?v=163"></script>
+<script src="sync.js?v=163"></script>
+<script src="receipts.js?v=163"></script>
+<script src="receipt-image.js?v=163"></script>
+<script src="receipt-layout.js?v=163"></script>
+<script src="receipt-ocr.js?v=163"></script>
+<script src="product-photo.js?v=163"></script>
+<script src="product-photo-ui.js?v=163"></script>
+<script src="shopping-recommendations.js?v=163"></script>
+<script src="household-insights.js?v=163"></script>
+<script src="document-files.js?v=163"></script>
+<script src="document-photo.js?v=163"></script>
+<script src="cleaning-links.js?v=163"></script>
+<script src="home-model.js?v=163"></script>
+<script src="cocina.js?v=163"></script>
+<script src="cleaning-view.js?v=163"></script>
+<script src="home-ui.js?v=163"></script>
+<script src="household-ui.js?v=163"></script>
+<script src="receipt-extras.js?v=163"></script>
+<script src="house-plan.js?v=163"></script>
+<script src="house-plan-ui.js?v=163"></script>
+<script src="lidl-ui.js?v=163"></script>
+<script src="mama.js?v=163"></script>
+<script src="avisos.js?v=163"></script>
+<script src="tasks-ui.js?v=163"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -887,7 +892,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=162;
+const APP_VERSION=163;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1161,7 +1166,7 @@ function vHoy(){
     <p class="hoy-msg">${msg}</p></div>`;
   // El tiempo y sus consejos en lugar del cuadro de notas (las notas se apuntan en Importantes);
   // un mensaje que haya llegado se sigue viendo
-  h+=boardMsgCard()+mamaCard()+houseWxCard('forecast');
+  h+=boardMsgCard()+timerCard()+mamaCard()+houseWxCard('forecast');
   if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante hoy</h2><span class="imp-n">${impN}</span></div>${ul([...todayAppts.map(e=>eventRow(e,t,'Hoy')),...urgentTasks.map(x=>taskRow(x)),...todayImpTasks.map(x=>taskRow(x,t)),...urgentPets.map(petRow),...todayPetAppts.map(petRow),...imp.map(remRow)])}</section>`;
   if(soon.length)h+=`<details class="hsec imp acuerdate" style="--sc:var(--c-recordar)"${ui.acuClosed?'':' open'}><summary class="hsec-h" data-act="acuToggle"><span class="hsec-ic" aria-hidden="true">🔔</span><h2>¡Acuérdate!!</h2><span class="imp-n">${soon.length}</span><span class="tz-caret" aria-hidden="true">⌄</span></summary><p class="acu-sub">Citas importantes de los próximos 3 días</p>${ul(soon.map(x=>x.row))}</details>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;

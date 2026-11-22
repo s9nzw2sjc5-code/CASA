@@ -33,7 +33,7 @@
   // 3) Colada: poner → tender → recoger y doblar
   const washedToday=(input.tasks||[]).some(x=>x.lastDone===t&&input.isWash&&input.isWash(x));
   const fold=todayT.find(x=>/\bdoblar\b/i.test(String(x.title)));
-  if(washedToday&&h<21)add(80,'👕',`Lavadora puesta hoy: tender en cuanto termine.`);
+  if(washedToday&&h<21)add(80,'👕',`Lavadora puesta hoy: tender en cuanto termine.`,{kind:'timer'});
   else if(fold)add(55,'🧦',`Hoy toca doblar y guardar la ropa limpia.`,{kind:'task',id:fold.id});
   // 4) El tiempo: mañana llueve y toca colada
   const tomorrow=plus(t,1),fTom=(input.forecast||[]).find(d=>d.date===tomorrow);

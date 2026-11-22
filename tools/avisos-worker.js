@@ -1,5 +1,5 @@
 // Servicio de avisos de CASA (Cloudflare Worker «casa-avisos»).
-// Cada móvil sube los avisos de las próximas 48 h; cada 5 minutos se envían los que tocan.
+// Cada móvil sube los avisos de las próximas 48 h (y sus temporizadores); cada minuto se envían los que tocan.
 // El aviso viaja sin contenido (solo un toque); el móvil pide el texto aquí y lo muestra.
 // Secretos (no están en el repositorio): VAPID_JWK (clave privada) y VAPID_PUBLIC. Datos: KV «AVISOS».
 const ORIGIN = 'https://s9nzw2sjc5-code.github.io';
@@ -43,10 +43,11 @@ async function poke(env, sub) {
   return res.status;
 }
 
+async function index(env) { return (await env.AVISOS.get('idx', 'json')) || []; }
+async function setIndex(env, keys) { await env.AVISOS.put('idx', JSON.stringify([...new Set(keys)].slice(0, 50))); }
 async function deliver(env) {
-  let cursor;
-  do {
-    const page = await env.AVISOS.list({ prefix: 'd:', cursor });
+  {
+    const page = { keys: (await index(env)).map((name) => ({ name })) };
     for (const k of page.keys) {
       const dev = await env.AVISOS.get(k.name, 'json');
       if (!dev || !dev.sub) continue;
@@ -55,11 +56,10 @@ async function deliver(env) {
       dev.items = dev.items.filter((x) => x.at > now);
       dev.queue = [...(dev.queue || []), ...due].slice(-MAX_QUEUE);
       const status = await poke(env, dev.sub).catch(() => 0);
-      if (status === 404 || status === 410) await env.AVISOS.delete(k.name);
+      if (status === 404 || status === 410) { await env.AVISOS.delete(k.name); await setIndex(env, (await index(env)).filter((x) => x !== k.name)); }
       else await env.AVISOS.put(k.name, JSON.stringify(dev));
     }
-    cursor = page.list_complete ? null : page.cursor;
-  } while (cursor);
+  }
 }
 
 export default {
@@ -81,9 +81,10 @@ export default {
       const sub = body.sub || old.sub;
       if (!sub || !validSub(sub)) return json({ error: 'Suscripción no válida' }, 400);
       await env.AVISOS.put(key, JSON.stringify({ sub, items: cleanItems(body.items), queue: old.queue || [], at: Date.now() }));
+      const idx = await index(env); if (!idx.includes(key)) await setIndex(env, [...idx, key]);
       return json({ ok: true });
     }
-    if (path === '/unsubscribe') { await env.AVISOS.delete(key); return json({ ok: true }); }
+    if (path === '/unsubscribe') { await env.AVISOS.delete(key); await setIndex(env, (await index(env)).filter((x) => x !== key)); return json({ ok: true }); }
     if (path === '/pending') {
       const dev = await env.AVISOS.get(key, 'json');
       const queue = (dev && dev.queue) || [];
