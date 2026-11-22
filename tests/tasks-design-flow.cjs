@@ -367,7 +367,7 @@ const { chromium } = require("playwright"),
 
     // «Mamá dice» en Hoy: saludo, avisos con su botón y la rutina de mañana y noche
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !t.mamaKey); ui.view = "hoy"; ui.mamaOpen = true; render(); });
-    assert.match(await p.locator(".mama summary").innerText(), /Buen[oa]s (días|tardes|noches), /);
+    assert.match(await p.locator(".mama summary").innerText(), /Recordatorios de hoy/);
     assert.ok(await p.locator(".mama li").count() >= 1 && (await p.locator(".mama li").count()) <= 4);
     await p.evaluate(() => { const h = new Date().getHours(); if (h >= 12 && h < 20) { CasaMama._h = true; } });
     await p.evaluate(() => mamaAddRoutines());

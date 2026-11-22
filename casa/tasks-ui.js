@@ -276,7 +276,7 @@ function taskPrioritySheet(){
  return ov;
 }
 
-/* ---------- «Mamá dice»: recordatorios como los de una madre, en Hoy ---------- */
+/* ---------- Recordatorios de hoy (en Hoy): qué toca, en tono neutro ---------- */
 function mamaCard(){
  let list=[];
  try{
@@ -289,8 +289,8 @@ function mamaCard(){
    hasRoutines:(S.tasks||[]).some(t=>t.mamaKey)||!!(S.cook&&S.cook.mamaNoRoutines)});
  }catch(e){console.error(e);return''}
  if(!list.length)return'';
- const btn=a=>!a?'':a.kind==='task'?`<button class="btn sec" data-act="toggleTask" data-id="${esc(a.id)}">✓ Hecho</button>`:a.kind==='priority'?`<button class="btn sec" data-act="taskPriority">⚡ Repártemelas</button>`:a.kind==='routines'?`<button class="btn sec" data-act="mamaRoutines">Añadir rutina de mañana y noche</button>`:`<button class="btn sec" data-act="tab" data-v="${{tareas:'tareas',ringo:'ringo',importantes:'recordar',compras:'compras'}[a.kind]||'tareas'}">Ver</button>`;
- return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>💬 ${esc(CasaMama.greeting(new Date().getHours(),today()))}</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>`;
+ const btn=a=>!a?'':a.kind==='task'?`<button class="btn sec" data-act="toggleTask" data-id="${esc(a.id)}">✓ Hecho</button>`:a.kind==='priority'?`<button class="btn sec" data-act="taskPriority">⚡ Repartir por prioridad</button>`:a.kind==='routines'?`<button class="btn sec" data-act="mamaRoutines">Añadir rutina de mañana y noche</button>`:`<button class="btn sec" data-act="tab" data-v="${{tareas:'tareas',ringo:'ringo',importantes:'recordar',compras:'compras'}[a.kind]||'tareas'}">Ver</button>`;
+ return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>`;
 }
 // Rutina de mañana y noche: tareas diarias cortas (se pueden borrar o cambiar como cualquier tarea)
 function mamaAddRoutines(){
