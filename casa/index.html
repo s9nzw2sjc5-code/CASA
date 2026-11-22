@@ -236,6 +236,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.ts-remind{margin:4px 0 8px}.ts-rm-f{padding:4px 0 6px}.tz-remind{color:var(--c-recordar);font-weight:600}
+
 .avisos-bell{margin-left:auto;align-self:center;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:1.35rem;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;flex:none}.avisos-bell.off{opacity:.85}.avisos-bell.warn::after{content:'';position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;background:#FFD23F}.avisos-bell{position:relative}
 
 .avisos-box{margin:-6px 0 14px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);max-width:calc(100% - 76px)}.avisos-box.on{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.88rem;max-width:none}.avisos-box.on .link{min-height:40px}.avisos-box .avisos-on{width:100%;min-height:46px;white-space:normal}.avisos-box.warn{border-color:color-mix(in srgb,var(--c-recordar) 55%,var(--line));background:color-mix(in srgb,var(--c-recordar) 10%,var(--surface));max-width:none}.avisos-box.warn p,.avisos-err{margin:0;font-size:.86rem;line-height:1.45}.avisos-err{margin-top:8px;color:var(--danger)}
@@ -820,31 +822,31 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=172"></script>
-<script src="sync.js?v=172"></script>
-<script src="receipts.js?v=172"></script>
-<script src="receipt-image.js?v=172"></script>
-<script src="receipt-layout.js?v=172"></script>
-<script src="receipt-ocr.js?v=172"></script>
-<script src="product-photo.js?v=172"></script>
-<script src="product-photo-ui.js?v=172"></script>
-<script src="shopping-recommendations.js?v=172"></script>
-<script src="household-insights.js?v=172"></script>
-<script src="document-files.js?v=172"></script>
-<script src="document-photo.js?v=172"></script>
-<script src="cleaning-links.js?v=172"></script>
-<script src="home-model.js?v=172"></script>
-<script src="cocina.js?v=172"></script>
-<script src="cleaning-view.js?v=172"></script>
-<script src="home-ui.js?v=172"></script>
-<script src="household-ui.js?v=172"></script>
-<script src="receipt-extras.js?v=172"></script>
-<script src="house-plan.js?v=172"></script>
-<script src="house-plan-ui.js?v=172"></script>
-<script src="lidl-ui.js?v=172"></script>
-<script src="mama.js?v=172"></script>
-<script src="avisos.js?v=172"></script>
-<script src="tasks-ui.js?v=172"></script>
+<script src="push.js?v=173"></script>
+<script src="sync.js?v=173"></script>
+<script src="receipts.js?v=173"></script>
+<script src="receipt-image.js?v=173"></script>
+<script src="receipt-layout.js?v=173"></script>
+<script src="receipt-ocr.js?v=173"></script>
+<script src="product-photo.js?v=173"></script>
+<script src="product-photo-ui.js?v=173"></script>
+<script src="shopping-recommendations.js?v=173"></script>
+<script src="household-insights.js?v=173"></script>
+<script src="document-files.js?v=173"></script>
+<script src="document-photo.js?v=173"></script>
+<script src="cleaning-links.js?v=173"></script>
+<script src="home-model.js?v=173"></script>
+<script src="cocina.js?v=173"></script>
+<script src="cleaning-view.js?v=173"></script>
+<script src="home-ui.js?v=173"></script>
+<script src="household-ui.js?v=173"></script>
+<script src="receipt-extras.js?v=173"></script>
+<script src="house-plan.js?v=173"></script>
+<script src="house-plan-ui.js?v=173"></script>
+<script src="lidl-ui.js?v=173"></script>
+<script src="mama.js?v=173"></script>
+<script src="avisos.js?v=173"></script>
+<script src="tasks-ui.js?v=173"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -899,7 +901,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=172;
+const APP_VERSION=173;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -912,8 +914,8 @@ try{const r=localStorage.getItem(LS);if(r)S=Object.assign(fresh(),JSON.parse(r))
 CasaReceipts.normalizeHistory(S);
 let ui={view:'hoy',taskFilter:'pend',personFilter:'all',list:null,week:0};
 try{const u=localStorage.getItem(LS+'-ui');if(u)ui=Object.assign(ui,JSON.parse(u))}catch(e){}
-// Al abrir la app, Tareas empieza también en «Para hoy»
-ui.taskView='hoy';ui.taskZone=null;ui.taskMode='tasks';
+// Al abrir la app: siempre en Hoy (y Tareas, si se abre, en «Para hoy»)
+ui.view='hoy';ui.taskView='hoy';ui.taskZone=null;ui.taskMode='tasks';
 if(ui.ckTab==='novedades')ui.novCat=null;
 let prefRef=null,prefsReady=false;setTimeout(()=>{if(!prefsReady){prefsReady=true;render()}},3000);
 let docRef=null,dbRef=null,saveTimer=null,syncState='local',lastSyncAt=0;
@@ -1082,6 +1084,7 @@ function taskRow(t,occ){
     urgent?'<span class="urgent-tag">❗ Urgente</span>':'',
     t.date&&!occ?`<span class="${late?'late':''}">${late?'Atrasada · ':''}${relDate(t.date)}${t.time?' a las '+t.time:''}</span>`:(t.time&&t.date?`<span>${t.time}</span>`:''),
     t.repeat&&t.repeat!=='none'?`<span>${repLabel(t)}</span>`:'',
+    typeof remindLabel==='function'&&remindLabel(t)?`<span class="tz-remind">${esc(remindLabel(t))}</span>`:'',
     CasaHousePlan.minutesFor(t)?`<span title="Tiempo aproximado">⏱ ${CasaHousePlan.minutesFor(t)} min</span>`:'',
     // El consejo va en la línea de detalles para no quitarle ancho al título
     !preview&&CasaHousePlan.tipFor(t)?`<button class="tip-inline" data-act="taskTip" data-id="${t.id}" aria-label="Cómo hacer ${esc(t.title)}" title="Cómo hacerlo">💡</button>`:''
@@ -1737,6 +1740,7 @@ function taskSheet(t,date,extra){
     <label class="urgent-check imp-check" title="Verla en Importantes"><input type="checkbox" id="f_imp" aria-label="Fecha importante: verla en Importantes" ${isImportantTask(t)?'checked':''}><span aria-hidden="true">📅</span></label>
     ${!n&&!t.done?`<button type="button" class="tomorrow-ic ts-tomorrow" data-ts-tomorrow aria-label="Pasar a mañana" title="Pasar a mañana">⏭️</button>`:''}
     ${CasaHousePlan.tipFor(t)?`<button type="button" class="tip-inline ts-tip" data-ts-tip aria-label="Cómo hacerlo" title="Cómo hacerlo">💡</button>`:''}</div>
+    ${taskRemindHtml(t)}
     <textarea class="field ts-notes" id="f_n" rows="2" placeholder="Notas" aria-label="Notas">${esc(t.notes)}</textarea>`,
   {onSave:ov=>{
     const title=val(ov,'f_t');if(!title){toast('Escribe el nombre de la tarea');return false}
@@ -1745,11 +1749,15 @@ function taskSheet(t,date,extra){
     const urgent=ov.querySelector('#f_u').checked;
     // Si sigue siendo urgente, no se puede posponer (quitar la fecha también sería posponerla)
     if(!n&&urgent&&t.urgent&&t.date&&(!d||CasaHousePlan.blocksPostpone(t,d,today()))){toast('Es urgente ❗: no se puede posponer. Desmarca «Urgente» si de verdad hay que cambiarla.');return false}
-    const o={title,date:d,time:d?val(ov,'f_h'):'',who:n?'ambos':(t.who||'ambos'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,tzZone:val(ov,'f_zone'),...cus};
-    if(n)S.tasks.push({id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o});else{const x=find(S.tasks,t.id);if(x)Object.assign(x,o)}
+    const remind=taskRemindRead(ov);if(remind===false)return false;
+    const prevRemind=t.remind?{...t.remind}:null;
+    const o={title,date:d,time:d?val(ov,'f_h'):'',who:n?'ambos':(t.who||'ambos'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,tzZone:val(ov,'f_zone'),remind,...cus};
+    let saved;if(n){saved={id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o};S.tasks.push(saved)}else{saved=find(S.tasks,t.id);if(saved)Object.assign(saved,o)}
+    if(saved)taskRemindSync(saved,prevRemind);
     const zn=o.tzZone&&o.tzZone!==prevZone?TASK_ZONES.find(z=>z.id===o.tzZone):null;
     save();toast(zn?`${n?'Tarea creada':'Tarea guardada'} · vinculada a ${zn.name}`:n?'Tarea creada':'Tarea guardada');
-  },onDelete:n?null:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});
+  },onDelete:n?null:()=>{if(t.remind)CasaAvisos.cancel(avisosCtx(),'tr-'+t.id);S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});
+  taskRemindWire(ov0);
   ov0.classList.add('task-sheet');if(n)ov0.dataset.newTask='1';repeatPreview(ov0);
   // 💡 abre el consejo en su propia ventana, sin alargar la ficha
   const tipBtn=ov0.querySelector('[data-ts-tip]');if(tipBtn)tipBtn.addEventListener('click',()=>houseTipSheet(t));
@@ -1936,6 +1944,7 @@ function markTaskDone(task){
   const repeating=!task.done&&task.repeat&&task.repeat!=='none',prev={date:task.date||'',lastDone:task.lastDone||'',lastDoneAt:task.lastDoneAt||0,lastDoneBy:task.lastDoneBy||'',day:today()};
   Object.assign(task,CasaCleaningLinks.advanceTask(task,today(),Date.now(),meName(),nextOcc));
   if(repeating)task.undoPrev=prev;else delete task.undoPrev;
+  if(task.remind&&typeof CasaAvisos!=='undefined'&&typeof avisosCtx==='function'){CasaAvisos.cancel(avisosCtx(),'tr-'+task.id);delete task.remind}
   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(task.id))r.date=CasaCleaningLinks.effectiveDate(S,r)});
 }
 function undoTaskDone(t){

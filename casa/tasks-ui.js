@@ -59,6 +59,7 @@ function tzRow(t,{done=false,showDate=false,simple=false}={}){
  const meta=[t.urgent&&!done?'<span class="urgent-tag" title="Urgente">❗</span>':'',wet?'<span class="tz-wet">🌧️ mejor en día seco</span>':'',`<span>${esc(z.name)}</span>`,min?`<span class="tz-min">${min} min</span>`:'',
   late?`<span class="late">Atrasada · ${esc(relDate(t.date))}</span>`:showDate&&t.date&&!done?`<span>${esc(relDate(t.date))}</span>`:'',
   done?`<span>Hecha ${taskDoneDay(t)===today()?'hoy':esc(relDate(taskDoneDay(t)).toLowerCase())}</span>`:'',
+  remindLabel(t)?`<span class="tz-remind">${esc(remindLabel(t))}</span>`:'',
   ].filter(Boolean).join('<i aria-hidden="true">·</i>');
  const check=`<button class="check round ${done?'on':''}" ${canToggle?`data-act="${done&&!t.done?'undoDone':'toggleTask'}" data-id="${esc(t.id)}" aria-label="${esc((done?'Desmarcar ':'Completar ')+t.title)}"`:`disabled aria-label="Hecha"`}></button>`;
  return`<li class="row tz-row ${done?'is-done':''} ${t.urgent&&!done?'is-urgent':''}">${check}<button class="tz-main" data-act="editTask" data-id="${esc(t.id)}"><span class="tz-title">${esc(t.title)}</span>${simple&&!(t.urgent&&!done)&&!late?'':`<span class="tz-meta">${meta}</span>`}</button><span class="tz-go" aria-hidden="true">›</span></li>`;
@@ -410,6 +411,8 @@ const alarmsActive=()=>((S.cook&&S.cook.alarms)||[]).filter(a=>a&&a.at>Date.now(
 const hm=m=>m>=60?`${Math.floor(m/60)} h${m%60?' '+(m%60)+' min':''}`:`${m} min`;
 const timerLeft=t=>{const m=Math.ceil((t.end-Date.now())/60e3);return m<=0?'✅ Lista':'quedan '+hm(m)};
 const clock=ms=>new Date(ms).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+// Fecha local «AAAA-MM-DD» (no la universal: cerca de medianoche cambia de día)
+const localDay=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const personName=id=>id==='ambos'?'los dos':((S.people||[]).find(p=>p.id===id)||{name:id}).name;
 // Para quién: yo, el otro o los dos (personas de la casa)
 function whoOptions(sel){const me=ui.me||'yo',other=(partner()||{}).id||'juanma';return[[me,'Para mí'],[other,'Para '+personName(other)],['ambos','Para los dos']].map(([v,l])=>`<option value="${v}" ${v===sel?'selected':''}>${esc(l)}</option>`).join('')}
@@ -449,7 +452,7 @@ function timerStart(label,mins,remember,program,to){
 }
 function timerStop(id){S.cook.timers=timersActive().filter(t=>t.id!==id);save();CasaAvisos.cancel(avisosCtx(),'tm-'+id)}
 function alarmSheet(){
- const now=new Date(Date.now()+30*60e3),d=now.toISOString().slice(0,10),h=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ const now=new Date(Date.now()+30*60e3),d=localDay(now),h=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
  const ov=sheet('🔔 Aviso',`<input class="field" id="al_t" placeholder="¿De qué aviso? Ej.: sacar el pollo del congelador" maxlength="200" aria-label="Texto del aviso">
   <label for="al_to">Para</label><select class="field" id="al_to">${whoOptions(ui.me||'yo')}</select>
   <label class="av-type"><input type="checkbox" id="al_now"><span>Ahora mismo</span></label>
@@ -477,3 +480,37 @@ function timerLocal(t){
 }
 setInterval(()=>{try{if(ui.view!=='hoy'||document.querySelector('.overlay')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement&&document.activeElement.tagName))return;if(timersActive().length||alarmsActive().length)render();timersActive().forEach(timerLocal)}catch(e){}},30000);
 Object.assign(TASKS_ACT,{timerSheet:()=>{if(!ui.me){whoAmI(()=>timerSheet());return}timerSheet()},timerStop:d=>timerStop(d.id),alarmSheet:()=>{if(!ui.me){whoAmI(()=>alarmSheet());return}alarmSheet()},alarmStop:d=>alarmStop(d.id)});
+
+/* ---------- Recordatorio de una tarea: a quién (Mari, Juanma o los dos) y cuándo ---------- */
+const remindWho=to=>to&&to.length>1?'los dos':personName((to||[])[0]||'');
+function remindLabel(t){
+ const r=t&&t.remind;if(!r||!(r.at>Date.now()-3600e3))return'';
+ const d=new Date(r.at),day=d.toDateString()===new Date().toDateString()?'hoy':d.toDateString()===new Date(Date.now()+864e5).toDateString()?'mañana':d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric'});
+ return `🔔 ${day} ${clock(r.at)} · ${remindWho(r.to)}`;
+}
+function taskRemindHtml(t){
+ const r=t.remind&&t.remind.at>Date.now()-3600e3?t.remind:null,d=r?new Date(r.at):null;
+ const day=d?localDay(d):(t.date||today()),hour=d?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):(t.time||'09:00');
+ const sel=r?(r.to.length>1?'ambos':r.to[0]):(ui.me||'yo');
+ return`<div class="ts-remind"><label class="av-type"><input type="checkbox" id="f_rm" ${r?'checked':''}><span>🔔 Recordatorio${r?': '+esc(remindLabel(t).replace(/^🔔 /,'')):''}</span></label>
+  <div class="ts-rm-f" ${r?'':'hidden'}><div class="grid2"><div><label for="f_rm_d">Día</label><input class="field" type="date" id="f_rm_d" value="${day}"></div><div><label for="f_rm_h">Hora</label><input class="field" type="time" id="f_rm_h" value="${hour}"></div></div>
+  <label for="f_rm_to">Para</label><select class="field" id="f_rm_to">${whoOptions(sel)}</select></div></div>`;
+}
+function taskRemindWire(ov){const c=ov.querySelector('#f_rm'),f=ov.querySelector('.ts-rm-f');if(c&&f)c.onchange=()=>{f.hidden=!c.checked}}
+// Lee el recordatorio de la ficha: {at,to} o null si está quitado; false si la hora no vale
+function taskRemindRead(ov){
+ const c=ov.querySelector('#f_rm');if(!c||!c.checked)return null;
+ const at=new Date(val(ov,'f_rm_d')+'T'+(val(ov,'f_rm_h')||'09:00')).getTime();
+ if(!(at>Date.now()+30e3)){toast('El recordatorio tiene que ser para un día y hora que aún no hayan pasado');return false}
+ return {at,to:whoTo(val(ov,'f_rm_to')),by:ui.me||''};
+}
+// Programa (o quita) el aviso del recordatorio en el servicio
+function taskRemindSync(t,prev){
+ const ctx=avisosCtx(),id='tr-'+t.id,r=t.remind;
+ const same=prev&&r&&prev.at===r.at&&String(prev.to)===String(r.to);
+ if(prev&&!same)CasaAvisos.cancel(ctx,id);
+ if(!r||same||typeof CasaAvisos==='undefined')return;
+ const forOther=r.to.some(p=>p!==(ui.me||'yo')),me=meName()||'Casa';
+ CasaAvisos.send(ctx,{to:r.to,id,at:new Date(r.at).toISOString(),title:'🔔 '+String(t.title).slice(0,100),body:forOther?`${me} te lo recuerda`+(t.notes?' · '+t.notes:''):(t.notes||'Recordatorio de tarea'),tag:'casa-'+id,type:forOther?'mensaje':'alarma'})
+  .then(x=>{if(!x.devices)toast('Recordatorio guardado, pero '+remindWho(r.to)+' no tiene los avisos activados en su móvil.')}).catch(()=>toast('Recordatorio guardado; se avisará cuando haya conexión con el servicio de avisos.'));
+}

@@ -441,7 +441,7 @@ const { chromium } = require("playwright"),
     // Aviso a una hora para mí, y «Mari dice…» a Juanma ahora mismo
     await p.locator("[data-act=alarmSheet]").click();
     await p.locator("#al_t").fill("Sacar el pollo del congelador");
-    const later = await p.evaluate(() => { const d = new Date(Date.now() + 3 * 3600e3); return [d.toISOString().slice(0, 10), String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")]; });
+    const later = await p.evaluate(() => { const d = new Date(Date.now() + 3 * 3600e3); return [d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"), String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")]; });
     await p.locator("#al_d").fill(later[0]); await p.locator("#al_h").fill(later[1]);
     await p.locator(".overlay [data-s=ok]").click();
     await p.waitForFunction(() => /Aviso programado|aún no tiene/.test(document.querySelector("#toast").textContent));
@@ -492,6 +492,36 @@ const { chromium } = require("playwright"),
     for (let i = 0; i < 60 && !avisosCalls.some((c) => c[1].relay); i++) await p.waitForTimeout(100);
     const relay = avisosCalls.find((c) => c[1].relay);
     assert.ok(relay && relay[0] === "/subscribe" && relay[1].person === "juanma" && relay[1].sub.endpoint.endsWith("/juanma") && relay[1].houseKey, "Mari registra el móvil de Juanma");
+
+    // Recordatorio en una tarea: para Juanma a una hora; se ve en la lista (cuándo y a quién); se quita; al hacerla, se cancela
+    avisosCalls.length = 0;
+    await p.evaluate(() => { ui.me = "yo"; S.tasks.push({ id: "rm1", title: "Llamar al fontanero", date: today(), repeat: "none", done: false }); save(); ui.view = "tareas"; ui.taskView = "hoy"; ui.taskZone = null; render(); });
+    await p.locator('.tz-main[data-id="rm1"]').click();
+    await p.locator("#f_rm").check();
+    const when = await p.evaluate(() => { const d = new Date(Date.now() + 2 * 3600e3); return [d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"), String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0")]; });
+    await p.locator("#f_rm_d").fill(when[0]); await p.locator("#f_rm_h").fill(when[1]);
+    await p.locator("#f_rm_to").selectOption("juanma");
+    await p.locator(".overlay [data-s=ok]").click();
+    for (let i = 0; i < 30 && !avisosCalls.some((c) => c[0] === "/send"); i++) await p.waitForTimeout(100);
+    const rs = avisosCalls.find((c) => c[0] === "/send");
+    assert.deepEqual([rs[1].to.join(), rs[1].title, rs[1].type, rs[1].id], ["juanma", "🔔 Llamar al fontanero", "mensaje", "tr-rm1"]);
+    assert.match(rs[1].body, /Mari te lo recuerda/);
+    assert.match(await p.locator('.tz-row:has([data-id="rm1"])').innerText(), new RegExp("🔔 (hoy|mañana) " + when[1] + " · Juanma"));
+    // Quitarlo
+    await p.locator('.tz-main[data-id="rm1"]').click();
+    assert.equal(await p.locator("#f_rm").isChecked(), true);
+    await p.locator("#f_rm").uncheck();
+    await p.locator(".overlay [data-s=ok]").click();
+    for (let i = 0; i < 30 && !avisosCalls.some((c) => c[0] === "/cancel"); i++) await p.waitForTimeout(100);
+    assert.ok(avisosCalls.some((c) => c[0] === "/cancel" && c[1].id === "tr-rm1"), "quitado: se cancela");
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "rm1").remind), null);
+    // Al marcarla hecha, el recordatorio pendiente se cancela
+    await p.evaluate(() => { const t = S.tasks.find((t) => t.id === "rm1"); t.remind = { at: Date.now() + 3600e3, to: ["yo"], by: "yo" }; save(); render(); });
+    avisosCalls.length = 0;
+    await p.locator('.tz-row [data-act=toggleTask][data-id="rm1"]').click();
+    for (let i = 0; i < 30 && !avisosCalls.some((c) => c[0] === "/cancel"); i++) await p.waitForTimeout(100);
+    assert.ok(avisosCalls.some((c) => c[0] === "/cancel" && c[1].id === "tr-rm1"), "hecha: se cancela");
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => t.id !== "rm1"); save(); });
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
