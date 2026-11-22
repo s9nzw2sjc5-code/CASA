@@ -44,8 +44,38 @@ async function vapidAuth(env, endpoint) {
   const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(unsigned));
   return `vapid t=${unsigned}.${b64u(sig)}, k=${env.VAPID_PUBLIC}`;
 }
-async function poke(env, sub) {
-  const res = await fetch(sub.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, sub.endpoint), TTL: '86400', Urgency: 'high', 'Content-Length': '0' } });
+// Cifrado del contenido del aviso (RFC 8291, aes128gcm): el móvil lo muestra directamente, sin tener que preguntar
+const ub = (s) => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - String(s).length % 4) % 4)), (c) => c.charCodeAt(0));
+const cat = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
+async function hkdf(salt, ikm, info, len) {
+  const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, len * 8));
+}
+async function encrypt(sub, data) {
+  const uaPublic = ub(sub.keys.p256dh), authSecret = ub(sub.keys.auth), te = new TextEncoder();
+  const local = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const asPublic = new Uint8Array(await crypto.subtle.exportKey('raw', local.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, local.privateKey, 256));
+  const ikm = await hkdf(authSecret, shared, cat(te.encode('WebPush: info\0'), uaPublic, asPublic), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, te.encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, te.encode('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, cat(te.encode(JSON.stringify(data)), new Uint8Array([2]))));
+  const header = new Uint8Array(21); header.set(salt, 0); new DataView(header.buffer).setUint32(16, 4096); header[20] = asPublic.length;
+  return cat(header, asPublic, ct);
+}
+// Envía el aviso con su texto (o un toque sin texto si no hay nada que mandar)
+async function poke(env, sub, items) {
+  const headers = { Authorization: await vapidAuth(env, sub.endpoint), TTL: '86400', Urgency: 'high' };
+  let body = null;
+  if (items && items.length) {
+    const data = { items: items.slice(-3).map((x) => ({ title: x.title, body: x.body, tag: x.tag })) };
+    body = await encrypt(sub, data);
+    Object.assign(headers, { 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream' });
+  } else headers['Content-Length'] = '0';
+  const res = await fetch(sub.endpoint, { method: 'POST', headers, body });
   return res.status;
 }
 
@@ -62,7 +92,7 @@ async function flush(env, key, dev) {
   dev.inbox = (dev.inbox || []).filter((x) => x.at > now);
   if (!due.length) { await env.AVISOS.put(key, JSON.stringify(dev)); return; }
   dev.queue = [...(dev.queue || []), ...due].slice(-MAX_QUEUE);
-  const status = await poke(env, dev.sub).catch(() => 0);
+  const status = await poke(env, dev.sub, due).catch(() => 0);
   if (status === 404 || status === 410) await dropDevice(env, key);
   else await env.AVISOS.put(key, JSON.stringify(dev));
   return dueIds;
@@ -94,6 +124,13 @@ export default {
     if (!body || typeof body !== 'object') return json({ error: 'Datos no válidos' }, 400);
 
     // Avisos entre la casa: necesitan la clave de la casa
+    if (path === '/status') {
+      const house = await houseOf(body.houseKey);
+      if (!house) return json({ error: 'Falta la clave de la casa' }, 403);
+      const people = {};
+      for (const [, dev] of await houseDevices(env, house)) if (dev.person) people[dev.person] = (people[dev.person] || 0) + 1;
+      return json({ ok: true, people });
+    }
     if (path === '/send' || path === '/cancel') {
       const house = await houseOf(body.houseKey);
       if (!house) return json({ error: 'Falta la clave de la casa' }, 403);
@@ -139,9 +176,10 @@ export default {
     if (path === '/test') {
       const dev = await env.AVISOS.get(key, 'json');
       if (!dev || !dev.sub) return json({ error: 'Este móvil no está dado de alta' }, 404);
-      dev.queue = [...(dev.queue || []), { at: Date.now(), title: 'Casa · Prueba', body: 'Los avisos de Casa llegan a este móvil.', tag: 'casa-test' }].slice(-MAX_QUEUE);
+      const probe = { at: Date.now(), title: 'Casa · Prueba', body: 'Los avisos de Casa llegan a este móvil.', tag: 'casa-test' };
+      dev.queue = [...(dev.queue || []), probe].slice(-MAX_QUEUE);
       await env.AVISOS.put(key, JSON.stringify(dev));
-      const status = await poke(env, dev.sub).catch(() => 0);
+      const status = await poke(env, dev.sub, [probe]).catch(() => 0);
       return json({ ok: status >= 200 && status < 300, status });
     }
     return json({ error: 'No encontrado' }, 404);

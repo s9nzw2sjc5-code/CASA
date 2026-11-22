@@ -63,6 +63,8 @@
   async disable(){await root.CasaPush.disable(sub=>post('/unsubscribe',{endpoint:sub.endpoint})).catch(()=>{});try{localStorage.removeItem(LSK)}catch(e){}},
   // Avisos para una persona (o las dos): a una hora, «Mari dice…» o el fin de un temporizador
   send(ctx,o){if(!ctx.houseKey)return Promise.reject(Error('Activa los avisos en algún móvil primero.'));return post('/send',{houseKey:ctx.houseKey,...o})},
+  // Qué personas de la casa tienen los avisos activados ({yo:1, juanma:1})
+  status(ctx){if(!ctx.houseKey)return Promise.resolve({people:{}});return post('/status',{houseKey:ctx.houseKey}).catch(()=>({people:{}}))},
   cancel(ctx,id){if(!ctx.houseKey)return Promise.resolve();return post('/cancel',{houseKey:ctx.houseKey,id}).catch(()=>{})},
   async test(){const sub=await subscription();if(!sub)throw Error('Activa primero los avisos en este móvil.');const r=await post('/test',{endpoint:sub.endpoint});if(!r.ok)throw Error('El servicio de avisos no ha podido llegar a este móvil.');},
   // Se llama al pintar la app: sube los avisos un rato después del último cambio

@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v165';
+const CACHE = 'casa-v166';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['cleaning-view.js?v=165','push.js?v=165','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=165', 'shopping-recommendations.js?v=165', 'household-insights.js?v=165', 'household-ui.js?v=165', 'document-files.js?v=165', 'document-photo.js?v=165', 'home-model.js?v=165', 'cleaning-links.js?v=165', 'home-ui.js?v=165', 'cocina.js?v=165', 'product-photo.js?v=165', 'product-photo-ui.js?v=165', 'receipts.js?v=165', 'receipt-image.js?v=165', 'receipt-layout.js?v=165', 'receipt-ocr.js?v=165', 'receipt-extras.js?v=165', 'house-plan.js?v=165', 'house-plan-ui.js?v=165', 'lidl-ui.js?v=165', 'mama.js?v=165', 'avisos.js?v=165', 'tasks-ui.js?v=165', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['cleaning-view.js?v=166','push.js?v=166','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=166', 'shopping-recommendations.js?v=166', 'household-insights.js?v=166', 'household-ui.js?v=166', 'document-files.js?v=166', 'document-photo.js?v=166', 'home-model.js?v=166', 'cleaning-links.js?v=166', 'home-ui.js?v=166', 'cocina.js?v=166', 'product-photo.js?v=166', 'product-photo-ui.js?v=166', 'receipts.js?v=166', 'receipt-image.js?v=166', 'receipt-layout.js?v=166', 'receipt-ocr.js?v=166', 'receipt-extras.js?v=166', 'house-plan.js?v=166', 'house-plan-ui.js?v=166', 'lidl-ui.js?v=166', 'mama.js?v=166', 'avisos.js?v=166', 'tasks-ui.js?v=166', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -59,8 +59,16 @@ async function showPending(){
   }catch(e){}
   await self.registration.showNotification('Casa',{body:'Tienes avisos pendientes. Toca para verlos.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:'casa-avisos',data:{url:home}});
 }
+async function showItems(items){
+  const home=new URL('./',self.location.href).href;
+  for(const x of items.slice(-5))await self.registration.showNotification(String(x.title||'Casa').slice(0,120),{body:String(x.body||'').slice(0,300),icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:String(x.tag||'casa').slice(0,80),data:{url:home}});
+  // Lo ya mostrado no se vuelve a mostrar: se vacía la cola del servicio (sin esperar)
+  try{const sub=await self.registration.pushManager.getSubscription();fetch(AVISOS_URL+'/pending',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub&&sub.endpoint})}).catch(()=>{})}catch(e){}
+}
 self.addEventListener('push',event=>{
   let payload=null;try{payload=event.data?event.data.json():null}catch(e){}
+  // Con el texto dentro (lo normal): se muestra directamente
+  if(payload&&Array.isArray(payload.items)&&payload.items.length){event.waitUntil(showItems(payload.items));return}
   if(!payload){event.waitUntil(showPending());return}
   const url=new URL('./',self.location.href);
   if(['task','reminder'].includes(payload.kind)&&typeof payload.id==='string'&&payload.id.length<200){url.searchParams.set('noticeKind',payload.kind);url.searchParams.set('noticeId',payload.id)}
