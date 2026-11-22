@@ -236,6 +236,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.avisos-bell{margin-left:auto;align-self:center;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:1.35rem;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;flex:none}.avisos-bell.off{opacity:.85}.avisos-bell.warn::after{content:'';position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;background:#FFD23F}.avisos-bell{position:relative}
+
 .avisos-box{margin:-6px 0 14px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);max-width:calc(100% - 76px)}.avisos-box.on{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.88rem;max-width:none}.avisos-box.on .link{min-height:40px}.avisos-box .avisos-on{width:100%;min-height:46px;white-space:normal}.avisos-box.warn{border-color:color-mix(in srgb,var(--c-recordar) 55%,var(--line));background:color-mix(in srgb,var(--c-recordar) 10%,var(--surface));max-width:none}.avisos-box.warn p,.avisos-err{margin:0;font-size:.86rem;line-height:1.45}.avisos-err{margin-top:8px;color:var(--danger)}
 
 .av-status{margin:6px 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-size:.9rem;line-height:1.6}
@@ -818,31 +820,31 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=170"></script>
-<script src="sync.js?v=170"></script>
-<script src="receipts.js?v=170"></script>
-<script src="receipt-image.js?v=170"></script>
-<script src="receipt-layout.js?v=170"></script>
-<script src="receipt-ocr.js?v=170"></script>
-<script src="product-photo.js?v=170"></script>
-<script src="product-photo-ui.js?v=170"></script>
-<script src="shopping-recommendations.js?v=170"></script>
-<script src="household-insights.js?v=170"></script>
-<script src="document-files.js?v=170"></script>
-<script src="document-photo.js?v=170"></script>
-<script src="cleaning-links.js?v=170"></script>
-<script src="home-model.js?v=170"></script>
-<script src="cocina.js?v=170"></script>
-<script src="cleaning-view.js?v=170"></script>
-<script src="home-ui.js?v=170"></script>
-<script src="household-ui.js?v=170"></script>
-<script src="receipt-extras.js?v=170"></script>
-<script src="house-plan.js?v=170"></script>
-<script src="house-plan-ui.js?v=170"></script>
-<script src="lidl-ui.js?v=170"></script>
-<script src="mama.js?v=170"></script>
-<script src="avisos.js?v=170"></script>
-<script src="tasks-ui.js?v=170"></script>
+<script src="push.js?v=171"></script>
+<script src="sync.js?v=171"></script>
+<script src="receipts.js?v=171"></script>
+<script src="receipt-image.js?v=171"></script>
+<script src="receipt-layout.js?v=171"></script>
+<script src="receipt-ocr.js?v=171"></script>
+<script src="product-photo.js?v=171"></script>
+<script src="product-photo-ui.js?v=171"></script>
+<script src="shopping-recommendations.js?v=171"></script>
+<script src="household-insights.js?v=171"></script>
+<script src="document-files.js?v=171"></script>
+<script src="document-photo.js?v=171"></script>
+<script src="cleaning-links.js?v=171"></script>
+<script src="home-model.js?v=171"></script>
+<script src="cocina.js?v=171"></script>
+<script src="cleaning-view.js?v=171"></script>
+<script src="home-ui.js?v=171"></script>
+<script src="household-ui.js?v=171"></script>
+<script src="receipt-extras.js?v=171"></script>
+<script src="house-plan.js?v=171"></script>
+<script src="house-plan-ui.js?v=171"></script>
+<script src="lidl-ui.js?v=171"></script>
+<script src="mama.js?v=171"></script>
+<script src="avisos.js?v=171"></script>
+<script src="tasks-ui.js?v=171"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -897,7 +899,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=170;
+const APP_VERSION=171;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1166,7 +1168,7 @@ function vHoy(){
   let h=`<div class="hoy-hero">
     <div class="hoy-top"><span class="hoy-greet">${greet} 👋</span>
       <div class="ring-box" aria-label="${done} de ${total} tareas de hoy hechas"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" stroke-dasharray="${(pct*C).toFixed(1)} ${C}"${pct?'':' style="opacity:0"'}/></svg><span class="ring-n">${done}/${total}</span></div></div>
-    <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span></div>
+    <div class="hoy-date"><span class="hoy-num">${d.getDate()}</span><span class="hoy-wd"><b>${d.toLocaleDateString('es-ES',{weekday:'long'})}</b>${d.toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span>${typeof avisosBell==='function'?avisosBell():''}</div>
     <div class="hoy-stats">${stat(now.length+late.length,'tareas','tareas')}${stat(evs.length,'eventos','semana')}${stat(rems.length,'avisos','recordar')}${stat(pend,'compras','compras')}</div>
     <p class="hoy-msg">${msg}</p></div>`;
   // El tiempo y sus consejos en lugar del cuadro de notas (las notas se apuntan en Importantes);

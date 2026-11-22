@@ -378,14 +378,16 @@ const { chromium } = require("playwright"),
 
     // Avisos: si el móvil no los permite, se explica por qué (bloqueados o iPhone abierto desde Safari)
     await p.evaluate(() => { ui.view = "hoy"; ui.mamaOpen = false; render(); });
-    assert.match(await p.locator(".avisos-box").innerText(), /bloqueados en este móvil|Recibir avisos/, "siempre a la vista, aunque la tarjeta esté plegada");
-    const iosMsg = await p.evaluate(() => { const pm = window.PushManager; delete window.PushManager; Object.defineProperty(navigator, "userAgent", { get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", configurable: true }); render(); const t = document.querySelector(".avisos-box").innerText; window.PushManager = pm; delete navigator.userAgent; return t; });
+    assert.equal(await p.locator(".hoy-date .avisos-bell").count(), 1, "campanita al lado de la fecha");
+    assert.equal(await p.locator(".mama .avisos-box, .avisos-box").count(), 0, "sin bloque de avisos bajo los recordatorios");
+    assert.match(await p.evaluate(() => (() => { const d = document.createElement("div"); d.innerHTML = avisosBox(); return d.textContent; })()), /bloqueados en este móvil|Recibir avisos/);
+    const iosMsg = await p.evaluate(() => { const pm = window.PushManager; delete window.PushManager; Object.defineProperty(navigator, "userAgent", { get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", configurable: true }); const t = (() => { const d = document.createElement("div"); d.innerHTML = avisosBox(); return d.textContent; })(); window.PushManager = pm; delete navigator.userAgent; return t; });
     assert.match(iosMsg, /abre Casa desde su icono de la pantalla de inicio/);
     const androidMsgs = await p.evaluate(() => {
       const out = [], setUA = (ua) => Object.defineProperty(navigator, "userAgent", { get: () => ua, configurable: true });
       Object.defineProperty(Notification, "permission", { get: () => "denied", configurable: true });
-      setUA("Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"); render(); out.push(document.querySelector(".avisos-box").innerText);
-      setUA("Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 WhatsApp/2.24"); render(); out.push(document.querySelector(".avisos-box").innerText);
+      setUA("Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"); out.push((() => { const d = document.createElement("div"); d.innerHTML = avisosBox(); return d.textContent; })());
+      setUA("Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 WhatsApp/2.24"); out.push((() => { const d = document.createElement("div"); d.innerHTML = avisosBox(); return d.textContent; })());
       delete navigator.userAgent; delete Notification.permission; render(); return out;
     });
     assert.match(androidMsgs[0], /En Chrome: toca el candado[\s\S]*Notificaciones › Permitir/);
@@ -400,14 +402,13 @@ const { chromium } = require("playwright"),
       ui.me = "yo"; // este móvil es de Mari
       S.tasks.push({ id: "av1", title: "Cita con hora", date: addDays(today(), 1), time: "17:00", repeat: "none", done: false }); save(); ui.view = "hoy"; ui.mamaOpen = true; render();
     });
-    await p.locator("[data-act=avisosOn]").click();
+    await p.locator(".avisos-bell").click();
     await p.waitForFunction(() => /Avisos activados/.test(document.querySelector("#toast").textContent));
-    assert.match(await p.locator(".avisos-box.on").innerText(), /activados/);
+    assert.equal(await p.locator(".avisos-bell").innerText(), "🔔");
     const sub = avisosCalls.find((c) => c[0] === "/subscribe");
     assert.ok(sub && sub[1].sub.endpoint.includes("fcm") && sub[1].items.some((x) => /Cita con hora/.test(x.title)), "alta con sus avisos");
     assert.ok(sub[1].person === "yo" && sub[1].houseKey && sub[1].houseKey.length >= 20, "de quién es y clave de la casa");
-    assert.equal(await p.locator("[data-act=avisosSheet]").count(), 1);
-    await p.locator("[data-act=avisosSheet]").click();
+    await p.locator(".avisos-bell").click();
     await p.locator("#av_m").fill("08:30");
     await p.locator(".overlay [data-s=ok]").click();
     assert.equal(await p.evaluate(() => CasaAvisos.hours().morning), "08:30");
@@ -459,7 +460,7 @@ const { chromium } = require("playwright"),
     assert.equal(await p.locator(".timer-row.alarm").count(), 0);
     // Ajustar: avisos de cada persona en su móvil (tipos y «solo lo mío»)
     await p.evaluate(() => render());
-    await p.locator("[data-act=avisosSheet]").click();
+    await p.locator(".avisos-bell").click();
     await p.locator('[data-av-type="resumen"]').uncheck();
     await p.locator(".overlay [data-s=ok]").click();
     assert.equal(await p.evaluate(() => CasaAvisos.prefs().types.resumen), false);
@@ -469,15 +470,17 @@ const { chromium } = require("playwright"),
     await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-pendiente"); ui.view = "hoy"; render(); });
     await p.evaluate(() => { window.CasaPush.enable = async ({ register }) => { try { await register({ endpoint: "https://fcm.googleapis.com/fcm/send/prueba", keys: { p256dh: "a", auth: "b" } }); localStorage.setItem("casa-push-enabled", "1"); } catch (e) { if (e && (e.name === "TypeError" || /fetch/i.test(e.message))) { e.pending = true; } throw e; } }; });
     await p.route("https://casa-avisos.s9nzw2sjc5.workers.dev/**", (r) => r.abort("connectionrefused"));
-    await p.locator("[data-act=avisosOn]").click();
+    await p.locator(".avisos-bell").click();
     await p.waitForFunction(() => /Falta conectar con el servicio/.test(document.querySelector("#toast").textContent));
-    assert.match(await p.locator(".avisos-box").innerText(), /todavía no se ha podido conectar con el servicio[\s\S]*Reintentar ahora/);
+    assert.equal(await p.locator(".avisos-bell.warn").count(), 1, "campanita con aviso");
+    await p.locator(".avisos-bell").click();
+    assert.match(await p.locator(".overlay").last().innerText(), /todavía no se ha podido conectar con el servicio[\s\S]*Reintentar ahora/);
     assert.doesNotMatch(await p.locator("#app").innerText(), /Failed to fetch/);
     await p.unroute("https://casa-avisos.s9nzw2sjc5.workers.dev/**");
     await p.route("https://casa-avisos.s9nzw2sjc5.workers.dev/**", (r) => r.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: '{"ok":true}' }));
-    await p.locator("[data-act=avisosRetry]").click();
+    await p.locator(".overlay [data-act=avisosRetry]").click();
     await p.waitForFunction(() => /Conectado/.test(document.querySelector("#toast").textContent));
-    assert.match(await p.locator(".avisos-box").innerText(), /activados/);
+    assert.equal(await p.locator(".avisos-bell.warn").count(), 0);
     assert.equal(await p.evaluate(() => CasaAvisos.pending()), false);
     await p.evaluate(() => { localStorage.removeItem("casa-avisos"); });
 

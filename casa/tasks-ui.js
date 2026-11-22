@@ -298,7 +298,7 @@ function mamaCard(){
  }catch(e){console.error(e);return''}
  if(!list.length)return'';
  const btn=a=>!a?'':a.kind==='task'?`<button class="btn sec" data-act="toggleTask" data-id="${esc(a.id)}">✓ Hecho</button>`:a.kind==='priority'?`<button class="btn sec" data-act="taskPriority">⚡ Repartir por prioridad</button>`:a.kind==='routines'?`<button class="btn sec" data-act="mamaRoutines">Añadir rutina de mañana y noche</button>`:a.kind==='timer'?`<button class="btn sec" data-act="timerSheet">⏲️ Poner temporizador</button>`:`<button class="btn sec" data-act="tab" data-v="${{tareas:'tareas',ringo:'ringo',importantes:'recordar',compras:'compras'}[a.kind]||'tareas'}">Ver</button>`;
- return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>${avisosBox()}`;
+ return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>`;
 }
 // Rutina de mañana y noche: tareas diarias cortas (se pueden borrar o cambiar como cualquier tarea)
 function mamaAddRoutines(){
@@ -323,6 +323,23 @@ function avisosState(){
  if(!('serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window))return isIOS()&&!isStandalone()?'ios-browser':'unsupported';
  if(Notification.permission==='denied')return'blocked';
  return CasaAvisos.on()?'on':'off';
+}
+// Campanita en la tarjeta de arriba de Hoy (al lado de la fecha): 🔔 activados (abre los ajustes) · 🔕 sin activar
+function avisosBell(){
+ const st=avisosState();if(st==='none')return'';
+ const on=st==='on',warn=!on&&st!=='off'||on&&CasaAvisos.pending();
+ const label=on?(warn?'Avisos activados, pendientes de conectar':'Avisos en el móvil: activados. Ajustes'):'Avisos en el móvil: sin activar';
+ return`<button class="avisos-bell ${on?'on':'off'} ${warn?'warn':''}" data-act="avisosBell" aria-label="${label}" title="${label}">${on?'🔔':'🔕'}</button>`;
+}
+function avisosBellTap(){
+ const st=avisosState();
+ if(st==='on'&&!CasaAvisos.pending())return avisosSheet();
+ if(st==='off'&&!ui.avisosError)return avisosOn();
+ // Algo impide los avisos (o falta conectar): explicarlo en una ventanita, con lo que se puede hacer
+ const ov=sheet('🔕 Avisos en este móvil',`<div class="avisos-sheet-msg">${avisosBox()}</div>`,{autoFocus:false});
+ ov.querySelector('[data-s=ok]')?.remove();ov.querySelector('[data-s=cancel]').textContent='Cerrar';
+ ov.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;e.stopPropagation();ov.remove();const f=TASKS_ACT[b.dataset.act];if(f)f(b.dataset)});
+ return ov;
 }
 function avisosBox(){
  const st=avisosState();
@@ -367,7 +384,7 @@ function avisosSheet(){
  ov.querySelector('[data-av-off]').onclick=async()=>{await CasaAvisos.disable();ov.remove();toast('Avisos desactivados en este móvil');render()};
  return ov;
 }
-Object.assign(TASKS_ACT,{avisosOn:()=>avisosOn(),avisosSheet:()=>avisosSheet(),avisosRetry:()=>{toast('Reintentando…');CasaAvisos.syncNow(avisosCtx()).then(()=>{toast(CasaAvisos.pending()?'Sigue sin conexión con el servicio. Prueba con otra red.':'✅ Conectado: los avisos ya llegan a este móvil');render()}).catch(()=>toast('Sigue sin conexión con el servicio. Prueba con otra red (wifi o datos) o más tarde.'))}});
+Object.assign(TASKS_ACT,{avisosBell:()=>avisosBellTap(),avisosOn:()=>avisosOn(),avisosSheet:()=>avisosSheet(),avisosRetry:()=>{toast('Reintentando…');CasaAvisos.syncNow(avisosCtx()).then(()=>{toast(CasaAvisos.pending()?'Sigue sin conexión con el servicio. Prueba con otra red.':'✅ Conectado: los avisos ya llegan a este móvil');render()}).catch(()=>toast('Sigue sin conexión con el servicio. Prueba con otra red (wifi o datos) o más tarde.'))}});
 
 /* ---------- Temporizadores y avisos a una hora (se comparten entre los dos móviles) ---------- */
 // Programas habituales de cada aparato (minutos); siempre se puede poner otro tiempo
