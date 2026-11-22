@@ -381,6 +381,15 @@ const { chromium } = require("playwright"),
     assert.match(await p.locator(".avisos-box").innerText(), /bloqueados en este móvil|Recibir avisos/, "siempre a la vista, aunque la tarjeta esté plegada");
     const iosMsg = await p.evaluate(() => { const pm = window.PushManager; delete window.PushManager; Object.defineProperty(navigator, "userAgent", { get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", configurable: true }); render(); const t = document.querySelector(".avisos-box").innerText; window.PushManager = pm; delete navigator.userAgent; return t; });
     assert.match(iosMsg, /abre Casa desde su icono de la pantalla de inicio/);
+    const androidMsgs = await p.evaluate(() => {
+      const out = [], setUA = (ua) => Object.defineProperty(navigator, "userAgent", { get: () => ua, configurable: true });
+      Object.defineProperty(Notification, "permission", { get: () => "denied", configurable: true });
+      setUA("Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"); render(); out.push(document.querySelector(".avisos-box").innerText);
+      setUA("Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 WhatsApp/2.24"); render(); out.push(document.querySelector(".avisos-box").innerText);
+      delete navigator.userAgent; delete Notification.permission; render(); return out;
+    });
+    assert.match(androidMsgs[0], /En Chrome: toca el candado[\s\S]*Notificaciones › Permitir/);
+    assert.match(androidMsgs[1], /dentro de otra app \(WhatsApp/);
     // Avisos en el móvil: «📲 Recibir estos avisos» da de alta el móvil y sube los avisos (servicio simulado)
     const avisosCalls = [];
     await p.context().grantPermissions(["notifications"]);

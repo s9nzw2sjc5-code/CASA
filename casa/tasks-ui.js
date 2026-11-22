@@ -313,9 +313,13 @@ document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('de
 /* ---------- Avisos en el móvil: activar, ajustar horas, probar y desactivar ---------- */
 // Estado de los avisos en este móvil, siempre a la vista (fuera de la tarjeta plegable) y explicando qué falta
 const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=()=>/Android/i.test(navigator.userAgent);
+// Navegadores dentro de otras apps (WhatsApp, Instagram, Facebook…): no permiten avisos
+const isInApp=()=>/(FBAN|FBAV|Instagram|WhatsApp|; wv\)|Line\/)/i.test(navigator.userAgent);
 const isStandalone=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
 function avisosState(){
  if(typeof CasaAvisos==='undefined')return'none';
+ if(isInApp())return'inapp';
  if(!('serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window))return isIOS()&&!isStandalone()?'ios-browser':'unsupported';
  if(Notification.permission==='denied')return'blocked';
  return CasaAvisos.on()?'on':'off';
@@ -326,8 +330,9 @@ function avisosBox(){
  if(st==='on')return`<div class="avisos-box on"><span>🔔 Avisos en este móvil: activados</span><button class="link" data-act="avisosSheet">Ajustar</button></div>`;
  if(st==='off')return`<div class="avisos-box"><button class="btn avisos-on" data-act="avisosOn">📲 Recibir avisos en este móvil</button>${ui.avisosError?`<p class="avisos-err">${esc(ui.avisosError)}</p>`:''}</div>`;
  const msg={'ios-browser':'Para recibir avisos en el iPhone, abre Casa desde su icono de la pantalla de inicio (en Safari: Compartir › «Añadir a pantalla de inicio»). Desde Safari el iPhone no permite avisos.',
-  unsupported:'Este navegador no permite avisos. En iPhone, abre Casa desde el icono de la pantalla de inicio.',
-  blocked:'Los avisos están bloqueados en este móvil. Actívalos en Ajustes › Notificaciones › Casa (permitir notificaciones) y vuelve a abrir Casa.'}[st];
+  inapp:'Casa está abierta dentro de otra app (WhatsApp, Instagram…), y ahí no hay avisos. Ábrela en Chrome'+(isIOS()?' o desde el icono de la pantalla de inicio':'')+'.',
+  unsupported:isAndroid()?'Este navegador no permite avisos. Abre Casa en Chrome.':'Este navegador no permite avisos. En iPhone, abre Casa desde el icono de la pantalla de inicio.',
+  blocked:isAndroid()?'Los avisos están bloqueados para Casa. En Chrome: toca el candado (o ⋮ › Ajustes del sitio) junto a la dirección › Notificaciones › Permitir. Si sigue sin ir: Ajustes del móvil › Aplicaciones › Chrome › Notificaciones › activadas. Luego vuelve a abrir Casa.':'Los avisos están bloqueados en este móvil. Actívalos en Ajustes › Notificaciones › Casa (permitir notificaciones) y vuelve a abrir Casa.'}[st];
  return`<div class="avisos-box warn"><p>⚠️ ${esc(msg)}</p></div>`;
 }
 // Clave privada de la casa (para que solo vuestros móviles puedan mandaros avisos); se guarda con los datos de Casa
@@ -341,7 +346,7 @@ async function avisosOn(){
  avisosHouseKey();
  toast('Activando los avisos… acepta el permiso si te lo pide');
  try{await CasaAvisos.enable(avisosCtx());ui.avisosError='';toast('✅ Avisos activados en este móvil');render()}
- catch(e){ui.avisosError=String(e&&e.message||e)||'No se han podido activar los avisos.';toast(ui.avisosError);render()}
+ catch(e){ui.avisosError=(String(e&&e.message||e)||'No se han podido activar los avisos.')+(isAndroid()&&/permiso|bloquead/i.test(String(e&&e.message))?' En Chrome: candado junto a la dirección › Notificaciones › Permitir, y vuelve a pulsar.':'');toast(ui.avisosError);render()}
 }
 const AVISO_TYPES=[['resumen','Resumen del día'],['urgente','Lo urgente'],['hora','Tareas con hora'],['citas','Citas (30 min antes)'],['ringo','Ringo'],['manana','Lo de mañana'],['timers','Temporizadores (lavadora, secadora…)'],['alarma','Avisos a una hora'],['mensaje','Mensajes del otro («… dice»)']];
 function avisosSheet(){

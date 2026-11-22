@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v168';
+const CACHE = 'casa-v169';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['cleaning-view.js?v=168','push.js?v=168','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=168', 'shopping-recommendations.js?v=168', 'household-insights.js?v=168', 'household-ui.js?v=168', 'document-files.js?v=168', 'document-photo.js?v=168', 'home-model.js?v=168', 'cleaning-links.js?v=168', 'home-ui.js?v=168', 'cocina.js?v=168', 'product-photo.js?v=168', 'product-photo-ui.js?v=168', 'receipts.js?v=168', 'receipt-image.js?v=168', 'receipt-layout.js?v=168', 'receipt-ocr.js?v=168', 'receipt-extras.js?v=168', 'house-plan.js?v=168', 'house-plan-ui.js?v=168', 'lidl-ui.js?v=168', 'mama.js?v=168', 'avisos.js?v=168', 'tasks-ui.js?v=168', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['cleaning-view.js?v=169','push.js?v=169','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=169', 'shopping-recommendations.js?v=169', 'household-insights.js?v=169', 'household-ui.js?v=169', 'document-files.js?v=169', 'document-photo.js?v=169', 'home-model.js?v=169', 'cleaning-links.js?v=169', 'home-ui.js?v=169', 'cocina.js?v=169', 'product-photo.js?v=169', 'product-photo-ui.js?v=169', 'receipts.js?v=169', 'receipt-image.js?v=169', 'receipt-layout.js?v=169', 'receipt-ocr.js?v=169', 'receipt-extras.js?v=169', 'house-plan.js?v=169', 'house-plan-ui.js?v=169', 'lidl-ui.js?v=169', 'mama.js?v=169', 'avisos.js?v=169', 'tasks-ui.js?v=169', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

@@ -8,8 +8,10 @@
     async enable({publicKey,register}){
       if(!supported())throw new Error('Este navegador no permite notificaciones. En iPhone, abre CASA desde la pantalla de inicio.');
       if(!publicKey||typeof register!=='function')throw new Error('El servicio de envío todavía no está configurado.');
-      if(await Notification.requestPermission()!=='granted')throw new Error('No se ha concedido permiso para las notificaciones.');
-      const sw=await navigator.serviceWorker.ready;
+      const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error(perm==='denied'?'Las notificaciones están bloqueadas para Casa en este móvil.':'No se ha dado permiso para las notificaciones (puede que el navegador lo haya bloqueado sin preguntar).');
+      // Si el componente de avisos de Casa no está listo, se intenta arrancar; nunca se queda esperando sin decir nada
+      if(!(await navigator.serviceWorker.getRegistration()))await navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});
+      const sw=await Promise.race([navigator.serviceWorker.ready,new Promise((_,no)=>setTimeout(()=>no(new Error('Casa no ha podido prepararse para los avisos. Cierra Casa del todo, vuelve a abrirla y pulsa otra vez.')),12000))]);
       let subscription=await sw.pushManager.getSubscription(),created=false;
       if(!subscription){subscription=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:decode(publicKey)});created=true}
       try{await register(subscription.toJSON());localStorage.setItem(key,'1')}
