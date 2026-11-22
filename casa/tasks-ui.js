@@ -248,7 +248,7 @@ function tzZoneSelectHtml(t){
 /* ---------- Reorganizar por prioridad: repartir lo acumulado sin sobrecargar ningún día ---------- */
 // Minutos por día: entre semana poco, el fin de semana más (como el plan de limpieza)
 const PRIO_CAP=d=>{const w=taskWeekday(d);return w<5?50:w===5?90:120};
-const prioMinutes=x=>CasaHousePlan.minutesFor(x)||15;
+const prioMinutes=x=>CasaHousePlan.minutesFor(x)||(x&&x.mamaKey&&(CasaMama.ROUTINES.find(r=>r.key===x.mamaKey)||{}).min)||15;
 const prioFreq=x=>x.repeat==='daily'?0:x.repeat==='weekly'?1:x.repeat==='custom'&&x.unit==='w'&&Number(x.every)<=2?2:x.repeat==='custom'&&x.unit==='d'?1:x.repeat&&x.repeat!=='none'?3:4;
 function priorityPlan(){
  const t=today(),mine=taskMine(),movable=mine.filter(x=>!x.done&&x.date&&x.date<=t&&!x.urgent);
@@ -275,3 +275,29 @@ function taskPrioritySheet(){
  }});
  return ov;
 }
+
+/* ---------- «Mamá dice»: recordatorios como los de una madre, en Hoy ---------- */
+function mamaCard(){
+ let list=[];
+ try{
+  const place=houseWxPlace(),c=place&&houseWxFor(place);
+  list=CasaMama.nudges({today:today(),hour:new Date().getHours(),tasks:taskMine(),
+   pets:(S.pet||[]).map(x=>({name:x.name,due:petDue(x)})),
+   listPending:(S.items||[]).filter(i=>!i.done&&i.listId===cartList()).length,
+   lowPantry:typeof pantryLow==='function'?(S.pantry||[]).filter(pantryLow).length:0,
+   forecast:c?c.days:[],isWash:CasaHousePlan.isWash,isWet:CasaHousePlan.isWet,isImportant:isImportantTask,minutes:prioMinutes,dayName:tzDay,
+   hasRoutines:(S.tasks||[]).some(t=>t.mamaKey)||!!(S.cook&&S.cook.mamaNoRoutines)});
+ }catch(e){console.error(e);return''}
+ if(!list.length)return'';
+ const btn=a=>!a?'':a.kind==='task'?`<button class="btn sec" data-act="toggleTask" data-id="${esc(a.id)}">✓ Hecho</button>`:a.kind==='priority'?`<button class="btn sec" data-act="taskPriority">⚡ Repártemelas</button>`:a.kind==='routines'?`<button class="btn sec" data-act="mamaRoutines">Añadir rutina de mañana y noche</button>`:`<button class="btn sec" data-act="tab" data-v="${{tareas:'tareas',ringo:'ringo',importantes:'recordar',compras:'compras'}[a.kind]||'tareas'}">Ver</button>`;
+ return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>💬 ${esc(CasaMama.greeting(new Date().getHours(),today()))}</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>`;
+}
+// Rutina de mañana y noche: tareas diarias cortas (se pueden borrar o cambiar como cualquier tarea)
+function mamaAddRoutines(){
+ const have=new Set((S.tasks||[]).filter(t=>t.mamaKey).map(t=>t.mamaKey)),add=CasaMama.ROUTINES.filter(r=>!have.has(r.key));
+ if(!add.length){toast('Ya tienes la rutina de mañana y noche');return}
+ for(const r of add)S.tasks.push({id:uid(),title:r.title,date:today(),who:'ambos',repeat:r.repeat,...(r.every?{every:r.every,unit:r.unit}:{}),notes:'',done:false,mamaKey:r.key});
+ save();toastUndo(`Añadida la rutina de mañana y noche (${add.length} tareas cortas)`,7000);
+}
+Object.assign(TASKS_ACT,{mamaRoutines:()=>mamaAddRoutines()});
+document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.mama')){ui.mamaOpen=e.target.open;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(err){}}},true);

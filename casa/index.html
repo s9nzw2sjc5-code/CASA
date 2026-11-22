@@ -236,6 +236,10 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.mama{margin:0 0 14px;padding:12px 14px;border-radius:18px;border:1px solid color-mix(in srgb,var(--c-hoy) 35%,var(--line));background:color-mix(in srgb,var(--c-hoy) 7%,var(--surface))}
+.mama>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:36px;font-size:1rem}.mama>summary::-webkit-details-marker{display:none}.mama[open] .tz-caret{transform:rotate(180deg)}
+.mama ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:10px}.mama li{display:flex;gap:10px;align-items:flex-start}.mama li>span{font-size:1.2rem;line-height:1.3}.mama li p{margin:0 0 6px;font-size:.9rem;line-height:1.4}.mama li .btn{min-height:38px;padding:6px 12px;font-size:.82rem}
+
 .tz-prio{width:100%;min-height:46px;margin:0 0 6px;font-weight:700}
 .prio-days{display:grid;gap:10px;max-height:52vh;overflow:auto}.prio-day h4{margin:0 0 4px;font-size:.95rem}.prio-day h4 small{color:var(--muted);font-weight:500}.prio-day ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:.88rem}.prio-day li small{color:var(--muted)}
 
@@ -802,29 +806,30 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=159"></script>
-<script src="sync.js?v=159"></script>
-<script src="receipts.js?v=159"></script>
-<script src="receipt-image.js?v=159"></script>
-<script src="receipt-layout.js?v=159"></script>
-<script src="receipt-ocr.js?v=159"></script>
-<script src="product-photo.js?v=159"></script>
-<script src="product-photo-ui.js?v=159"></script>
-<script src="shopping-recommendations.js?v=159"></script>
-<script src="household-insights.js?v=159"></script>
-<script src="document-files.js?v=159"></script>
-<script src="document-photo.js?v=159"></script>
-<script src="cleaning-links.js?v=159"></script>
-<script src="home-model.js?v=159"></script>
-<script src="cocina.js?v=159"></script>
-<script src="cleaning-view.js?v=159"></script>
-<script src="home-ui.js?v=159"></script>
-<script src="household-ui.js?v=159"></script>
-<script src="receipt-extras.js?v=159"></script>
-<script src="house-plan.js?v=159"></script>
-<script src="house-plan-ui.js?v=159"></script>
-<script src="lidl-ui.js?v=159"></script>
-<script src="tasks-ui.js?v=159"></script>
+<script src="push.js?v=160"></script>
+<script src="sync.js?v=160"></script>
+<script src="receipts.js?v=160"></script>
+<script src="receipt-image.js?v=160"></script>
+<script src="receipt-layout.js?v=160"></script>
+<script src="receipt-ocr.js?v=160"></script>
+<script src="product-photo.js?v=160"></script>
+<script src="product-photo-ui.js?v=160"></script>
+<script src="shopping-recommendations.js?v=160"></script>
+<script src="household-insights.js?v=160"></script>
+<script src="document-files.js?v=160"></script>
+<script src="document-photo.js?v=160"></script>
+<script src="cleaning-links.js?v=160"></script>
+<script src="home-model.js?v=160"></script>
+<script src="cocina.js?v=160"></script>
+<script src="cleaning-view.js?v=160"></script>
+<script src="home-ui.js?v=160"></script>
+<script src="household-ui.js?v=160"></script>
+<script src="receipt-extras.js?v=160"></script>
+<script src="house-plan.js?v=160"></script>
+<script src="house-plan-ui.js?v=160"></script>
+<script src="lidl-ui.js?v=160"></script>
+<script src="mama.js?v=160"></script>
+<script src="tasks-ui.js?v=160"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -879,7 +884,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=159;
+const APP_VERSION=160;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1153,7 +1158,7 @@ function vHoy(){
     <p class="hoy-msg">${msg}</p></div>`;
   // El tiempo y sus consejos en lugar del cuadro de notas (las notas se apuntan en Importantes);
   // un mensaje que haya llegado se sigue viendo
-  h+=boardMsgCard()+houseWxCard('forecast');
+  h+=boardMsgCard()+mamaCard()+houseWxCard('forecast');
   if(impN)h+=`<section class="hsec imp" style="--sc:var(--c-recordar)"><div class="hsec-h"><span class="hsec-ic" aria-hidden="true">❗</span><h2>Importante hoy</h2><span class="imp-n">${impN}</span></div>${ul([...todayAppts.map(e=>eventRow(e,t,'Hoy')),...urgentTasks.map(x=>taskRow(x)),...todayImpTasks.map(x=>taskRow(x,t)),...urgentPets.map(petRow),...todayPetAppts.map(petRow),...imp.map(remRow)])}</section>`;
   if(soon.length)h+=`<details class="hsec imp acuerdate" style="--sc:var(--c-recordar)"${ui.acuClosed?'':' open'}><summary class="hsec-h" data-act="acuToggle"><span class="hsec-ic" aria-hidden="true">🔔</span><h2>¡Acuérdate!!</h2><span class="imp-n">${soon.length}</span><span class="tz-caret" aria-hidden="true">⌄</span></summary><p class="acu-sub">Citas importantes de los próximos 3 días</p>${ul(soon.map(x=>x.row))}</details>`;
   h+=`<div class="quick"><input class="field" id="qTask" placeholder="Añadir tarea para hoy" enterkeyhint="done"><button class="btn" data-act="quickTask">Añadir</button></div>`;

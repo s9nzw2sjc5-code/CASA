@@ -431,5 +431,5 @@
  // No se puede posponer una tarea urgente: solo adelantarla o dejarla para hoy
  const blocksPostpone=(t,date,today)=>!!t&&!!t.urgent&&!t.done&&!!date&&date>(validDate(t.date)&&t.date>today?t.date:today);
 
- const api={norm,needsUnify,unifyTasks,dedupeConverted,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone,rebalance,minutesFor,isLong,LONG_MIN};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
+ const api={isWash,norm,needsUnify,unifyTasks,dedupeConverted,ZONES,LAUNDRY,WASHER_NAMES,washerNames,washerUpdates,expandItems,ITEMS,TIPS,tipFor,buildPlan,legacyTitles,suggestKey,joinCandidates,integrate,defaultZones,isSeasonal,monthItems,nextMonths,forecastDays,isWet,isOutdoor,sky,recommendations,blocksPostpone,rebalance,minutesFor,isLong,LONG_MIN};root.CasaHousePlan=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

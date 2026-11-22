@@ -40,7 +40,7 @@ const { chromium } = require("playwright"),
         { ...base, id: "fuente", title: "Limpiar la fuente de Ringo", date: t, urgent: true },
         { ...base, id: "luz", title: "Pagar la luz", date: t },
         { ...base, id: "cocina", title: "Cocina: encimera", date: a(-30), done: true, doneAt: t, plan: "casa", planKey: "cocina-semanal" },
-        { ...base, id: "nevera", title: "Nevera: vaciar y limpiar por dentro", date: a(9), plan: "casa", planKey: "nevera" },
+        { ...base, id: "nevera", title: "Nevera: vaciar y limpiar por dentro", date: a(6 - ((new Date(t + "T12:00:00").getDay() + 6) % 7) + 3), plan: "casa", planKey: "nevera" },
         { ...base, id: "sinfecha", title: "Algo sin fecha", date: "" },
       ];
       S.cook = { planDays: 2 };
@@ -364,6 +364,17 @@ const { chromium } = require("playwright"),
     await p.locator(".toast-undo").click();
     assert.equal(await p.evaluate(() => JSON.stringify(S.tasks.map((t) => [t.id, t.date]))), before, "se puede deshacer");
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !/^pr/.test(t.id)); save(); });
+
+    // «Mamá dice» en Hoy: saludo, avisos con su botón y la rutina de mañana y noche
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !t.mamaKey); ui.view = "hoy"; ui.mamaOpen = true; render(); });
+    assert.match(await p.locator(".mama summary").innerText(), /Buen[oa]s (días|tardes|noches), /);
+    assert.ok(await p.locator(".mama li").count() >= 1 && (await p.locator(".mama li").count()) <= 4);
+    await p.evaluate(() => { const h = new Date().getHours(); if (h >= 12 && h < 20) { CasaMama._h = true; } });
+    await p.evaluate(() => mamaAddRoutines());
+    assert.equal(await p.evaluate(() => S.tasks.filter((t) => t.mamaKey).length), 3);
+    await p.evaluate(() => mamaAddRoutines());
+    assert.equal(await p.evaluate(() => S.tasks.filter((t) => t.mamaKey).length), 3, "no se duplica");
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !t.mamaKey); save(); });
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
