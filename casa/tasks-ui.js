@@ -327,6 +327,7 @@ function avisosState(){
 function avisosBox(){
  const st=avisosState();
  if(st==='none')return'';
+ if(st==='on'&&CasaAvisos.pending())return`<div class="avisos-box warn"><p>🔔 Avisos activados en este móvil, pero todavía no se ha podido conectar con el servicio de avisos (puede ser la red o la compañía: en España algunas bloquean Cloudflare durante el fútbol). Se reintenta solo cada vez que abres Casa; prueba también con otra red (wifi o datos).</p><button class="link" data-act="avisosRetry">Reintentar ahora</button></div>`;
  if(st==='on')return`<div class="avisos-box on"><span>🔔 Avisos en este móvil: activados</span><button class="link" data-act="avisosSheet">Ajustar</button></div>`;
  if(st==='off')return`<div class="avisos-box"><button class="btn avisos-on" data-act="avisosOn">📲 Recibir avisos en este móvil</button>${ui.avisosError?`<p class="avisos-err">${esc(ui.avisosError)}</p>`:''}</div>`;
  const msg={'ios-browser':'Para recibir avisos en el iPhone, abre Casa desde su icono de la pantalla de inicio (en Safari: Compartir › «Añadir a pantalla de inicio»). Desde Safari el iPhone no permite avisos.',
@@ -345,8 +346,8 @@ async function avisosOn(){
  ui.avisosError='';
  avisosHouseKey();
  toast('Activando los avisos… acepta el permiso si te lo pide');
- try{await CasaAvisos.enable(avisosCtx());ui.avisosError='';toast('✅ Avisos activados en este móvil');render()}
- catch(e){ui.avisosError=(String(e&&e.message||e)||'No se han podido activar los avisos.')+(isAndroid()&&/permiso|bloquead/i.test(String(e&&e.message))?' En Chrome: candado junto a la dirección › Notificaciones › Permitir, y vuelve a pulsar.':'');toast(ui.avisosError);render()}
+ try{const r=await CasaAvisos.enable(avisosCtx());ui.avisosError='';toast(r&&r.pending?'Avisos activados. Falta conectar con el servicio: se reintenta solo.':'✅ Avisos activados en este móvil');render()}
+ catch(e){ui.avisosError=(/failed to fetch|networkerror|load failed/i.test(String(e&&e.message))?'No se ha podido conectar con el servicio de avisos. Prueba con otra red (wifi o datos) o más tarde.':(String(e&&e.message||e)||'No se han podido activar los avisos.'))+(isAndroid()&&/permiso|bloquead/i.test(String(e&&e.message))?' En Chrome: candado junto a la dirección › Notificaciones › Permitir, y vuelve a pulsar.':'');toast(ui.avisosError);render()}
 }
 const AVISO_TYPES=[['resumen','Resumen del día'],['urgente','Lo urgente'],['hora','Tareas con hora'],['citas','Citas (30 min antes)'],['ringo','Ringo'],['manana','Lo de mañana'],['timers','Temporizadores (lavadora, secadora…)'],['alarma','Avisos a una hora'],['mensaje','Mensajes del otro («… dice»)']];
 function avisosSheet(){
@@ -366,7 +367,7 @@ function avisosSheet(){
  ov.querySelector('[data-av-off]').onclick=async()=>{await CasaAvisos.disable();ov.remove();toast('Avisos desactivados en este móvil');render()};
  return ov;
 }
-Object.assign(TASKS_ACT,{avisosOn:()=>avisosOn(),avisosSheet:()=>avisosSheet()});
+Object.assign(TASKS_ACT,{avisosOn:()=>avisosOn(),avisosSheet:()=>avisosSheet(),avisosRetry:()=>{toast('Reintentando…');CasaAvisos.syncNow(avisosCtx()).then(()=>{toast(CasaAvisos.pending()?'Sigue sin conexión con el servicio. Prueba con otra red.':'✅ Conectado: los avisos ya llegan a este móvil');render()}).catch(()=>toast('Sigue sin conexión con el servicio. Prueba con otra red (wifi o datos) o más tarde.'))}});
 
 /* ---------- Temporizadores y avisos a una hora (se comparten entre los dos móviles) ---------- */
 // Programas habituales de cada aparato (minutos); siempre se puede poner otro tiempo

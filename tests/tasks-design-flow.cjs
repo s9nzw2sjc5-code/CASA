@@ -465,6 +465,22 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => CasaAvisos.prefs().types.resumen), false);
     await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-prefs"); S.cook.timers = []; S.cook.alarms = []; S.tasks = S.tasks.filter((t) => t.id !== "col1"); save(); });
 
+    // Sin conexión con el servicio («Failed to fetch»): queda activado y el alta se reintenta sola
+    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-pendiente"); ui.view = "hoy"; render(); });
+    await p.evaluate(() => { window.CasaPush.enable = async ({ register }) => { try { await register({ endpoint: "https://fcm.googleapis.com/fcm/send/prueba", keys: { p256dh: "a", auth: "b" } }); localStorage.setItem("casa-push-enabled", "1"); } catch (e) { if (e && (e.name === "TypeError" || /fetch/i.test(e.message))) { e.pending = true; } throw e; } }; });
+    await p.route("https://casa-avisos.s9nzw2sjc5.workers.dev/**", (r) => r.abort("connectionrefused"));
+    await p.locator("[data-act=avisosOn]").click();
+    await p.waitForFunction(() => /Falta conectar con el servicio/.test(document.querySelector("#toast").textContent));
+    assert.match(await p.locator(".avisos-box").innerText(), /todavía no se ha podido conectar con el servicio[\s\S]*Reintentar ahora/);
+    assert.doesNotMatch(await p.locator("#app").innerText(), /Failed to fetch/);
+    await p.unroute("https://casa-avisos.s9nzw2sjc5.workers.dev/**");
+    await p.route("https://casa-avisos.s9nzw2sjc5.workers.dev/**", (r) => r.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: '{"ok":true}' }));
+    await p.locator("[data-act=avisosRetry]").click();
+    await p.waitForFunction(() => /Conectado/.test(document.querySelector("#toast").textContent));
+    assert.match(await p.locator(".avisos-box").innerText(), /activados/);
+    assert.equal(await p.evaluate(() => CasaAvisos.pending()), false);
+    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

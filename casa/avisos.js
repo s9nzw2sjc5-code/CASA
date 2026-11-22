@@ -5,7 +5,7 @@
  'use strict';
  const URL_AVISOS='https://casa-avisos.s9nzw2sjc5.workers.dev';
  const VAPID_PUBLIC='BBDg3erlCBsJ-_5HoF097o0zREX5rAiYY0I-IqXhHGg75q1X29q0El9wWlyopl-BhlAZy7JldNf7WHhilvqUPY4';
- const LSK='casa-avisos',hoursKey='casa-avisos-horas';
+ const LSK='casa-avisos',hoursKey='casa-avisos-horas',pendKey='casa-avisos-pendiente';
  const post=(path,body)=>fetch(URL_AVISOS+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||('Error '+r.status));return d});
  const on=()=>{try{return localStorage.getItem(LSK)==='1'&&'Notification' in root&&Notification.permission==='granted'}catch(e){return false}};
  function hours(){try{return Object.assign({morning:'09:00',noon:'13:00',evening:'21:00'},JSON.parse(localStorage.getItem(hoursKey)||'{}'))}catch(e){return{morning:'09:00',noon:'13:00',evening:'21:00'}}}
@@ -52,6 +52,7 @@
   if(!sub)return;
   const items=build(ctx),body={sub:sub.toJSON(),items,...meta(ctx)},sig=JSON.stringify(body);if(!force&&sig===lastSent)return;
   await post('/schedule',body);lastSent=sig;
+  try{if(localStorage.getItem(pendKey)==='1'){localStorage.removeItem(pendKey);if(root.render)root.render()}}catch(e){}
  }
  const api={
   URL:URL_AVISOS,on,hours,build,prefs,TYPES,timerBody,
@@ -60,9 +61,12 @@
   async syncNow(ctx){await sync(ctx,true)},
   setHours(h){try{localStorage.setItem(hoursKey,JSON.stringify(Object.assign(hours(),h)))}catch(e){}lastSent=''},
   async enable(ctx){
-   await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:sub=>post('/subscribe',{sub,items:build(ctx),...meta(ctx)})});
-   localStorage.setItem(LSK,'1');lastSent='';
+   try{await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:sub=>post('/subscribe',{sub,items:build(ctx),...meta(ctx)})})}
+   catch(e){if(e&&e.pending){localStorage.setItem(LSK,'1');localStorage.setItem(pendKey,'1');lastSent='';return {pending:true}}throw e}
+   localStorage.setItem(LSK,'1');localStorage.removeItem(pendKey);lastSent='';return {pending:false};
   },
+  // ¿Falta completar el alta en el servicio? (se reintenta sola)
+  pending(){try{return localStorage.getItem(pendKey)==='1'}catch(e){return false}},
   async disable(){await root.CasaPush.disable(sub=>post('/unsubscribe',{endpoint:sub.endpoint})).catch(()=>{});try{localStorage.removeItem(LSK)}catch(e){}},
   // Avisos para una persona (o las dos): a una hora, «Mari dice…» o el fin de un temporizador
   send(ctx,o){if(!ctx.houseKey)return Promise.reject(Error('Activa los avisos en algún móvil primero.'));return post('/send',{houseKey:ctx.houseKey,...o})},
@@ -71,7 +75,9 @@
   cancel(ctx,id){if(!ctx.houseKey)return Promise.resolve();return post('/cancel',{houseKey:ctx.houseKey,id}).catch(()=>{})},
   async test(){const sub=await subscription();if(!sub)throw Error('Activa primero los avisos en este móvil.');const r=await post('/test',{endpoint:sub.endpoint});if(!r.ok)throw Error('El servicio de avisos no ha podido llegar a este móvil.');},
   // Al abrir Casa: volver a dar de alta este móvil en el servicio (por si se perdió) y subir sus avisos
-  heal(ctxFn){if(!on()||api._healed)return;api._healed=true;setTimeout(()=>{sync(ctxFn(),true).catch(e=>console.warn('avisos',e))},3000)},
+  heal(ctxFn){if(!on()||api._healed)return;api._healed=true;setTimeout(()=>{sync(ctxFn(),true).catch(e=>console.warn('avisos',e))},3000);
+   // Si el alta quedó pendiente (sin conexión con el servicio), se reintenta cada 2 minutos mientras Casa esté abierta
+   setInterval(()=>{if(on()&&api.pending())sync(ctxFn(),true).catch(()=>{})},120000)},
   // Se llama al pintar la app: sube los avisos un rato después del último cambio
   schedule(ctxFn){if(!on())return;clearTimeout(timer);timer=setTimeout(()=>{sync(ctxFn()).catch(e=>console.warn('avisos',e))},8000)},
  };

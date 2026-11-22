@@ -15,7 +15,10 @@
       let subscription=await sw.pushManager.getSubscription(),created=false;
       if(!subscription){subscription=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:decode(publicKey)});created=true}
       try{await register(subscription.toJSON());localStorage.setItem(key,'1')}
-      catch(error){if(created)await subscription.unsubscribe();throw error}
+      catch(error){
+        // Sin conexión con el servicio (red, compañía…): el móvil se queda suscrito y el alta se reintenta sola
+        if(error&&(error.name==='TypeError'||/fetch|network|red/i.test(error.message))){localStorage.setItem(key,'1');error.pending=true;throw error}
+        if(created)await subscription.unsubscribe();throw error}
       return subscription;
     },
     async disable(unregister){
