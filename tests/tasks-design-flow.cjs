@@ -376,6 +376,26 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => S.tasks.filter((t) => t.mamaKey).length), 3, "no se duplica");
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !t.mamaKey); save(); });
 
+    // Avisos en el móvil: «📲 Recibir estos avisos» da de alta el móvil y sube los avisos (servicio simulado)
+    const avisosCalls = [];
+    await p.context().grantPermissions(["notifications"]);
+    await p.route("https://casa-avisos.s9nzw2sjc5.workers.dev/**", async (r) => { avisosCalls.push([new URL(r.request().url()).pathname, JSON.parse(r.request().postData() || "{}")]); await r.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: '{"ok":true}' }); });
+    await p.evaluate(() => {
+      Object.defineProperty(Notification, "permission", { get: () => "granted", configurable: true }); // en el móvil: permiso concedido
+      window.CasaPush.enable = async ({ publicKey, register }) => { if (!publicKey || publicKey.length < 80) throw Error("sin clave"); await register({ endpoint: "https://fcm.googleapis.com/fcm/send/prueba", keys: { p256dh: "a", auth: "b" } }); };
+      S.tasks.push({ id: "av1", title: "Cita con hora", date: addDays(today(), 1), time: "17:00", repeat: "none", done: false }); save(); ui.view = "hoy"; ui.mamaOpen = true; render();
+    });
+    await p.locator("[data-act=avisosOn]").click();
+    await p.waitForFunction(() => /Avisos activados/.test(document.querySelector("#toast").textContent));
+    const sub = avisosCalls.find((c) => c[0] === "/subscribe");
+    assert.ok(sub && sub[1].sub.endpoint.includes("fcm") && sub[1].items.some((x) => /Cita con hora/.test(x.title)), "alta con sus avisos");
+    assert.equal(await p.locator("[data-act=avisosSheet]").count(), 1);
+    await p.locator("[data-act=avisosSheet]").click();
+    await p.locator("#av_m").fill("08:30");
+    await p.locator(".overlay [data-s=ok]").click();
+    assert.equal(await p.evaluate(() => CasaAvisos.hours().morning), "08:30");
+    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); S.tasks = S.tasks.filter((t) => t.id !== "av1"); save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

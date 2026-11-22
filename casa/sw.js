@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v161';
+const CACHE = 'casa-v162';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['cleaning-view.js?v=161','push.js?v=161','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=161', 'shopping-recommendations.js?v=161', 'household-insights.js?v=161', 'household-ui.js?v=161', 'document-files.js?v=161', 'document-photo.js?v=161', 'home-model.js?v=161', 'cleaning-links.js?v=161', 'home-ui.js?v=161', 'cocina.js?v=161', 'product-photo.js?v=161', 'product-photo-ui.js?v=161', 'receipts.js?v=161', 'receipt-image.js?v=161', 'receipt-layout.js?v=161', 'receipt-ocr.js?v=161', 'receipt-extras.js?v=161', 'house-plan.js?v=161', 'house-plan-ui.js?v=161', 'lidl-ui.js?v=161', 'mama.js?v=161', 'tasks-ui.js?v=161', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['cleaning-view.js?v=162','push.js?v=162','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=162', 'shopping-recommendations.js?v=162', 'household-insights.js?v=162', 'household-ui.js?v=162', 'document-files.js?v=162', 'document-photo.js?v=162', 'home-model.js?v=162', 'cleaning-links.js?v=162', 'home-ui.js?v=162', 'cocina.js?v=162', 'product-photo.js?v=162', 'product-photo-ui.js?v=162', 'receipts.js?v=162', 'receipt-image.js?v=162', 'receipt-layout.js?v=162', 'receipt-ocr.js?v=162', 'receipt-extras.js?v=162', 'house-plan.js?v=162', 'house-plan-ui.js?v=162', 'lidl-ui.js?v=162', 'mama.js?v=162', 'avisos.js?v=162', 'tasks-ui.js?v=162', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -47,9 +47,21 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// El servidor envía solo una referencia; las respuestas se confirman dentro de CASA.
+// Avisos: el servicio «casa-avisos» envía solo un toque; aquí se pide el texto y se muestra.
+const AVISOS_URL='https://casa-avisos.s9nzw2sjc5.workers.dev';
+async function showPending(){
+  const home=new URL('./',self.location.href).href;
+  try{
+    const sub=await self.registration.pushManager.getSubscription();
+    const r=await fetch(AVISOS_URL+'/pending',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub&&sub.endpoint})});
+    const items=((await r.json()).items||[]).slice(-5);
+    if(items.length){for(const x of items)await self.registration.showNotification(String(x.title||'Casa').slice(0,120),{body:String(x.body||'').slice(0,300),icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:String(x.tag||'casa').slice(0,80),data:{url:home}});return}
+  }catch(e){}
+  await self.registration.showNotification('Casa',{body:'Tienes avisos pendientes. Toca para verlos.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:'casa-avisos',data:{url:home}});
+}
 self.addEventListener('push',event=>{
-  let payload={};try{payload=event.data?event.data.json():{}}catch(e){}
+  let payload=null;try{payload=event.data?event.data.json():null}catch(e){}
+  if(!payload){event.waitUntil(showPending());return}
   const url=new URL('./',self.location.href);
   if(['task','reminder'].includes(payload.kind)&&typeof payload.id==='string'&&payload.id.length<200){url.searchParams.set('noticeKind',payload.kind);url.searchParams.set('noticeId',payload.id)}
   event.waitUntil(self.registration.showNotification('CASA',{body:'Tienes un aviso pendiente. Toca para verlo y responder.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:typeof payload.tag==='string'?payload.tag.slice(0,120):'casa-notice',data:{url:url.href}}));

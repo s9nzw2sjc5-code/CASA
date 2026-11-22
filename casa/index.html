@@ -236,6 +236,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.mama .avisos-on{width:100%;margin-top:12px;min-height:44px}.mama .avisos-link{display:block;margin:10px auto 0;font-size:.85rem}.avisos-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.avisos-actions .btn{flex:1 1 140px}
+
 .mama{margin:0 0 14px;padding:12px 14px;border-radius:18px;border:1px solid color-mix(in srgb,var(--c-hoy) 35%,var(--line));background:color-mix(in srgb,var(--c-hoy) 7%,var(--surface))}
 .mama>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:36px;font-size:1rem}.mama>summary::-webkit-details-marker{display:none}.mama[open] .tz-caret{transform:rotate(180deg)}
 .mama ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:10px}.mama li{display:flex;gap:10px;align-items:flex-start}.mama li>span{font-size:1.2rem;line-height:1.3}.mama li p{margin:0 0 6px;font-size:.9rem;line-height:1.4}.mama li .btn{min-height:38px;padding:6px 12px;font-size:.82rem}
@@ -806,30 +808,31 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=161"></script>
-<script src="sync.js?v=161"></script>
-<script src="receipts.js?v=161"></script>
-<script src="receipt-image.js?v=161"></script>
-<script src="receipt-layout.js?v=161"></script>
-<script src="receipt-ocr.js?v=161"></script>
-<script src="product-photo.js?v=161"></script>
-<script src="product-photo-ui.js?v=161"></script>
-<script src="shopping-recommendations.js?v=161"></script>
-<script src="household-insights.js?v=161"></script>
-<script src="document-files.js?v=161"></script>
-<script src="document-photo.js?v=161"></script>
-<script src="cleaning-links.js?v=161"></script>
-<script src="home-model.js?v=161"></script>
-<script src="cocina.js?v=161"></script>
-<script src="cleaning-view.js?v=161"></script>
-<script src="home-ui.js?v=161"></script>
-<script src="household-ui.js?v=161"></script>
-<script src="receipt-extras.js?v=161"></script>
-<script src="house-plan.js?v=161"></script>
-<script src="house-plan-ui.js?v=161"></script>
-<script src="lidl-ui.js?v=161"></script>
-<script src="mama.js?v=161"></script>
-<script src="tasks-ui.js?v=161"></script>
+<script src="push.js?v=162"></script>
+<script src="sync.js?v=162"></script>
+<script src="receipts.js?v=162"></script>
+<script src="receipt-image.js?v=162"></script>
+<script src="receipt-layout.js?v=162"></script>
+<script src="receipt-ocr.js?v=162"></script>
+<script src="product-photo.js?v=162"></script>
+<script src="product-photo-ui.js?v=162"></script>
+<script src="shopping-recommendations.js?v=162"></script>
+<script src="household-insights.js?v=162"></script>
+<script src="document-files.js?v=162"></script>
+<script src="document-photo.js?v=162"></script>
+<script src="cleaning-links.js?v=162"></script>
+<script src="home-model.js?v=162"></script>
+<script src="cocina.js?v=162"></script>
+<script src="cleaning-view.js?v=162"></script>
+<script src="home-ui.js?v=162"></script>
+<script src="household-ui.js?v=162"></script>
+<script src="receipt-extras.js?v=162"></script>
+<script src="house-plan.js?v=162"></script>
+<script src="house-plan-ui.js?v=162"></script>
+<script src="lidl-ui.js?v=162"></script>
+<script src="mama.js?v=162"></script>
+<script src="avisos.js?v=162"></script>
+<script src="tasks-ui.js?v=162"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -884,7 +887,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=161;
+const APP_VERSION=162;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1604,6 +1607,7 @@ function render(){
   // Filas de botones que se deslizan de lado (categorías, listas…): se quedan donde estaban al volver a pintar
   const rowsKey=[ui.view,ui.ckTab,ui.taskView,ui.taskMode].join('|'),keepRows=render._rowsKey===rowsKey?[...document.querySelectorAll('#app .chips')].map(el=>[el.className,el.scrollLeft]):[];render._rowsKey=rowsKey;
   const keepVals={};['qTask','qItem','qQty','qNoDate','qHist','qNote','qNoteR','qRec','qVeto','reorgDate','reorgAway','qLidl'].forEach(k=>{const el=$('#'+k);if(el)keepVals[k]=el.value});
+  if(typeof CasaAvisos!=='undefined'&&typeof avisosCtx==='function')CasaAvisos.schedule(avisosCtx);
   document.body.dataset.view=ui.view;document.body.dataset.shopping=ui.view==='compras'&&(!ui.ckTab||ui.ckTab==='lista')?'list':'';
   replaceAppContent((syncState==='ro'?`<div class="empty" style="border-color:var(--danger);color:var(--danger);margin-bottom:14px;text-align:left">No tienes permiso para guardar cambios: lo que añadas no llegará a la otra persona. Pide que te inviten como Editora o Colaboradora y vuelve a abrir la app.</div>`:'')+v().replace(/<h1>([\s\S]*?)<\/h1><p class="sub">([\s\S]*?)<\/p>(<div class="hero-stats">[\s\S]*?<\/div>)?/,'<header class="hero"><h1>$1</h1><p class="sub">$2</p>$3</header>')+`<p class="sync"><span id="sync">${syncText()}</span><br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="backups">Copias de seguridad</button><br><span>Versión ${APP_VERSION}</span> · <button class="link" data-act="refreshApp">Actualizar Casa</button>${window.casaLogout?'<br><button class="link" style="font-size:.8rem;margin-top:6px" data-act="logout">Cerrar sesión</button>':''}</p>`);
   Object.entries(keepVals).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});

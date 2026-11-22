@@ -277,20 +277,28 @@ function taskPrioritySheet(){
 }
 
 /* ---------- Recordatorios de hoy (en Hoy): qué toca, en tono neutro ---------- */
+// Datos para los recordatorios de un día (los mismos para la tarjeta y para los avisos del móvil)
+function mamaInput(day,hour){
+ const place=houseWxPlace(),c=place&&houseWxFor(place);
+ return {today:day,hour,tasks:taskMine(),
+  pets:(S.pet||[]).map(x=>({name:x.name,due:petDue(x)})),
+  listPending:(S.items||[]).filter(i=>!i.done&&i.listId===cartList()).length,
+  lowPantry:typeof pantryLow==='function'?(S.pantry||[]).filter(pantryLow).length:0,
+  forecast:c?c.days:[],isWash:CasaHousePlan.isWash,isWet:CasaHousePlan.isWet,isImportant:isImportantTask,minutes:prioMinutes,dayName:tzDay,
+  hasRoutines:(S.tasks||[]).some(t=>t.mamaKey)||!!(S.cook&&S.cook.mamaNoRoutines)};
+}
+// Lo que necesitan los avisos del móvil para calcularse
+const avisosCtx=()=>({today:today(),addDays,tasks:S.tasks||[],events:(S.events||[]).filter(e=>e&&!e.done),
+ pets:(S.pet||[]).map(x=>({id:x.id,name:x.name,due:petDue(x),time:x.time||''})),
+ nudges:day=>CasaMama.nudges({...mamaInput(day,9),tasks:(S.tasks||[]).filter(t=>t&&!t.done)}),minutes:prioMinutes});
 function mamaCard(){
  let list=[];
  try{
-  const place=houseWxPlace(),c=place&&houseWxFor(place);
-  list=CasaMama.nudges({today:today(),hour:new Date().getHours(),tasks:taskMine(),
-   pets:(S.pet||[]).map(x=>({name:x.name,due:petDue(x)})),
-   listPending:(S.items||[]).filter(i=>!i.done&&i.listId===cartList()).length,
-   lowPantry:typeof pantryLow==='function'?(S.pantry||[]).filter(pantryLow).length:0,
-   forecast:c?c.days:[],isWash:CasaHousePlan.isWash,isWet:CasaHousePlan.isWet,isImportant:isImportantTask,minutes:prioMinutes,dayName:tzDay,
-   hasRoutines:(S.tasks||[]).some(t=>t.mamaKey)||!!(S.cook&&S.cook.mamaNoRoutines)});
+  list=CasaMama.nudges(mamaInput(today(),new Date().getHours()));
  }catch(e){console.error(e);return''}
  if(!list.length)return'';
  const btn=a=>!a?'':a.kind==='task'?`<button class="btn sec" data-act="toggleTask" data-id="${esc(a.id)}">✓ Hecho</button>`:a.kind==='priority'?`<button class="btn sec" data-act="taskPriority">⚡ Repartir por prioridad</button>`:a.kind==='routines'?`<button class="btn sec" data-act="mamaRoutines">Añadir rutina de mañana y noche</button>`:`<button class="btn sec" data-act="tab" data-v="${{tareas:'tareas',ringo:'ringo',importantes:'recordar',compras:'compras'}[a.kind]||'tareas'}">Ver</button>`;
- return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>`;
+ return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul>${typeof CasaAvisos==='undefined'?'':CasaAvisos.on()?`<button class="link avisos-link" data-act="avisosSheet">🔔 Avisos en el móvil: activados · Ajustar</button>`:`<button class="btn avisos-on" data-act="avisosOn">📲 Recibir estos avisos en el móvil</button>`}</details>`;
 }
 // Rutina de mañana y noche: tareas diarias cortas (se pueden borrar o cambiar como cualquier tarea)
 function mamaAddRoutines(){
@@ -301,3 +309,23 @@ function mamaAddRoutines(){
 }
 Object.assign(TASKS_ACT,{mamaRoutines:()=>mamaAddRoutines()});
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.mama')){ui.mamaOpen=e.target.open;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(err){}}},true);
+
+/* ---------- Avisos en el móvil: activar, ajustar horas, probar y desactivar ---------- */
+async function avisosOn(){
+ try{await CasaAvisos.enable(avisosCtx());toast('Avisos activados en este móvil');render()}
+ catch(e){toast(String(e&&e.message||e))}
+}
+function avisosSheet(){
+ const h=CasaAvisos.hours();
+ const ov=sheet('🔔 Avisos en el móvil',`<p class="hint">Llegan aunque Casa esté cerrada. Se preparan cada vez que abres o cambias algo.</p>
+  <div class="grid2"><div><label for="av_m">Resumen del día</label><input class="field" type="time" id="av_m" value="${esc(h.morning)}"></div>
+  <div><label for="av_n">Lo urgente</label><input class="field" type="time" id="av_n" value="${esc(h.noon)}"></div>
+  <div><label for="av_e">Lo de mañana</label><input class="field" type="time" id="av_e" value="${esc(h.evening)}"></div></div>
+  <p class="hint">Además: las tareas con hora a su hora, y las citas 30 minutos antes.</p>
+  <div class="avisos-actions"><button type="button" class="btn sec" data-av-test>Enviar una prueba</button><button type="button" class="btn sec" data-av-off>Desactivar en este móvil</button></div>`,
+  {saveLabel:'Guardar',autoFocus:false,onSave:ov=>{CasaAvisos.setHours({morning:val(ov,'av_m')||'09:00',noon:val(ov,'av_n')||'13:00',evening:val(ov,'av_e')||'21:00'});CasaAvisos.schedule(avisosCtx);toast('Horas de los avisos guardadas')}});
+ ov.querySelector('[data-av-test]').onclick=async()=>{try{await CasaAvisos.test();toast('Prueba enviada: debería llegar en unos segundos')}catch(e){toast(String(e&&e.message||e))}};
+ ov.querySelector('[data-av-off]').onclick=async()=>{await CasaAvisos.disable();ov.remove();toast('Avisos desactivados en este móvil');render()};
+ return ov;
+}
+Object.assign(TASKS_ACT,{avisosOn:()=>avisosOn(),avisosSheet:()=>avisosSheet()});
