@@ -236,6 +236,8 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.avisos-box{margin:-6px 0 14px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);max-width:calc(100% - 76px)}.avisos-box.on{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.88rem;max-width:none}.avisos-box.on .link{min-height:40px}.avisos-box .avisos-on{width:100%;min-height:46px;white-space:normal}.avisos-box.warn{border-color:color-mix(in srgb,var(--c-recordar) 55%,var(--line));background:color-mix(in srgb,var(--c-recordar) 10%,var(--surface));max-width:none}.avisos-box.warn p,.avisos-err{margin:0;font-size:.86rem;line-height:1.45}.avisos-err{margin-top:8px;color:var(--danger)}
+
 .av-status{margin:6px 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-size:.9rem;line-height:1.6}
 .timer-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.timer-btns.one{grid-template-columns:1fr}.timer-btns .btn{min-height:44px;padding:8px}.timer-row.alarm{border-color:color-mix(in srgb,var(--c-recordar) 45%,var(--line))}.tm-progs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}.tm-progs .chip{min-height:38px}
 
@@ -816,31 +818,31 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=167"></script>
-<script src="sync.js?v=167"></script>
-<script src="receipts.js?v=167"></script>
-<script src="receipt-image.js?v=167"></script>
-<script src="receipt-layout.js?v=167"></script>
-<script src="receipt-ocr.js?v=167"></script>
-<script src="product-photo.js?v=167"></script>
-<script src="product-photo-ui.js?v=167"></script>
-<script src="shopping-recommendations.js?v=167"></script>
-<script src="household-insights.js?v=167"></script>
-<script src="document-files.js?v=167"></script>
-<script src="document-photo.js?v=167"></script>
-<script src="cleaning-links.js?v=167"></script>
-<script src="home-model.js?v=167"></script>
-<script src="cocina.js?v=167"></script>
-<script src="cleaning-view.js?v=167"></script>
-<script src="home-ui.js?v=167"></script>
-<script src="household-ui.js?v=167"></script>
-<script src="receipt-extras.js?v=167"></script>
-<script src="house-plan.js?v=167"></script>
-<script src="house-plan-ui.js?v=167"></script>
-<script src="lidl-ui.js?v=167"></script>
-<script src="mama.js?v=167"></script>
-<script src="avisos.js?v=167"></script>
-<script src="tasks-ui.js?v=167"></script>
+<script src="push.js?v=168"></script>
+<script src="sync.js?v=168"></script>
+<script src="receipts.js?v=168"></script>
+<script src="receipt-image.js?v=168"></script>
+<script src="receipt-layout.js?v=168"></script>
+<script src="receipt-ocr.js?v=168"></script>
+<script src="product-photo.js?v=168"></script>
+<script src="product-photo-ui.js?v=168"></script>
+<script src="shopping-recommendations.js?v=168"></script>
+<script src="household-insights.js?v=168"></script>
+<script src="document-files.js?v=168"></script>
+<script src="document-photo.js?v=168"></script>
+<script src="cleaning-links.js?v=168"></script>
+<script src="home-model.js?v=168"></script>
+<script src="cocina.js?v=168"></script>
+<script src="cleaning-view.js?v=168"></script>
+<script src="home-ui.js?v=168"></script>
+<script src="household-ui.js?v=168"></script>
+<script src="receipt-extras.js?v=168"></script>
+<script src="house-plan.js?v=168"></script>
+<script src="house-plan-ui.js?v=168"></script>
+<script src="lidl-ui.js?v=168"></script>
+<script src="mama.js?v=168"></script>
+<script src="avisos.js?v=168"></script>
+<script src="tasks-ui.js?v=168"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -895,7 +897,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=167;
+const APP_VERSION=168;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],

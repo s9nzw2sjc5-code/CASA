@@ -376,6 +376,11 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => S.tasks.filter((t) => t.mamaKey).length), 3, "no se duplica");
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !t.mamaKey); save(); });
 
+    // Avisos: si el móvil no los permite, se explica por qué (bloqueados o iPhone abierto desde Safari)
+    await p.evaluate(() => { ui.view = "hoy"; ui.mamaOpen = false; render(); });
+    assert.match(await p.locator(".avisos-box").innerText(), /bloqueados en este móvil|Recibir avisos/, "siempre a la vista, aunque la tarjeta esté plegada");
+    const iosMsg = await p.evaluate(() => { const pm = window.PushManager; delete window.PushManager; Object.defineProperty(navigator, "userAgent", { get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", configurable: true }); render(); const t = document.querySelector(".avisos-box").innerText; window.PushManager = pm; delete navigator.userAgent; return t; });
+    assert.match(iosMsg, /abre Casa desde su icono de la pantalla de inicio/);
     // Avisos en el móvil: «📲 Recibir estos avisos» da de alta el móvil y sube los avisos (servicio simulado)
     const avisosCalls = [];
     await p.context().grantPermissions(["notifications"]);
@@ -388,6 +393,7 @@ const { chromium } = require("playwright"),
     });
     await p.locator("[data-act=avisosOn]").click();
     await p.waitForFunction(() => /Avisos activados/.test(document.querySelector("#toast").textContent));
+    assert.match(await p.locator(".avisos-box.on").innerText(), /activados/);
     const sub = avisosCalls.find((c) => c[0] === "/subscribe");
     assert.ok(sub && sub[1].sub.endpoint.includes("fcm") && sub[1].items.some((x) => /Cita con hora/.test(x.title)), "alta con sus avisos");
     assert.ok(sub[1].person === "yo" && sub[1].houseKey && sub[1].houseKey.length >= 20, "de quién es y clave de la casa");

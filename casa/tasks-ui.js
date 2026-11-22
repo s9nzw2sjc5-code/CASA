@@ -298,7 +298,7 @@ function mamaCard(){
  }catch(e){console.error(e);return''}
  if(!list.length)return'';
  const btn=a=>!a?'':a.kind==='task'?`<button class="btn sec" data-act="toggleTask" data-id="${esc(a.id)}">✓ Hecho</button>`:a.kind==='priority'?`<button class="btn sec" data-act="taskPriority">⚡ Repartir por prioridad</button>`:a.kind==='routines'?`<button class="btn sec" data-act="mamaRoutines">Añadir rutina de mañana y noche</button>`:a.kind==='timer'?`<button class="btn sec" data-act="timerSheet">⏲️ Poner temporizador</button>`:`<button class="btn sec" data-act="tab" data-v="${{tareas:'tareas',ringo:'ringo',importantes:'recordar',compras:'compras'}[a.kind]||'tareas'}">Ver</button>`;
- return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul>${typeof CasaAvisos==='undefined'?'':CasaAvisos.on()?`<button class="link avisos-link" data-act="avisosSheet">🔔 Avisos en el móvil: activados · Ajustar</button>`:`<button class="btn avisos-on" data-act="avisosOn">📲 Recibir estos avisos en el móvil</button>`}</details>`;
+ return`<details class="mama"${ui.mamaOpen===false?'':' open'}><summary><b>🔔 Recordatorios de hoy</b><span class="tz-caret" aria-hidden="true">⌄</span></summary><ul>${list.map(n=>`<li><span aria-hidden="true">${n.icon}</span><div><p>${esc(n.text)}</p>${btn(n.action)}</div></li>`).join('')}</ul></details>${avisosBox()}`;
 }
 // Rutina de mañana y noche: tareas diarias cortas (se pueden borrar o cambiar como cualquier tarea)
 function mamaAddRoutines(){
@@ -311,6 +311,25 @@ Object.assign(TASKS_ACT,{mamaRoutines:()=>mamaAddRoutines()});
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details.mama')){ui.mamaOpen=e.target.open;try{localStorage.setItem(LS+'-ui',JSON.stringify(ui))}catch(err){}}},true);
 
 /* ---------- Avisos en el móvil: activar, ajustar horas, probar y desactivar ---------- */
+// Estado de los avisos en este móvil, siempre a la vista (fuera de la tarjeta plegable) y explicando qué falta
+const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+function avisosState(){
+ if(typeof CasaAvisos==='undefined')return'none';
+ if(!('serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window))return isIOS()&&!isStandalone()?'ios-browser':'unsupported';
+ if(Notification.permission==='denied')return'blocked';
+ return CasaAvisos.on()?'on':'off';
+}
+function avisosBox(){
+ const st=avisosState();
+ if(st==='none')return'';
+ if(st==='on')return`<div class="avisos-box on"><span>🔔 Avisos en este móvil: activados</span><button class="link" data-act="avisosSheet">Ajustar</button></div>`;
+ if(st==='off')return`<div class="avisos-box"><button class="btn avisos-on" data-act="avisosOn">📲 Recibir avisos en este móvil</button>${ui.avisosError?`<p class="avisos-err">${esc(ui.avisosError)}</p>`:''}</div>`;
+ const msg={'ios-browser':'Para recibir avisos en el iPhone, abre Casa desde su icono de la pantalla de inicio (en Safari: Compartir › «Añadir a pantalla de inicio»). Desde Safari el iPhone no permite avisos.',
+  unsupported:'Este navegador no permite avisos. En iPhone, abre Casa desde el icono de la pantalla de inicio.',
+  blocked:'Los avisos están bloqueados en este móvil. Actívalos en Ajustes › Notificaciones › Casa (permitir notificaciones) y vuelve a abrir Casa.'}[st];
+ return`<div class="avisos-box warn"><p>⚠️ ${esc(msg)}</p></div>`;
+}
 // Clave privada de la casa (para que solo vuestros móviles puedan mandaros avisos); se guarda con los datos de Casa
 function avisosHouseKey(){
  S.cook=S.cook||{};if(S.cook.avisosKey)return S.cook.avisosKey;
@@ -318,9 +337,11 @@ function avisosHouseKey(){
 }
 async function avisosOn(){
  if(!ui.me){whoAmI(()=>avisosOn());return}
+ ui.avisosError='';
  avisosHouseKey();
- try{await CasaAvisos.enable(avisosCtx());toast('Avisos activados en este móvil');render()}
- catch(e){toast(String(e&&e.message||e))}
+ toast('Activando los avisos… acepta el permiso si te lo pide');
+ try{await CasaAvisos.enable(avisosCtx());ui.avisosError='';toast('✅ Avisos activados en este móvil');render()}
+ catch(e){ui.avisosError=String(e&&e.message||e)||'No se han podido activar los avisos.';toast(ui.avisosError);render()}
 }
 const AVISO_TYPES=[['resumen','Resumen del día'],['urgente','Lo urgente'],['hora','Tareas con hora'],['citas','Citas (30 min antes)'],['ringo','Ringo'],['manana','Lo de mañana'],['timers','Temporizadores (lavadora, secadora…)'],['alarma','Avisos a una hora'],['mensaje','Mensajes del otro («… dice»)']];
 function avisosSheet(){
