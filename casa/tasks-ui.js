@@ -352,8 +352,11 @@ const TIMER_PROGRAMS={
 const timerKind=l=>/lavadora/i.test(l)?'lavadora':/secadora/i.test(l)?'secadora':/lavavajillas/i.test(l)?'lavavajillas':/horno/i.test(l)?'horno':'';
 function timerPresets(){
  const L=(S.cook&&S.cook.houseLaundry)||{},washers=L.twoWashers?CasaHousePlan.washerNames(L):['Lavadora'];
- return [...washers,...(L.dryer!==false?['Secadora']:[]),'Lavavajillas','Horno'];
+ return [...washers,...(L.dryer!==false?['Secadora']:[])];
 }
+// ¿Toca hoy lavadora o secadora? (pendiente hoy o atrasada, o hecha hoy)
+const isLaundryTask=t=>!!t&&(CasaHousePlan.isWash(t)||/\b(lavadora|lavadoras|secadora|colada)\b/i.test(taskNorm(t.title)));
+function laundryToday(){const d=today();return (S.tasks||[]).some(t=>isLaundryTask(t)&&(!t.done&&t.date&&t.date<=d||t.lastDone===d||t.done&&t.doneAt===d))}
 const timerMins=l=>Number((S.cook&&S.cook.timerMins||{})[l])||({lavadora:90,secadora:120,lavavajillas:150,horno:45}[timerKind(l)])||30;
 const timersActive=()=>((S.cook&&S.cook.timers)||[]).filter(t=>t&&t.end>Date.now()-15*60e3);
 const alarmsActive=()=>((S.cook&&S.cook.alarms)||[]).filter(a=>a&&a.at>Date.now()-5*60e3);
@@ -368,24 +371,23 @@ function timerCard(){
  const ts=timersActive(),as=alarmsActive();
  return`<section class="timers">${ts.map(t=>`<div class="timer-row ${t.end<=Date.now()?'done':''}"><span aria-hidden="true">⏲️</span><span class="timer-t"><b>${esc(t.label)}${t.program?' · '+esc(t.program):''}</b><small>${esc(timerLeft(t))} · a las ${clock(t.end)}</small></span><button class="timer-x" data-act="timerStop" data-id="${esc(t.id)}" aria-label="Quitar temporizador ${esc(t.label)}">✕</button></div>`).join('')}
   ${as.map(a=>`<div class="timer-row alarm"><span aria-hidden="true">${a.to.length>1||a.to[0]!==(ui.me||'yo')?'💬':'🔔'}</span><span class="timer-t"><b>${esc(a.text)}</b><small>${new Date(a.at).toDateString()===new Date().toDateString()?'Hoy':new Date(a.at).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})} a las ${clock(a.at)} · ${esc(a.to.length>1?'para los dos':'para '+(a.to[0]===(ui.me||'yo')?'mí':personName(a.to[0])))}</small></span><button class="timer-x" data-act="alarmStop" data-id="${esc(a.id)}" aria-label="Quitar aviso">✕</button></div>`).join('')}
-  <div class="timer-btns"><button class="btn sec" data-act="timerSheet">⏲️ Temporizador</button><button class="btn sec" data-act="alarmSheet">🔔 Aviso a una hora</button></div></section>`;
+  <div class="timer-btns ${ts.length||laundryToday()?'':'one'}">${ts.length||laundryToday()?'<button class="btn sec" data-act="timerSheet">⏲️ Temporizador</button>':''}<button class="btn sec" data-act="alarmSheet">🔔 Aviso a una hora</button></div></section>`;
 }
 function timerSheet(){
  const ap=timerPresets();
- const ov=sheet('⏲️ Temporizador',`<label for="tm_ap">Aparato</label><select class="field" id="tm_ap">${ap.map(l=>`<option>${esc(l)}</option>`).join('')}<option value="">Otro…</option></select>
-  <input class="field" id="tm_other" placeholder="¿Qué es?" maxlength="40" hidden style="margin-top:8px">
+ const ov=sheet('⏲️ Temporizador',`<label for="tm_ap">Aparato</label><select class="field" id="tm_ap">${ap.map(l=>`<option>${esc(l)}</option>`).join('')}</select>
   <div class="tm-progs" data-tm-progs></div>
   <div class="grid2"><div><label for="tm_h">Horas</label><input class="field" type="number" inputmode="numeric" min="0" max="12" id="tm_h"></div><div><label for="tm_m">Minutos</label><input class="field" type="number" inputmode="numeric" min="0" max="59" id="tm_m"></div></div>
   <label for="tm_to">Avisar</label><select class="field" id="tm_to">${whoOptions(ui.me||'yo')}</select>`,{saveLabel:'Empezar',autoFocus:false,onSave:ov=>{
-  const ap=val(ov,'tm_ap'),label=ap||val(ov,'tm_other')||'Temporizador',mins=(Number(val(ov,'tm_h'))||0)*60+(Number(val(ov,'tm_m'))||0);
+  const ap=val(ov,'tm_ap'),label=ap||'Lavadora',mins=(Number(val(ov,'tm_h'))||0)*60+(Number(val(ov,'tm_m'))||0);
   if(!(mins>=1&&mins<=720)){toast('Pon cuánto dura (horas y minutos)');return false}
   timerStart(label,mins,!!ap,ov.dataset.prog||'',whoTo(val(ov,'tm_to')));
  }});
  const setT=m=>{ov.querySelector('#tm_h').value=Math.floor(m/60);ov.querySelector('#tm_m').value=m%60};
- const draw=()=>{const l=val(ov,'tm_ap'),k=timerKind(l||val(ov,'tm_other'));ov.querySelector('#tm_other').hidden=!!l;
+ const draw=()=>{const l=val(ov,'tm_ap'),k=timerKind(l);
   ov.querySelector('[data-tm-progs]').innerHTML=(TIMER_PROGRAMS[k]||[]).map(([n,m])=>`<button type="button" class="chip" data-tm-prog="${m}" data-name="${esc(n)}">${esc(n)} · ${hm(m)}</button>`).join('');
   delete ov.dataset.prog;setT(l?timerMins(l):30)};
- ov.querySelector('#tm_ap').onchange=draw;ov.querySelector('#tm_other').oninput=()=>{const k=timerKind(val(ov,'tm_other'));if(k)draw()};
+ ov.querySelector('#tm_ap').onchange=draw;
  ov.addEventListener('click',e=>{const b=e.target.closest('[data-tm-prog]');if(!b)return;ov.querySelectorAll('[data-tm-prog]').forEach(x=>x.classList.toggle('on',x===b));ov.dataset.prog=b.dataset.name;setT(Number(b.dataset.tmProg))});
  draw();return ov;
 }

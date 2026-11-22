@@ -402,8 +402,14 @@ const { chromium } = require("playwright"),
     await p.evaluate(() => { const fakeSub = { endpoint: "https://fcm.googleapis.com/fcm/send/prueba", toJSON() { return { endpoint: this.endpoint, keys: { p256dh: "a", auth: "b" } }; } }; Object.defineProperty(navigator.serviceWorker, "ready", { value: Promise.resolve({ pushManager: { getSubscription: async () => fakeSub } }), configurable: true }); });
     await p.evaluate(() => { ui.me = "yo"; localStorage.setItem("casa-avisos", "1"); S.cook = { ...S.cook, avisosKey: "clave-de-prueba-0123456789abc", houseLaundry: { twoWashers: true, dryer: true, names: ["Lavadora de arriba", "Lavadora de abajo"] } }; save(); ui.view = "hoy"; render(); });
     avisosCalls.length = 0;
+    // Solo cuando toca poner la lavadora o la secadora
+    assert.equal(await p.locator("[data-act=timerSheet]").count(), 0, "sin colada hoy, sin temporizador");
+    assert.equal(await p.locator("[data-act=alarmSheet]").count(), 1, "el aviso a una hora, siempre");
+    await p.evaluate(() => { S.tasks.push({ id: "col1", title: "Día de colada: poner lavadoras", date: today(), repeat: "weekly", done: false, plan: "casa", planKey: "lavadora-1" }); save(); render(); });
     await p.locator("[data-act=timerSheet]").first().click();
-    assert.match(await p.locator("#tm_ap").innerText(), /Lavadora de arriba[\s\S]*Lavadora de abajo[\s\S]*Secadora[\s\S]*Lavavajillas/);
+    const aps = await p.locator("#tm_ap").innerText();
+    assert.match(aps, /Lavadora de arriba[\s\S]*Lavadora de abajo[\s\S]*Secadora/);
+    assert.doesNotMatch(aps, /Lavavajillas|Horno|Otro/);
     await p.locator(".overlay [data-tm-prog]", { hasText: "Algodón" }).click();
     assert.deepEqual([await p.locator("#tm_h").inputValue(), await p.locator("#tm_m").inputValue()], ["2", "30"], "programa Algodón: 2 h 30");
     await p.locator("#tm_h").fill("4"); await p.locator("#tm_m").fill("0");
@@ -442,7 +448,7 @@ const { chromium } = require("playwright"),
     await p.locator('[data-av-type="resumen"]').uncheck();
     await p.locator(".overlay [data-s=ok]").click();
     assert.equal(await p.evaluate(() => CasaAvisos.prefs().types.resumen), false);
-    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-prefs"); S.cook.timers = []; S.cook.alarms = []; save(); });
+    await p.evaluate(() => { localStorage.removeItem("casa-avisos"); localStorage.removeItem("casa-avisos-prefs"); S.cook.timers = []; S.cook.alarms = []; S.tasks = S.tasks.filter((t) => t.id !== "col1"); save(); });
 
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
