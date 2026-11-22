@@ -162,7 +162,10 @@ export default {
       if (!sub || !validSub(sub)) return json({ error: 'Suscripción no válida' }, 400);
       const house = (await houseOf(body.houseKey)) || old.house || '';
       const mute = (Array.isArray(body.mute) ? body.mute : old.mute || []).filter((t) => TYPES.includes(t));
-      await env.AVISOS.put(key, JSON.stringify({ sub, person: person(body.person) || old.person || '', house, mute, items: cleanItems(body.items, MAX_ITEMS), inbox: old.inbox || [], queue: old.queue || [], at: Date.now() }));
+      // «relay»: otro móvil de la casa da de alta este (si este no llega al servicio); no toca sus avisos propios
+      if (body.relay && !house) return json({ error: 'Falta la clave de la casa' }, 403);
+      const items = body.relay ? (old.items || []) : cleanItems(body.items, MAX_ITEMS);
+      await env.AVISOS.put(key, JSON.stringify({ sub, person: person(body.person) || old.person || '', house, mute, items, inbox: old.inbox || [], queue: old.queue || [], at: body.relay ? (old.at || Date.now()) : Date.now(), relayed: body.relay ? Date.now() : old.relayed || 0 }));
       const idx = await index(env); if (!idx.includes(key)) await setIndex(env, [...idx, key]);
       return json({ ok: true });
     }

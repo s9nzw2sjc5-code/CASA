@@ -288,7 +288,9 @@ function mamaInput(day,hour){
   hasRoutines:(S.tasks||[]).some(t=>t.mamaKey)||!!(S.cook&&S.cook.mamaNoRoutines)};
 }
 // Lo que necesitan los avisos del móvil para calcularse
-const avisosCtx=()=>({today:today(),addDays,me:ui.me||'',houseKey:(S.cook&&S.cook.avisosKey)||'',timers:(S.cook&&S.cook.timers)||[],tasks:S.tasks||[],events:(S.events||[]).filter(e=>e&&!e.done),
+const avisosCtx=()=>({today:today(),addDays,me:ui.me||'',houseKey:(S.cook&&S.cook.avisosKey)||'',
+ devices:(S.cook&&S.cook.avisosDevices)||{},
+ storeDevice:(sub,mute)=>{if(!ui.me)return;S.cook=S.cook||{};S.cook.avisosDevices={...(S.cook.avisosDevices||{}),[ui.me]:{sub,mute:mute||[],at:Date.now()}};save()},timers:(S.cook&&S.cook.timers)||[],tasks:S.tasks||[],events:(S.events||[]).filter(e=>e&&!e.done),
  pets:(S.pet||[]).map(x=>({id:x.id,name:x.name,due:petDue(x),time:x.time||''})),
  nudges:day=>CasaMama.nudges({...mamaInput(day,9),tasks:(S.tasks||[]).filter(t=>t&&!t.done)}),minutes:prioMinutes});
 function mamaCard(){
@@ -344,7 +346,7 @@ function avisosBellTap(){
 function avisosBox(){
  const st=avisosState();
  if(st==='none')return'';
- if(st==='on'&&CasaAvisos.pending())return`<div class="avisos-box warn"><p>🔔 Avisos activados en este móvil, pero todavía no se ha podido conectar con el servicio de avisos (puede ser la red o la compañía: en España algunas bloquean Cloudflare durante el fútbol). Se reintenta solo cada vez que abres Casa; prueba también con otra red (wifi o datos).</p><button class="link" data-act="avisosRetry">Reintentar ahora</button></div>`;
+ if(st==='on'&&CasaAvisos.pending())return`<div class="avisos-box warn"><p>🔔 Avisos activados en este móvil, pero todavía no se ha podido conectar con el servicio de avisos (puede ser la red o la compañía: en España algunas bloquean Cloudflare durante el fútbol). Se reintenta solo cada vez que abres Casa, y también se registra a través del otro móvil de la casa cuando abra Casa.</p><button class="link" data-act="avisosRetry">Reintentar ahora</button></div>`;
  if(st==='on')return`<div class="avisos-box on"><span>🔔 Avisos en este móvil: activados</span><button class="link" data-act="avisosSheet">Ajustar</button></div>`;
  if(st==='off')return`<div class="avisos-box"><button class="btn avisos-on" data-act="avisosOn">📲 Recibir avisos en este móvil</button>${ui.avisosError?`<p class="avisos-err">${esc(ui.avisosError)}</p>`:''}</div>`;
  const msg={'ios-browser':'Para recibir avisos en el iPhone, abre Casa desde su icono de la pantalla de inicio (en Safari: Compartir › «Añadir a pantalla de inicio»). Desde Safari el iPhone no permite avisos.',

@@ -50,6 +50,8 @@
   // Si el móvil perdió la suscripción (pasa en iPhone), se renueva sola; si no se puede, se muestra otra vez el botón de activar
   if(!sub){try{await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:s=>post('/subscribe',{sub:s,items:build(ctx),...meta(ctx)})});lastSent='';sub=await subscription()}catch(e){try{localStorage.removeItem(LSK)}catch(_){}return}}
   if(!sub)return;
+  // Guardar (o actualizar) la dirección de avisos de este móvil en los datos de Casa, para que el otro móvil pueda registrarla
+  try{const mine=(ctx.devices||{})[ctx.me];if(ctx.me&&ctx.storeDevice&&(!mine||!mine.sub||mine.sub.endpoint!==sub.endpoint))ctx.storeDevice(sub.toJSON(),meta(ctx).mute)}catch(e){}
   const items=build(ctx),body={sub:sub.toJSON(),items,...meta(ctx)},sig=JSON.stringify(body);if(!force&&sig===lastSent)return;
   await post('/schedule',body);lastSent=sig;
   try{if(localStorage.getItem(pendKey)==='1'){localStorage.removeItem(pendKey);if(root.render)root.render()}}catch(e){}
@@ -61,7 +63,8 @@
   async syncNow(ctx){await sync(ctx,true)},
   setHours(h){try{localStorage.setItem(hoursKey,JSON.stringify(Object.assign(hours(),h)))}catch(e){}lastSent=''},
   async enable(ctx){
-   try{await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:sub=>post('/subscribe',{sub,items:build(ctx),...meta(ctx)})})}
+   // La dirección de avisos de este móvil se guarda también con los datos de Casa: si este móvil no llega al servicio, el otro la registra
+   try{await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:sub=>{if(ctx.storeDevice)ctx.storeDevice(sub,meta(ctx).mute);return post('/subscribe',{sub,items:build(ctx),...meta(ctx)})}})}
    catch(e){if(e&&e.pending){localStorage.setItem(LSK,'1');localStorage.setItem(pendKey,'1');lastSent='';return {pending:true}}throw e}
    localStorage.setItem(LSK,'1');localStorage.removeItem(pendKey);lastSent='';return {pending:false};
   },
@@ -74,6 +77,10 @@
   status(ctx){if(!ctx.houseKey)return Promise.resolve({people:{}});return post('/status',{houseKey:ctx.houseKey}).catch(()=>({people:{}}))},
   cancel(ctx,id){if(!ctx.houseKey)return Promise.resolve();return post('/cancel',{houseKey:ctx.houseKey,id}).catch(()=>{})},
   async test(){const sub=await subscription();if(!sub)throw Error('Activa primero los avisos en este móvil.');const r=await post('/test',{endpoint:sub.endpoint});if(!r.ok)throw Error('El servicio de avisos no ha podido llegar a este móvil.');},
+  // Al abrir Casa: dar de alta en el servicio los móviles de la otra persona guardados en los datos de Casa
+  // (por si su móvil no consigue conectar). Solo una vez por apertura.
+  relay(ctxFn){if(api._relayed)return;api._relayed=true;setTimeout(()=>{const ctx=ctxFn();if(!ctx.houseKey)return;
+   for(const [who,d] of Object.entries(ctx.devices||{}))if(d&&d.sub&&who!==ctx.me)post('/subscribe',{sub:d.sub,person:who,houseKey:ctx.houseKey,mute:d.mute||[],relay:true}).catch(()=>{})},4000)},
   // Al abrir Casa: volver a dar de alta este móvil en el servicio (por si se perdió) y subir sus avisos
   heal(ctxFn){if(!on()||api._healed)return;api._healed=true;setTimeout(()=>{sync(ctxFn(),true).catch(e=>console.warn('avisos',e))},3000);
    // Si el alta quedó pendiente (sin conexión con el servicio), se reintenta cada 2 minutos mientras Casa esté abierta

@@ -484,6 +484,15 @@ const { chromium } = require("playwright"),
     assert.equal(await p.evaluate(() => CasaAvisos.pending()), false);
     await p.evaluate(() => { localStorage.removeItem("casa-avisos"); });
 
+    // Si un móvil no llega al servicio, su dirección queda en los datos de Casa y el otro móvil la registra por él
+    avisosCalls.length = 0;
+    await p.unroute("https://casa-avisos.s9nzw2sjc5.workers.dev/**");
+    await p.route("https://casa-avisos.s9nzw2sjc5.workers.dev/**", async (r) => { avisosCalls.push([new URL(r.request().url()).pathname, JSON.parse(r.request().postData() || "{}")]); await r.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: '{"ok":true}' }); });
+    await p.evaluate(() => { S.cook.avisosDevices = { juanma: { sub: { endpoint: "https://fcm.googleapis.com/fcm/send/juanma", keys: { p256dh: "a", auth: "b" } }, mute: [], at: Date.now() } }; ui.me = "yo"; CasaAvisos._relayed = false; save(); render(); });
+    for (let i = 0; i < 60 && !avisosCalls.some((c) => c[1].relay); i++) await p.waitForTimeout(100);
+    const relay = avisosCalls.find((c) => c[1].relay);
+    assert.ok(relay && relay[0] === "/subscribe" && relay[1].person === "juanma" && relay[1].sub.endpoint.endsWith("/juanma") && relay[1].houseKey, "Mari registra el móvil de Juanma");
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {
