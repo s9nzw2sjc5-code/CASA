@@ -28,7 +28,7 @@
    // Mañana: resumen del día (lo mismo que «Recordatorios de hoy»)
    const n=(ctx.nudges?ctx.nudges(day):[]).slice(0,3).map(x=>x.text);
    const min=dayTasks.concat(late).reduce((s,t)=>s+(ctx.minutes?ctx.minutes(t):15),0);
-   if(dayTasks.length||late.length||n.length)push(at(day,H.morning),'Casa · Hoy',(n.length?n.join(' · '):'')+(n.length?'':(dayTasks.length+' tareas · unos '+min+' min')),'casa-manana-'+day,'resumen');
+   if(dayTasks.length||late.length||n.length)push(at(day,H.morning),'☀️ Hoy toca',(n.length?n.join(' · '):'')+(n.length?'':(dayTasks.length+' tareas · unos '+min+' min')),'casa-manana-'+day,'resumen');
    // Mediodía: lo urgente que siga sin hacer
    if(urgent.length)push(at(day,H.noon),'❗ Urgente',urgent.slice(0,3).map(t=>t.title).join(' · '),'casa-urgente-'+day,'urgente');
    // A su hora: tareas con hora y citas (30 min antes)
@@ -37,7 +37,7 @@
    for(const p of (ctx.pets||[]).filter(p=>p.due===day))push(at(day,p.time||H.morning),'🐶 Ringo: '+p.name,p.time?'A las '+p.time:'Toca hoy','casa-p-'+p.id+'-'+day,'ringo');
    // Noche: lo de mañana
    const next=pending.filter(t=>t.date===ctx.addDays(day,1));
-   if(next.length)push(at(day,H.evening),'Casa · Mañana',next.slice(0,4).map(t=>t.title).join(' · ')+(next.length>4?' y '+(next.length-4)+' más':''),'casa-noche-'+day,'manana');
+   if(next.length)push(at(day,H.evening),'🌙 Mañana toca',next.slice(0,4).map(t=>t.title).join(' · ')+(next.length>4?' y '+(next.length-4)+' más':''),'casa-noche-'+day,'manana');
   }
   return out.sort((a,b)=>a.at.localeCompare(b.at)).slice(0,80);
  }
@@ -46,7 +46,10 @@
  // Lo que el servicio necesita saber de este móvil: de quién es, de qué casa y qué avisos no quiere
  const meta=ctx=>({person:ctx.me||'',houseKey:ctx.houseKey||'',mute:TYPES.filter(k=>prefs().types[k]===false)});
  async function sync(ctx,force){
-  if(!on())return;const sub=await subscription();if(!sub)return;
+  if(!on())return;let sub=await subscription();
+  // Si el móvil perdió la suscripción (pasa en iPhone), se renueva sola; si no se puede, se muestra otra vez el botón de activar
+  if(!sub){try{await root.CasaPush.enable({publicKey:VAPID_PUBLIC,register:s=>post('/subscribe',{sub:s,items:build(ctx),...meta(ctx)})});lastSent='';sub=await subscription()}catch(e){try{localStorage.removeItem(LSK)}catch(_){}return}}
+  if(!sub)return;
   const items=build(ctx),body={sub:sub.toJSON(),items,...meta(ctx)},sig=JSON.stringify(body);if(!force&&sig===lastSent)return;
   await post('/schedule',body);lastSent=sig;
  }
@@ -67,6 +70,8 @@
   status(ctx){if(!ctx.houseKey)return Promise.resolve({people:{}});return post('/status',{houseKey:ctx.houseKey}).catch(()=>({people:{}}))},
   cancel(ctx,id){if(!ctx.houseKey)return Promise.resolve();return post('/cancel',{houseKey:ctx.houseKey,id}).catch(()=>{})},
   async test(){const sub=await subscription();if(!sub)throw Error('Activa primero los avisos en este móvil.');const r=await post('/test',{endpoint:sub.endpoint});if(!r.ok)throw Error('El servicio de avisos no ha podido llegar a este móvil.');},
+  // Al abrir Casa: volver a dar de alta este móvil en el servicio (por si se perdió) y subir sus avisos
+  heal(ctxFn){if(!on()||api._healed)return;api._healed=true;setTimeout(()=>{sync(ctxFn(),true).catch(e=>console.warn('avisos',e))},3000)},
   // Se llama al pintar la app: sube los avisos un rato después del último cambio
   schedule(ctxFn){if(!on())return;clearTimeout(timer);timer=setTimeout(()=>{sync(ctxFn()).catch(e=>console.warn('avisos',e))},8000)},
  };

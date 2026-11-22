@@ -24,7 +24,7 @@
     async test(){
       if(!supported()||Notification.permission!=='granted')throw new Error('Activa primero los permisos en este móvil.');
       const sw=await navigator.serviceWorker.ready;
-      await sw.showNotification('CASA · Prueba',{body:'Este móvil puede mostrar avisos de CASA. El envío remoto se comprueba por separado.',icon:'icons/icon-192.png',tag:'casa-test',data:{url:new URL('./',location.href).href}});
+      await sw.showNotification('📬 Tienes un mensaje de Casa',{body:'Este móvil puede mostrar avisos. El envío remoto se comprueba por separado.',icon:'icons/icon-192.png',tag:'casa-test',data:{url:new URL('./',location.href).href}});
     }
   };
 })();

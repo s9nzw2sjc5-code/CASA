@@ -1,8 +1,8 @@
 // Permite abrir la app sin conexión. Primero intenta la red (para recibir siempre
 // la última versión) y, si no hay, usa la copia guardada.
-const CACHE = 'casa-v166';
+const CACHE = 'casa-v167';
 const OCR_CACHE = 'casa-ocr-ppocrv4-1';
-const SHELL = ['cleaning-view.js?v=166','push.js?v=166','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=166', 'shopping-recommendations.js?v=166', 'household-insights.js?v=166', 'household-ui.js?v=166', 'document-files.js?v=166', 'document-photo.js?v=166', 'home-model.js?v=166', 'cleaning-links.js?v=166', 'home-ui.js?v=166', 'cocina.js?v=166', 'product-photo.js?v=166', 'product-photo-ui.js?v=166', 'receipts.js?v=166', 'receipt-image.js?v=166', 'receipt-layout.js?v=166', 'receipt-ocr.js?v=166', 'receipt-extras.js?v=166', 'house-plan.js?v=166', 'house-plan-ui.js?v=166', 'lidl-ui.js?v=166', 'mama.js?v=166', 'avisos.js?v=166', 'tasks-ui.js?v=166', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
+const SHELL = ['cleaning-view.js?v=167','push.js?v=167','./', 'index.html', 'icons/icon.svg', 'config.js', 'sync.js?v=167', 'shopping-recommendations.js?v=167', 'household-insights.js?v=167', 'household-ui.js?v=167', 'document-files.js?v=167', 'document-photo.js?v=167', 'home-model.js?v=167', 'cleaning-links.js?v=167', 'home-ui.js?v=167', 'cocina.js?v=167', 'product-photo.js?v=167', 'product-photo-ui.js?v=167', 'receipts.js?v=167', 'receipt-image.js?v=167', 'receipt-layout.js?v=167', 'receipt-ocr.js?v=167', 'receipt-extras.js?v=167', 'house-plan.js?v=167', 'house-plan-ui.js?v=167', 'lidl-ui.js?v=167', 'mama.js?v=167', 'avisos.js?v=167', 'tasks-ui.js?v=167', 'lidl.json', 'mercadona.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -55,13 +55,13 @@ async function showPending(){
     const sub=await self.registration.pushManager.getSubscription();
     const r=await fetch(AVISOS_URL+'/pending',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub&&sub.endpoint})});
     const items=((await r.json()).items||[]).slice(-5);
-    if(items.length){for(const x of items)await self.registration.showNotification(String(x.title||'Casa').slice(0,120),{body:String(x.body||'').slice(0,300),icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:String(x.tag||'casa').slice(0,80),data:{url:home}});return}
+    if(items.length){for(const x of items)await self.registration.showNotification(String(x.title||'📬 Tienes un mensaje de Casa').slice(0,120),{body:String(x.body||'').slice(0,300),icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:String(x.tag||'casa').slice(0,80),data:{url:home}});return}
   }catch(e){}
-  await self.registration.showNotification('Casa',{body:'Tienes avisos pendientes. Toca para verlos.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:'casa-avisos',data:{url:home}});
+  await self.registration.showNotification('📬 Tienes un mensaje de Casa',{body:'Toca para verlo.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:'casa-avisos',data:{url:home}});
 }
 async function showItems(items){
   const home=new URL('./',self.location.href).href;
-  for(const x of items.slice(-5))await self.registration.showNotification(String(x.title||'Casa').slice(0,120),{body:String(x.body||'').slice(0,300),icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:String(x.tag||'casa').slice(0,80),data:{url:home}});
+  for(const x of items.slice(-5))await self.registration.showNotification(String(x.title||'📬 Tienes un mensaje de Casa').slice(0,120),{body:String(x.body||'').slice(0,300),icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:String(x.tag||'casa').slice(0,80),data:{url:home}});
   // Lo ya mostrado no se vuelve a mostrar: se vacía la cola del servicio (sin esperar)
   try{const sub=await self.registration.pushManager.getSubscription();fetch(AVISOS_URL+'/pending',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub&&sub.endpoint})}).catch(()=>{})}catch(e){}
 }
@@ -72,7 +72,7 @@ self.addEventListener('push',event=>{
   if(!payload){event.waitUntil(showPending());return}
   const url=new URL('./',self.location.href);
   if(['task','reminder'].includes(payload.kind)&&typeof payload.id==='string'&&payload.id.length<200){url.searchParams.set('noticeKind',payload.kind);url.searchParams.set('noticeId',payload.id)}
-  event.waitUntil(self.registration.showNotification('CASA',{body:'Tienes un aviso pendiente. Toca para verlo y responder.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:typeof payload.tag==='string'?payload.tag.slice(0,120):'casa-notice',data:{url:url.href}}));
+  event.waitUntil(self.registration.showNotification('📬 Tienes un mensaje de Casa',{body:'Toca para verlo y responder.',icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:typeof payload.tag==='string'?payload.tag.slice(0,120):'casa-notice',data:{url:url.href}}));
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();

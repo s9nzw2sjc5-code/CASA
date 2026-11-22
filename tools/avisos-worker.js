@@ -176,7 +176,7 @@ export default {
     if (path === '/test') {
       const dev = await env.AVISOS.get(key, 'json');
       if (!dev || !dev.sub) return json({ error: 'Este móvil no está dado de alta' }, 404);
-      const probe = { at: Date.now(), title: 'Casa · Prueba', body: 'Los avisos de Casa llegan a este móvil.', tag: 'casa-test' };
+      const probe = { at: Date.now(), title: '📬 Tienes un mensaje de Casa', body: 'Prueba: los avisos llegan bien a este móvil.', tag: 'casa-test' };
       dev.queue = [...(dev.queue || []), probe].slice(-MAX_QUEUE);
       await env.AVISOS.put(key, JSON.stringify(dev));
       const status = await poke(env, dev.sub, [probe]).catch(() => 0);
