@@ -523,6 +523,48 @@ const { chromium } = require("playwright"),
     assert.ok(avisosCalls.some((c) => c[0] === "/cancel" && c[1].id === "tr-rm1"), "hecha: se cancela");
     await p.evaluate(() => { S.tasks = S.tasks.filter((t) => t.id !== "rm1"); save(); });
 
+    // Permisos: Mari controla todos los recordatorios; Juanma solo los que se pone él
+    avisosCalls.length = 0;
+    await p.evaluate(() => {
+      const t = today(), soon = Date.now() + 2 * 3600e3;
+      S.tasks.push({ id: "pm1", title: "Sacar la basura", date: t, repeat: "none", done: false, remind: { at: soon, to: ["juanma"], by: "yo" } },
+                   { id: "pm2", title: "Pedir cita médico", date: t, repeat: "none", done: false, remind: { at: soon, to: ["juanma"], by: "juanma" } });
+      S.cook.alarms = [{ id: "al-m", text: "Aviso de Mari", at: soon, to: ["yo"], by: "yo" }];
+      ui.me = "juanma"; save(); ui.view = "tareas"; ui.taskView = "hoy"; ui.taskZone = null; render();
+    });
+    // Juanma no puede cambiar ni borrar el recordatorio que le puso Mari
+    await p.locator('.tz-main[data-id="pm1"]').click();
+    assert.match(await p.locator(".overlay .ts-remind.locked").innerText(), /puesto por Mari[\s\S]*Solo Mari puede cambiarlo/);
+    assert.equal(await p.locator(".overlay #f_rm").count(), 0);
+    await p.locator(".overlay [data-s=del]").click();
+    assert.match(await p.locator("#toast").innerText(), /solo ella puede borrarla/);
+    assert.equal(await p.evaluate(() => S.tasks.some((t) => t.id === "pm1")), true);
+    await p.locator(".overlay [data-s=ok]").click();
+    assert.equal(await p.evaluate(() => !!S.tasks.find((t) => t.id === "pm1").remind), true, "sigue el recordatorio");
+    // Su propio recordatorio sí lo controla (y solo «para mí»)
+    await p.locator('.tz-main[data-id="pm2"]').click();
+    assert.equal(await p.locator(".overlay #f_rm").isChecked(), true);
+    assert.deepEqual(await p.locator("#f_rm_to option").allInnerTexts(), ["Para mí"]);
+    await p.locator(".overlay [data-s=cancel]").click();
+    // Al completarla, el recordatorio de Mari no se cancela
+    await p.locator('.tz-row [data-act=toggleTask][data-id="pm1"]').click();
+    await p.waitForTimeout(300);
+    assert.ok(!avisosCalls.some((c) => c[0] === "/cancel" && c[1].id === "tr-pm1"), "hecha por Juanma: el de Mari sigue");
+    // El aviso de Mari en Hoy no tiene ✕ para Juanma
+    await p.evaluate(() => { ui.view = "hoy"; render(); });
+    assert.equal(await p.locator('.timer-row.alarm .timer-x').count(), 0);
+    // Mari: lo ve todo en la campanita y puede quitar el de Juanma
+    await p.evaluate(() => { ui.me = "yo"; const t = S.tasks.find((t) => t.id === "pm1"); t.done = false; t.remind = { at: Date.now() + 2 * 3600e3, to: ["juanma"], by: "yo" }; localStorage.setItem("casa-avisos", "1"); save(); render(); });
+    await p.locator(".avisos-bell").click();
+    const lst = await p.locator(".overlay .av-list").innerText();
+    assert.match(lst, /Sacar la basura[\s\S]*para Juanma · puesto por Mari/);
+    assert.match(lst, /Pedir cita médico[\s\S]*para Juanma · puesto por Juanma/);
+    assert.match(lst, /Aviso de Mari/);
+    await p.locator('.overlay [data-rm-cancel="t:pm2"]').click();
+    assert.equal(await p.evaluate(() => S.tasks.find((t) => t.id === "pm2").remind), null, "Mari quita el de Juanma");
+    await p.locator(".overlay [data-s=cancel]").click();
+    await p.evaluate(() => { S.tasks = S.tasks.filter((t) => !["pm1", "pm2"].includes(t.id)); S.cook.alarms = []; localStorage.removeItem("casa-avisos"); save(); });
+
     assert.deepEqual(errors, [], "errores de página");
     console.log("tasks-design-flow: OK");
   } finally {

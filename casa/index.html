@@ -236,6 +236,9 @@ body[data-view="tareas"] .hero::after{font-size:3.8rem;bottom:-10px}
 .tz-wide{width:100%;min-height:50px;border-radius:99px;font-weight:700}
 .tz-edit{color:var(--c-tareas);font-weight:600;text-decoration:underline;min-height:44px}
 .tz-org{display:grid;gap:8px}
+.ts-remind.locked p{margin:0;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--c-recordar) 10%,var(--surface));font-size:.9rem}.ts-remind.locked small{color:var(--muted)}
+.av-h{margin:14px 0 6px}.av-list{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}.av-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:12px}.av-list li>span{flex:1;display:grid;min-width:0}.av-list small{color:var(--muted);font-size:.78rem}
+
 .ts-remind{margin:4px 0 8px}.ts-rm-f{padding:4px 0 6px}.tz-remind{color:var(--c-recordar);font-weight:600}
 
 .avisos-bell{margin-left:auto;align-self:center;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:1.35rem;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;flex:none}.avisos-bell.off{opacity:.85}.avisos-bell.warn::after{content:'';position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;background:#FFD23F}.avisos-bell{position:relative}
@@ -822,31 +825,31 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=173"></script>
-<script src="sync.js?v=173"></script>
-<script src="receipts.js?v=173"></script>
-<script src="receipt-image.js?v=173"></script>
-<script src="receipt-layout.js?v=173"></script>
-<script src="receipt-ocr.js?v=173"></script>
-<script src="product-photo.js?v=173"></script>
-<script src="product-photo-ui.js?v=173"></script>
-<script src="shopping-recommendations.js?v=173"></script>
-<script src="household-insights.js?v=173"></script>
-<script src="document-files.js?v=173"></script>
-<script src="document-photo.js?v=173"></script>
-<script src="cleaning-links.js?v=173"></script>
-<script src="home-model.js?v=173"></script>
-<script src="cocina.js?v=173"></script>
-<script src="cleaning-view.js?v=173"></script>
-<script src="home-ui.js?v=173"></script>
-<script src="household-ui.js?v=173"></script>
-<script src="receipt-extras.js?v=173"></script>
-<script src="house-plan.js?v=173"></script>
-<script src="house-plan-ui.js?v=173"></script>
-<script src="lidl-ui.js?v=173"></script>
-<script src="mama.js?v=173"></script>
-<script src="avisos.js?v=173"></script>
-<script src="tasks-ui.js?v=173"></script>
+<script src="push.js?v=174"></script>
+<script src="sync.js?v=174"></script>
+<script src="receipts.js?v=174"></script>
+<script src="receipt-image.js?v=174"></script>
+<script src="receipt-layout.js?v=174"></script>
+<script src="receipt-ocr.js?v=174"></script>
+<script src="product-photo.js?v=174"></script>
+<script src="product-photo-ui.js?v=174"></script>
+<script src="shopping-recommendations.js?v=174"></script>
+<script src="household-insights.js?v=174"></script>
+<script src="document-files.js?v=174"></script>
+<script src="document-photo.js?v=174"></script>
+<script src="cleaning-links.js?v=174"></script>
+<script src="home-model.js?v=174"></script>
+<script src="cocina.js?v=174"></script>
+<script src="cleaning-view.js?v=174"></script>
+<script src="home-ui.js?v=174"></script>
+<script src="household-ui.js?v=174"></script>
+<script src="receipt-extras.js?v=174"></script>
+<script src="house-plan.js?v=174"></script>
+<script src="house-plan-ui.js?v=174"></script>
+<script src="lidl-ui.js?v=174"></script>
+<script src="mama.js?v=174"></script>
+<script src="avisos.js?v=174"></script>
+<script src="tasks-ui.js?v=174"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -901,7 +904,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=173;
+const APP_VERSION=174;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1655,7 +1658,7 @@ function sheet(title,body,{onSave,onDelete,saveLabel='Guardar',autoFocus=true}={
     const b=e.target.closest('[data-s]');if(!b)return;
     e.stopPropagation();
     if(b.dataset.s==='cancel')close();
-    if(b.dataset.s==='del'){onDelete();close()}
+    if(b.dataset.s==='del'){if(onDelete()!==false)close()}
     if(b.dataset.s==='ok'){if(onSave(ov)!==false)close()}
   });
   ov.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
@@ -1749,14 +1752,14 @@ function taskSheet(t,date,extra){
     const urgent=ov.querySelector('#f_u').checked;
     // Si sigue siendo urgente, no se puede posponer (quitar la fecha también sería posponerla)
     if(!n&&urgent&&t.urgent&&t.date&&(!d||CasaHousePlan.blocksPostpone(t,d,today()))){toast('Es urgente ❗: no se puede posponer. Desmarca «Urgente» si de verdad hay que cambiarla.');return false}
-    const remind=taskRemindRead(ov);if(remind===false)return false;
+    let remind=taskRemindRead(ov);if(remind===false)return false;if(remind==='keep')remind=t.remind||null;
     const prevRemind=t.remind?{...t.remind}:null;
     const o={title,date:d,time:d?val(ov,'f_h'):'',who:n?'ambos':(t.who||'ambos'),repeat:rep,notes:val(ov,'f_n'),urgent,important:ov.querySelector('#f_imp').checked,tzZone:val(ov,'f_zone'),remind,...cus};
     let saved;if(n){saved={id:uid(),done:false,...(t.applianceId?{applianceId:t.applianceId,maintenance:true}:{}),...o};S.tasks.push(saved)}else{saved=find(S.tasks,t.id);if(saved)Object.assign(saved,o)}
     if(saved)taskRemindSync(saved,prevRemind);
     const zn=o.tzZone&&o.tzZone!==prevZone?TASK_ZONES.find(z=>z.id===o.tzZone):null;
     save();toast(zn?`${n?'Tarea creada':'Tarea guardada'} · vinculada a ${zn.name}`:n?'Tarea creada':'Tarea guardada');
-  },onDelete:n?null:()=>{if(t.remind)CasaAvisos.cancel(avisosCtx(),'tr-'+t.id);S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});
+  },onDelete:n?null:()=>{if(t.remind&&t.remind.at>Date.now()&&!canControlRemind(t.remind)){toast('Esta tarea tiene un recordatorio de '+personName(t.remind.by||avisosAdmin())+': solo ella puede borrarla');return false}if(t.remind)CasaAvisos.cancel(avisosCtx(),'tr-'+t.id);S.tasks=S.tasks.filter(x=>x.id!==t.id);save();toastUndo('Tarea eliminada')},autoFocus:n});
   taskRemindWire(ov0);
   ov0.classList.add('task-sheet');if(n)ov0.dataset.newTask='1';repeatPreview(ov0);
   // 💡 abre el consejo en su propia ventana, sin alargar la ficha
@@ -1944,7 +1947,7 @@ function markTaskDone(task){
   const repeating=!task.done&&task.repeat&&task.repeat!=='none',prev={date:task.date||'',lastDone:task.lastDone||'',lastDoneAt:task.lastDoneAt||0,lastDoneBy:task.lastDoneBy||'',day:today()};
   Object.assign(task,CasaCleaningLinks.advanceTask(task,today(),Date.now(),meName(),nextOcc));
   if(repeating)task.undoPrev=prev;else delete task.undoPrev;
-  if(task.remind&&typeof CasaAvisos!=='undefined'&&typeof avisosCtx==='function'){CasaAvisos.cancel(avisosCtx(),'tr-'+task.id);delete task.remind}
+  if(task.remind&&typeof CasaAvisos!=='undefined'&&typeof avisosCtx==='function'&&canControlRemind(task.remind)){CasaAvisos.cancel(avisosCtx(),'tr-'+task.id);delete task.remind}
   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).includes(task.id))r.date=CasaCleaningLinks.effectiveDate(S,r)});
 }
 function undoTaskDone(t){

@@ -372,7 +372,7 @@ async function avisosOn(){
 const AVISO_TYPES=[['resumen','Resumen del día'],['urgente','Lo urgente'],['hora','Tareas con hora'],['citas','Citas (30 min antes)'],['ringo','Ringo'],['manana','Lo de mañana'],['timers','Temporizadores (lavadora, secadora…)'],['alarma','Avisos a una hora'],['mensaje','Mensajes del otro («… dice»)']];
 function avisosSheet(){
  const h=CasaAvisos.hours(),P=CasaAvisos.prefs(),me=meName();
- const ov=sheet(`🔔 Avisos${me?' de '+esc(me):''} en este móvil`,`<p class="hint">Cada persona los activa o quita en su móvil. Llegan aunque Casa esté cerrada.</p><p class="av-status" data-av-status>Comprobando quién tiene los avisos activados…</p>
+ const ov=sheet(`🔔 Avisos${me?' de '+esc(me):''} en este móvil`,`<p class="hint">Cada persona los activa o quita en su móvil. Llegan aunque Casa esté cerrada.</p><p class="av-status" data-av-status>Comprobando quién tiene los avisos activados…</p><div data-av-list></div>
   <div class="av-types">${AVISO_TYPES.map(([k,l])=>`<label class="av-type"><input type="checkbox" data-av-type="${k}" ${P.types[k]!==false?'checked':''}><span>${l}</span></label>`).join('')}</div>
   <label class="av-type"><input type="checkbox" id="av_mine" ${P.mine?'checked':''}><span>Solo mis tareas y las de los dos</span></label>
 
@@ -382,6 +382,8 @@ function avisosSheet(){
   <p class="hint">Además: las tareas con hora a su hora, y las citas 30 minutos antes.</p>
   <div class="avisos-actions"><button type="button" class="btn sec" data-av-test>Enviar una prueba</button><button type="button" class="btn sec" data-av-off>Desactivar en este móvil</button></div>`,
   {saveLabel:'Guardar',autoFocus:false,onSave:ov=>{CasaAvisos.setHours({morning:val(ov,'av_m')||'09:00',noon:val(ov,'av_n')||'13:00',evening:val(ov,'av_e')||'21:00'});CasaAvisos.setPrefs({types:Object.fromEntries([...ov.querySelectorAll('[data-av-type]')].map(i=>[i.dataset.avType,i.checked])),mine:ov.querySelector('#av_mine').checked});CasaAvisos.syncNow(avisosCtx()).catch(()=>{});toast('Avisos de este móvil guardados')}});
+ const box2=ov.querySelector('[data-av-list]');if(box2)box2.innerHTML=remindersListHtml();
+ ov.addEventListener('click',e=>{const b=e.target.closest('[data-rm-cancel]');if(!b)return;e.preventDefault();remindCancel(b.dataset.rmCancel);const bx=ov.querySelector('[data-av-list]');if(bx)bx.innerHTML=remindersListHtml()});
  CasaAvisos.status(avisosCtx()).then(r=>{const box=ov.querySelector('[data-av-status]');if(!box)return;const ids=[...new Set([(ui.me||'yo'),((partner()||{}).id||'juanma')])];box.innerHTML=ids.map(id=>`${(r.people||{})[id]?'✅':'⚠️'} ${esc(personName(id))}: ${(r.people||{})[id]?'avisos activados':'sin activar en su móvil'}`).join('<br>')});
  ov.querySelector('[data-av-test]').onclick=async()=>{try{await CasaAvisos.test();toast('Prueba enviada: debería llegar en unos segundos')}catch(e){toast(String(e&&e.message||e))}};
  ov.querySelector('[data-av-off]').onclick=async()=>{await CasaAvisos.disable();ov.remove();toast('Avisos desactivados en este móvil');render()};
@@ -420,7 +422,7 @@ const whoTo=v=>v==='ambos'?[...new Set([(ui.me||'yo'),((partner()||{}).id||'juan
 function timerCard(){
  const ts=timersActive(),as=alarmsActive();
  return`<section class="timers">${ts.map(t=>`<div class="timer-row ${t.end<=Date.now()?'done':''}"><span aria-hidden="true">⏲️</span><span class="timer-t"><b>${esc(t.label)}${t.program?' · '+esc(t.program):''}</b><small>${esc(timerLeft(t))} · a las ${clock(t.end)}</small></span><button class="timer-x" data-act="timerStop" data-id="${esc(t.id)}" aria-label="Quitar temporizador ${esc(t.label)}">✕</button></div>`).join('')}
-  ${as.map(a=>`<div class="timer-row alarm"><span aria-hidden="true">${a.to.length>1||a.to[0]!==(ui.me||'yo')?'💬':'🔔'}</span><span class="timer-t"><b>${esc(a.text)}</b><small>${new Date(a.at).toDateString()===new Date().toDateString()?'Hoy':new Date(a.at).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})} a las ${clock(a.at)} · ${esc(a.to.length>1?'para los dos':'para '+(a.to[0]===(ui.me||'yo')?'mí':personName(a.to[0])))}</small></span><button class="timer-x" data-act="alarmStop" data-id="${esc(a.id)}" aria-label="Quitar aviso">✕</button></div>`).join('')}
+  ${as.map(a=>`<div class="timer-row alarm"><span aria-hidden="true">${a.to.length>1||a.to[0]!==(ui.me||'yo')?'💬':'🔔'}</span><span class="timer-t"><b>${esc(a.text)}</b><small>${new Date(a.at).toDateString()===new Date().toDateString()?'Hoy':new Date(a.at).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})} a las ${clock(a.at)} · ${esc(a.to.length>1?'para los dos':'para '+(a.to[0]===(ui.me||'yo')?'mí':personName(a.to[0])))}</small></span>${canControlRemind(a)?`<button class="timer-x" data-act="alarmStop" data-id="${esc(a.id)}" aria-label="Quitar aviso">✕</button>`:''}</div>`).join('')}
   <div class="timer-btns ${ts.length||laundryToday()?'':'one'}">${ts.length||laundryToday()?'<button class="btn sec" data-act="timerSheet">⏲️ Temporizador</button>':''}<button class="btn sec" data-act="alarmSheet">🔔 Aviso a una hora</button></div></section>`;
 }
 function timerSheet(){
@@ -471,7 +473,7 @@ function alarmSheet(){
  ov.querySelector('#al_to').onchange=()=>{if(val(ov,'al_to')!==(ui.me||'yo')&&!val(ov,'al_t'))ov.querySelector('#al_now').checked=true;sync()};
  sync();return ov;
 }
-function alarmStop(id){S.cook.alarms=alarmsActive().filter(a=>a.id!==id);save();CasaAvisos.cancel(avisosCtx(),id)}
+function alarmStop(id){const a=alarmsActive().find(a=>a.id===id);if(a&&!canControlRemind(a)){toast('Solo '+personName(avisosAdmin())+' puede quitar este aviso');return}S.cook.alarms=alarmsActive().filter(a=>a.id!==id);save();CasaAvisos.cancel(avisosCtx(),id)}
 // Con Casa abierta: aviso en pantalla al terminar y la cuenta atrás se actualiza sola
 const timerLocalSet=new Set();
 function timerLocal(t){
@@ -482,6 +484,10 @@ setInterval(()=>{try{if(ui.view!=='hoy'||document.querySelector('.overlay')||/IN
 Object.assign(TASKS_ACT,{timerSheet:()=>{if(!ui.me){whoAmI(()=>timerSheet());return}timerSheet()},timerStop:d=>timerStop(d.id),alarmSheet:()=>{if(!ui.me){whoAmI(()=>alarmSheet());return}alarmSheet()},alarmStop:d=>alarmStop(d.id)});
 
 /* ---------- Recordatorio de una tarea: a quién (Mari, Juanma o los dos) y cuándo ---------- */
+// Quién manda en los recordatorios: Mari (persona «yo») controla todos; el otro solo los que se pone a sí mismo
+const avisosAdmin=()=>(S.cook&&S.cook.avisosAdmin)||'yo';
+const isAvisosAdmin=()=>(ui.me||'yo')===avisosAdmin();
+const canControlRemind=r=>!r||isAvisosAdmin()||(r.by===(ui.me||'')&&!(r.to||[]).includes(avisosAdmin()));
 const remindWho=to=>to&&to.length>1?'los dos':personName((to||[])[0]||'');
 function remindLabel(t){
  const r=t&&t.remind;if(!r||!(r.at>Date.now()-3600e3))return'';
@@ -490,15 +496,18 @@ function remindLabel(t){
 }
 function taskRemindHtml(t){
  const r=t.remind&&t.remind.at>Date.now()-3600e3?t.remind:null,d=r?new Date(r.at):null;
+ // Recordatorio puesto por Mari (o para ella): el otro lo ve, pero no lo puede cambiar
+ if(r&&!canControlRemind(r))return`<div class="ts-remind locked" data-rm-locked><p>${esc(remindLabel(t))} · puesto por ${esc(personName(r.by||avisosAdmin()))}<br><small>Solo ${esc(personName(avisosAdmin()))} puede cambiarlo o quitarlo.</small></p></div>`;
  const day=d?localDay(d):(t.date||today()),hour=d?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):(t.time||'09:00');
  const sel=r?(r.to.length>1?'ambos':r.to[0]):(ui.me||'yo');
  return`<div class="ts-remind"><label class="av-type"><input type="checkbox" id="f_rm" ${r?'checked':''}><span>🔔 Recordatorio${r?': '+esc(remindLabel(t).replace(/^🔔 /,'')):''}</span></label>
   <div class="ts-rm-f" ${r?'':'hidden'}><div class="grid2"><div><label for="f_rm_d">Día</label><input class="field" type="date" id="f_rm_d" value="${day}"></div><div><label for="f_rm_h">Hora</label><input class="field" type="time" id="f_rm_h" value="${hour}"></div></div>
-  <label for="f_rm_to">Para</label><select class="field" id="f_rm_to">${whoOptions(sel)}</select></div></div>`;
+  <label for="f_rm_to">Para</label><select class="field" id="f_rm_to">${isAvisosAdmin()?whoOptions(sel):`<option value="${esc(ui.me||'')}">Para mí</option>`}</select></div></div>`;
 }
 function taskRemindWire(ov){const c=ov.querySelector('#f_rm'),f=ov.querySelector('.ts-rm-f');if(c&&f)c.onchange=()=>{f.hidden=!c.checked}}
 // Lee el recordatorio de la ficha: {at,to} o null si está quitado; false si la hora no vale
 function taskRemindRead(ov){
+ if(ov.querySelector('[data-rm-locked]'))return 'keep';
  const c=ov.querySelector('#f_rm');if(!c||!c.checked)return null;
  const at=new Date(val(ov,'f_rm_d')+'T'+(val(ov,'f_rm_h')||'09:00')).getTime();
  if(!(at>Date.now()+30e3)){toast('El recordatorio tiene que ser para un día y hora que aún no hayan pasado');return false}
@@ -513,4 +522,26 @@ function taskRemindSync(t,prev){
  const forOther=r.to.some(p=>p!==(ui.me||'yo')),me=meName()||'Casa';
  CasaAvisos.send(ctx,{to:r.to,id,at:new Date(r.at).toISOString(),title:'🔔 '+String(t.title).slice(0,100),body:forOther?`${me} te lo recuerda`+(t.notes?' · '+t.notes:''):(t.notes||'Recordatorio de tarea'),tag:'casa-'+id,type:forOther?'mensaje':'alarma'})
   .then(x=>{if(!x.devices)toast('Recordatorio guardado, pero '+remindWho(r.to)+' no tiene los avisos activados en su móvil.')}).catch(()=>toast('Recordatorio guardado; se avisará cuando haya conexión con el servicio de avisos.'));
+}
+
+// Todos los recordatorios programados (de tareas y avisos a una hora), con quién los puso y para quién
+function remindersAll(){
+ const now=Date.now()-60e3,out=[];
+ for(const t of S.tasks||[])if(t&&!t.done&&t.remind&&t.remind.at>now)out.push({key:'t:'+t.id,text:t.title,at:t.remind.at,to:t.remind.to||[],by:t.remind.by||''});
+ for(const a of alarmsActive())if(a.at>now)out.push({key:'a:'+a.id,text:a.text,at:a.at,to:a.to||[],by:a.by||''});
+ return out.sort((x,y)=>x.at-y.at);
+}
+function remindersListHtml(){
+ // Mari los ve todos; el otro, solo los suyos (para él o puestos por él)
+ const me=ui.me||'yo',list=remindersAll().filter(r=>isAvisosAdmin()||r.to.includes(me)||r.by===me);
+ if(!list.length)return'<p class="hint">No hay recordatorios programados.</p>';
+ return`<h4 class="av-h">Recordatorios programados</h4><ul class="av-list">${list.map(r=>{const d=new Date(r.at),day=d.toDateString()===new Date().toDateString()?'Hoy':d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
+  return`<li><span><b>${esc(r.text)}</b><small>${esc(day)} ${clock(r.at)} · para ${esc(remindWho(r.to))}${r.by?' · puesto por '+esc(personName(r.by)):''}</small></span>${canControlRemind(r)?`<button type="button" class="timer-x" data-rm-cancel="${esc(r.key)}" aria-label="Quitar recordatorio">✕</button>`:''}</li>`}).join('')}</ul>`;
+}
+function remindCancel(key){
+ const [kind,id]=[key.slice(0,1),key.slice(2)];
+ if(kind==='a')return alarmStop(id);
+ const t=find(S.tasks,id);if(!t||!t.remind)return;
+ if(!canControlRemind(t.remind)){toast('Solo '+personName(avisosAdmin())+' puede quitar este recordatorio');return}
+ CasaAvisos.cancel(avisosCtx(),'tr-'+t.id);t.remind=null;save();toast('Recordatorio quitado');
 }
