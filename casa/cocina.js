@@ -1398,7 +1398,7 @@ function parseTicket(txt){
     // La cantidad pegada al nombre («2FONT NATURA», «2. FONT», «2-FONT») es la
     // cantidad de la línea, no parte del nombre del producto.
     const lead=!line.quantityObserved&&line.name.match(/^(\d{1,2})(?:\s*[.,:;*\-]\s*|\s*[x×]\s+|\s*)(?=[A-Za-zÁÉÍÓÚÑáéíóúñ]{3})(.+)$/),u=lead?+lead[1]:0;
-    if(u>=1&&u<=30&&!(line.unitObserved&&Number.isFinite(line.unit)&&Number.isFinite(line.price)&&Math.abs(Math.round(line.unit*u*100)-Math.round(line.price*100))>1)){line.name=lead[2].trim();line.units=u;line.quantityObserved=true;if(!line.unitObserved&&Number.isFinite(line.price))line.unit=line.price/u}line.nice=line.name.toLowerCase().replace(/^./,c=>c.toUpperCase())}
+    if(u>=1&&u<=30&&!(line.unitObserved&&Number.isFinite(line.unit)&&Number.isFinite(line.price)&&Math.abs(Math.round(line.unit*u*100)-Math.round(line.price*100))>1)){line.name=lead[2].trim();line.units=u;line.quantityObserved=true;if(!line.unitObserved&&Number.isFinite(line.price)){line.unit=line.price/u;const up=line.name.match(/^(.*\S)\s+(\d+[.,]\d{2})$/);if(up&&Math.abs(Math.round(tNum(up[2])*u*100)-Math.round(line.price*100))<=1){line.name=up[1];line.unit=tNum(up[2]);line.unitObserved=true}}}line.nice=line.name.toLowerCase().replace(/^./,c=>c.toUpperCase())}
   return {store:st,date,total,storeObserved:!!st,dateObserved:!!date,totalObserved:!!tm,lines:lines.filter(a=>a.name.length>1)};
 }
 // Producto de Mercadona de una línea del tique: el que cuesta exactamente lo mismo

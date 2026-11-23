@@ -46,5 +46,6 @@ test('a pizza base is an article, while a VAT base is metadata',()=>{
 test('a purchase quantity stuck to the product name is read as the quantity',()=>{
  const c=parser();
  for(const line of ['2FONT NATURA 1,20','2. FONT NATURA 1,20','2-FONT NATURA 1,20','2 FONT NATURA 0,60 1,20']){const t=c.parseTicket('MERCADONA\n09/11/2026\n'+line+'\nTOTAL 1,20');assert.equal(t.lines[0].name,'FONT NATURA',line);assert.equal(t.lines[0].units,2,line);assert.equal(t.lines[0].price,1.2,line);assert.equal(t.lines[0].quantityObserved,true,line)}
+ {const t=c.parseTicket('MERCADONA\n09/11/2026\n2FONT NATURA 5L 0,90 1,80\nTOTAL 1,80');assert.equal(t.lines[0].name,'FONT NATURA 5L');assert.equal(t.lines[0].units,2);assert.equal(t.lines[0].unit,.9);assert.equal(t.lines[0].price,1.8)}
  const t=c.parseTicket('MERCADONA\n09/11/2026\n7UP ZERO 1,10\nTOTAL 1,10');assert.equal(t.lines[0].name,'7UP ZERO');assert.equal(t.lines[0].units,1);
 });
