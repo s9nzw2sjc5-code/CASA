@@ -1,0 +1,15 @@
+const {chromium}=require('playwright');
+const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),assert=require('node:assert/strict');
+(async()=>{const root=path.resolve('.'),server=http.createServer((q,r)=>{const f=path.join(root,new URL(q.url,'http://local').pathname);fs.readFile(f,(e,b)=>{if(e)return r.writeHead(404).end();r.setHeader('Content-Type',f.endsWith('.js')?'application/javascript':f.endsWith('.html')?'text/html':'application/json');r.end(b)})});await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;try{browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true});const p=await browser.newPage({viewport:{width:390,height:844}});const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.route('https://**/*',r=>r.abort());await p.route('**/config.js',r=>r.fulfill({contentType:'application/javascript',body:'window.claude={use:async()=>null};'}));await p.goto(`http://127.0.0.1:${server.address().port}/casa/index.html`);await p.waitForFunction(()=>typeof vCleaning==='function');
+await p.evaluate(()=>{S=fresh();S.tasks=[{id:'k',title:'Cocina recogida',mamaKey:'mama-noche',repeat:'daily',date:addDays(today(),-1),who:'ambos'},{id:'s',title:'Cambiar sábanas',repeat:'weekly',date:today(),lastDone:addDays(today(),-4),who:'ambos'},...Array.from({length:5},(_,i)=>({id:'b'+i,title:'Limpiar baño '+i,repeat:'weekly',date:today(),who:'ambos'})),{id:'u',title:'Aviso urgente',urgent:true,date:today(),who:'ambos'}];S.cook={planDays:PLAN_DAYS_V};ui.view='hoy';ui.personFilter='all';render()});
+await p.waitForFunction(()=>S.tasks.find(t=>t.id==='s').date===addDays(today(),3));
+assert(await p.locator('[data-act=toggleTask][data-id=k]').count());
+assert.equal(await p.locator('[data-act=toggleTask][data-id=b0]').count(),0);
+assert(await p.locator('[data-act=toggleTask][data-id=u]').count());
+await p.locator('[data-act=skipCleaningDay]').click();assert(await p.locator('[data-light-keep=k]').isChecked());await p.locator('.overlay [data-s=ok]').click();
+assert(await p.evaluate(()=>S.tasks.filter(t=>t.id.startsWith('b')).every(t=>t.date>today()&&!t.done&&t.skippedCount===1)&&S.tasks.find(t=>t.id==='u').date===today()));
+assert(await p.evaluate(()=>new Set(S.tasks.filter(t=>t.id.startsWith('b')).map(t=>t.date)).size>=3));
+await p.locator('.check[data-act=toggleTask][data-id=k]').click();assert(await p.evaluate(()=>S.tasks.find(t=>t.id==='k').lastDone===today()));
+assert.equal(await p.locator('.check[data-act=toggleTask][data-id=k]').count(),0);await p.screenshot({path:'/tmp/casa-light-day.png'});await p.evaluate(()=>{ui.view='tareas';ui.taskView='todas';render()});assert(await p.getByText('Cambiar sábanas',{exact:true}).count());
+for(const width of [320,390]){await p.setViewportSize({width,height:844});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+assert.deepEqual(errors,[]);console.log('Correcto: día ligero, básicos atrasados, citas conservadas, reparación semanal y reparto sin marcar hechas.');}finally{await browser?.close();server.close()}})().catch(e=>{console.error(e);process.exitCode=1});

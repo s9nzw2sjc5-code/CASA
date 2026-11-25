@@ -74,7 +74,7 @@ function vTasksToday(){
  const urgentFirst=due.filter(x=>x.urgent).concat(due.filter(x=>!x.urgent));
  let h=personNote()+`<p class="tz-count">${plural(due.length,'pendiente','pendientes')} · ${plural(doneToday.length,'hecha','hechas')}</p>${progressBar(doneToday.length,due.length+doneToday.length,'Hecho hoy')}`;
  if(due.filter(x=>!x.urgent).length>=4||due.some(x=>x.date<t&&!x.urgent))h+=`<button class="btn sec tz-prio" data-act="taskPriority">⚡ Reorganizar por prioridad</button>`;
- h+=`<h2 class="tz-h2">Para hoy</h2>`;
+ h+=`<button class="btn sec tz-prio" data-act="skipCleaningDay">Saltar hoy · elegir lo básico</button><h2 class="tz-h2">Lo que más falta hace</h2><p class="hint">Ordenado por fecha pendiente. Puedes elegir una tarea y dejar el resto para otro momento.</p>`;
  if(urgentFirst.length)h+=tzList(urgentFirst.map(x=>tzRow(x)));
  else{const next=mine.filter(x=>!x.done&&x.date>t).sort(byDateTime)[0];h+=`<div class="empty tz-empty">Nada pendiente para hoy 🎉${next?`<br><small>Lo próximo: ${esc(next.title)} · ${esc(relDate(next.date).toLowerCase())}</small>`:''}</div>`}
  if(doneToday.length)h+=`<details class="tz-done"${ui.tzDoneOpen?' open':''}><summary data-act="tzDoneToggle"><span>Hechas hoy · ${doneToday.length}</span><span class="tz-caret" aria-hidden="true">⌄</span></summary>${tzList(doneToday.map(x=>tzRow(x,{done:true})))}</details>`;
@@ -248,28 +248,17 @@ function tzZoneSelectHtml(t){
 
 /* ---------- Reorganizar por prioridad: repartir lo acumulado sin sobrecargar ningún día ---------- */
 // Minutos por día: entre semana poco, el fin de semana más (como el plan de limpieza)
-const PRIO_CAP=d=>{const w=taskWeekday(d);return w<5?50:w===5?90:120};
+const PRIO_CAP=()=>25;
 const prioMinutes=x=>CasaHousePlan.minutesFor(x)||(x&&x.mamaKey&&(CasaMama.ROUTINES.find(r=>r.key===x.mamaKey)||{}).min)||15;
-const prioFreq=x=>x.repeat==='daily'?0:x.repeat==='weekly'?1:x.repeat==='custom'&&x.unit==='w'&&Number(x.every)<=2?2:x.repeat==='custom'&&x.unit==='d'?1:x.repeat&&x.repeat!=='none'?3:4;
-function priorityPlan(){
- const t=today(),mine=taskMine(),movable=mine.filter(x=>!x.done&&x.date&&x.date<=t&&!x.urgent);
- // Orden: 📅 importantes, más atrasadas, más frecuentes, más cortas
- movable.sort((a,b)=>(isImportantTask(b)?1:0)-(isImportantTask(a)?1:0)||a.date.localeCompare(b.date)||prioFreq(a)-prioFreq(b)||prioMinutes(a)-prioMinutes(b)||String(a.title).localeCompare(String(b.title),'es'));
- const ids=new Set(movable.map(x=>x.id)),load={};
- // Lo que ya hay cada día (y lo urgente de hoy) ocupa su sitio
- for(const x of mine)if(!x.done&&x.date&&!ids.has(x.id)){const d=x.date<t?t:x.date;load[d]=(load[d]||0)+prioMinutes(x)}
- const plan=[];
- for(const x of movable){const m=prioMinutes(x);let d=t,guard=0;while((load[d]||0)>0&&(load[d]||0)+m>PRIO_CAP(d)&&guard++<60)d=addDays(d,1);load[d]=(load[d]||0)+m;plan.push({id:x.id,title:x.title,from:x.date,to:d,min:m,important:isImportantTask(x)})}
- return {plan,load};
-}
+function priorityPlan(){return CasaCleaningPace.plan(taskMine(),today(),nextOcc,prioMinutes,{start:S.cook?.lightDay===today()?addDays(today(),1):today(),keep:taskMine().filter(CasaCleaningPace.basic).map(t=>t.id)})}
 function taskPrioritySheet(){
- const {plan,load}=priorityPlan(),t=today();
+ let result;try{result=priorityPlan()}catch(e){toast(e.message);return}const {plan,load}=result,t=today();
  if(!plan.length){toast('No hay tareas acumuladas que reorganizar');return}
  const days=[...new Set(plan.map(p=>p.to))].sort(),moved=plan.filter(p=>p.to!==p.from).length;
- const body=`<p class="hint">Lo importante y lo más atrasado, primero. Cada día, como mucho unos ${PRIO_CAP(t)} min entre semana y más el fin de semana. Las urgentes ❗ se quedan hoy.</p>
+ const body=`<p class="hint">Lo importante y lo más atrasado, primero. Reparto suave: unos 25 min extra al día, además de lo básico, contando la limpieza ya programada, y hasta dos tareas aplazadas. Una tarea más larga tendrá un día para ella sola. Los avisos importantes no se mueven.</p>
   <div class="prio-days">${days.map(d=>`<div class="prio-day"><h4>${esc(tzDay(d))} <small>· ${load[d]||0} min</small></h4><ul>${plan.filter(p=>p.to===d).map(p=>`<li>${p.important?'📅 ':''}${esc(p.title)} <small>${p.min} min${p.from<t?' · atrasada':''}</small></li>`).join('')}</ul></div>`).join('')}</div>`;
  const ov=sheet('⚡ Reorganizar por prioridad',body,{saveLabel:moved?`Aplicar (${moved})`:'Aplicar',autoFocus:false,onSave:()=>{
-  const by=new Map(plan.map(p=>[p.id,p.to]));let n=0;
+  if(plan.some(p=>{const x=find(S.tasks,p.id);return !x||x.done||x.date!==p.from||!CasaCleaningPace.cleaning(x)})){toast('Las tareas han cambiado. Abre de nuevo el reparto.');return false}const by=new Map(plan.map(p=>[p.id,p.to]));let n=0;
   for(const x of S.tasks)if(by.has(x.id)&&x.date!==by.get(x.id)){x.date=by.get(x.id);n++}
   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>by.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)});
   save();toastUndo(n?`${n} ${n===1?'tarea reorganizada':'tareas reorganizadas'} por prioridad`:'Ya estaba todo en su sitio',7000);
@@ -281,7 +270,7 @@ function taskPrioritySheet(){
 // Datos para los recordatorios de un día (los mismos para la tarjeta y para los avisos del móvil)
 function mamaInput(day,hour){
  const place=houseWxPlace(),c=place&&houseWxFor(place);
- return {today:day,hour,tasks:taskMine(),
+ return {today:day,hour,tasks:taskMine().filter(x=>!CasaCleaningPace.cleaning(x)||CasaCleaningPace.basic(x)),
   pets:(S.pet||[]).map(x=>({name:x.name,due:petDue(x)})),
   listPending:(S.items||[]).filter(i=>!i.done&&i.listId===cartList()).length,
   lowPantry:typeof pantryLow==='function'?(S.pantry||[]).filter(pantryLow).length:0,
@@ -293,7 +282,7 @@ const avisosCtx=()=>({today:today(),addDays,me:ui.me||'',houseKey:(S.cook&&S.coo
  devices:(S.cook&&S.cook.avisosDevices)||{},
  storeDevice:(sub,mute)=>{if(!ui.me)return;S.cook=S.cook||{};S.cook.avisosDevices={...(S.cook.avisosDevices||{}),[ui.me]:{sub,mute:mute||[],at:Date.now()}};save()},timers:(S.cook&&S.cook.timers)||[],tasks:S.tasks||[],events:(S.events||[]).filter(e=>e&&!e.done),
  pets:(S.pet||[]).map(x=>({id:x.id,name:x.name,due:petDue(x),time:x.time||''})),
- nudges:day=>CasaMama.nudges({...mamaInput(day,9),tasks:(S.tasks||[]).filter(t=>t&&!t.done)}),minutes:prioMinutes});
+ nudges:day=>CasaMama.nudges({...mamaInput(day,9),tasks:(S.tasks||[]).filter(t=>t&&!t.done&&(!CasaCleaningPace.cleaning(t)||CasaCleaningPace.basic(t)))}),minutes:prioMinutes});
 function mamaCard(){
  let list=[];
  try{
@@ -544,4 +533,21 @@ function remindCancel(key){
  const t=find(S.tasks,id);if(!t||!t.remind)return;
  if(!canControlRemind(t.remind)){toast('Solo '+personName(avisosAdmin())+' puede quitar este recordatorio');return}
  CasaAvisos.cancel(avisosCtx(),'tr-'+t.id);t.remind=null;save();toast('Recordatorio quitado');
+}
+
+function cleaningDatesRepair(){
+ if(cleaningDatesRepair.busy||!canWrite||syncState==='ro')return false;
+ const fixes=CasaCleaningPace.repairs(S.tasks,today(),nextOcc);if(!fixes.length)return false;
+ cleaningDatesRepair.busy=true;try{saveLocalBackup('antes-frecuencias-limpieza-'+Date.now(),clone(S),'Antes de corregir repeticiones de limpieza');for(const p of fixes)find(S.tasks,p.id).date=p.to;(S.routines||[]).filter(r=>r.linkedTasks&&!r.archived).forEach(r=>r.date=CasaCleaningLinks.effectiveDate(S,r));save();return true}finally{cleaningDatesRepair.busy=false}
+}
+function skipCleaningDay(){
+ const due=taskMine().filter(t=>!t.done&&CasaCleaningPace.cleaning(t)&&t.date&&t.date<=today());
+ const ov=sheet('Hoy, un día ligero',`<p class="hint">Marca solo lo que quieres mantener hoy. Lo demás se reparte desde mañana contando el trabajo ya programado, sin marcarlo como hecho. Las citas, tareas urgentes y avisos importantes no se cambian.</p><div class="home-checklist">${due.map(t=>`<label><input type="checkbox" data-light-keep="${esc(t.id)}" ${CasaCleaningPace.basic(t)?'checked':''}><span>${esc(t.title)}</span></label>`).join('')}</div><p class="hint">Objetivo: unos 25 minutos extra al día, además de lo básico y hasta dos tareas aplazadas; si una tarea dura más, se reserva un día para ella sola.</p>`,{saveLabel:'Saltar hoy y repartir',autoFocus:false,onSave:()=>{
+  const keep=[...ov.querySelectorAll('[data-light-keep]:checked')].map(el=>el.dataset.lightKeep);
+  let result;try{result=CasaCleaningPace.plan(taskMine(),today(),nextOcc,prioMinutes,{keep})}catch(e){toast(e.message);return false}
+  for(const p of result.plan){const task=find(S.tasks,p.id);task.date=p.to;task.skippedCount=(Number(task.skippedCount)||0)+1;task.lastSkipped=today()}
+  S.cook={...S.cook,lightDay:today(),lightKeep:keep};
+  (S.routines||[]).filter(r=>r.linkedTasks&&!r.archived).forEach(r=>r.date=CasaCleaningLinks.effectiveDate(S,r));
+  save();toastUndo('Día ligero: '+result.plan.length+' tareas repartidas, ninguna marcada como hecha.',8000);
+ }});return ov;
 }

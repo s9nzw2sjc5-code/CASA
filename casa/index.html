@@ -826,31 +826,32 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=176"></script>
-<script src="sync.js?v=176"></script>
-<script src="receipts.js?v=176"></script>
-<script src="receipt-image.js?v=176"></script>
-<script src="receipt-layout.js?v=176"></script>
-<script src="receipt-ocr.js?v=176"></script>
-<script src="product-photo.js?v=176"></script>
-<script src="product-photo-ui.js?v=176"></script>
-<script src="shopping-recommendations.js?v=176"></script>
-<script src="household-insights.js?v=176"></script>
-<script src="document-files.js?v=176"></script>
-<script src="document-photo.js?v=176"></script>
-<script src="cleaning-links.js?v=176"></script>
-<script src="home-model.js?v=176"></script>
-<script src="cocina.js?v=176"></script>
-<script src="cleaning-view.js?v=176"></script>
-<script src="home-ui.js?v=176"></script>
-<script src="household-ui.js?v=176"></script>
-<script src="receipt-extras.js?v=176"></script>
-<script src="house-plan.js?v=176"></script>
-<script src="house-plan-ui.js?v=176"></script>
-<script src="lidl-ui.js?v=176"></script>
-<script src="mama.js?v=176"></script>
-<script src="avisos.js?v=176"></script>
-<script src="tasks-ui.js?v=176"></script>
+<script src="push.js?v=177"></script>
+<script src="sync.js?v=177"></script>
+<script src="receipts.js?v=177"></script>
+<script src="receipt-image.js?v=177"></script>
+<script src="receipt-layout.js?v=177"></script>
+<script src="receipt-ocr.js?v=177"></script>
+<script src="product-photo.js?v=177"></script>
+<script src="product-photo-ui.js?v=177"></script>
+<script src="shopping-recommendations.js?v=177"></script>
+<script src="household-insights.js?v=177"></script>
+<script src="document-files.js?v=177"></script>
+<script src="document-photo.js?v=177"></script>
+<script src="cleaning-pace.js?v=177"></script>
+<script src="cleaning-links.js?v=177"></script>
+<script src="home-model.js?v=177"></script>
+<script src="cocina.js?v=177"></script>
+<script src="cleaning-view.js?v=177"></script>
+<script src="home-ui.js?v=177"></script>
+<script src="household-ui.js?v=177"></script>
+<script src="receipt-extras.js?v=177"></script>
+<script src="house-plan.js?v=177"></script>
+<script src="house-plan-ui.js?v=177"></script>
+<script src="lidl-ui.js?v=177"></script>
+<script src="mama.js?v=177"></script>
+<script src="avisos.js?v=177"></script>
+<script src="tasks-ui.js?v=177"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -905,7 +906,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=174;
+const APP_VERSION=177;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1145,9 +1146,11 @@ function upcomingAppointments(t,days){
 function vHoy(){
   const t=today(),d=new Date(),hr=d.getHours(),nowHM=pad(hr)+':'+pad(d.getMinutes());
   const greet=hr>=6&&hr<13?'Buenos días':hr>=13&&hr<21?'Buenas tardes':'Buenas noches';
-  const late=S.tasks.filter(x=>!x.done&&x.date&&x.date<t);
-  const now=S.tasks.filter(x=>!x.done&&x.date===t).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
-  const doneToday=S.tasks.filter(x=>x.done&&x.doneAt===t);
+  const keptToday=x=>S.cook?.lightDay===t&&(S.cook.lightKeep||[]).includes(x.id);
+  const visibleToday=x=>!CasaCleaningPace.cleaning(x)||CasaCleaningPace.basic(x)||keptToday(x);
+  const late=S.tasks.filter(x=>!x.done&&x.date&&x.date<t&&visibleToday(x)&&!CasaCleaningPace.basic(x)&&!keptToday(x));
+  const now=S.tasks.filter(x=>!x.done&&(x.date===t||(CasaCleaningPace.basic(x)||keptToday(x))&&x.date&&x.date<t)&&visibleToday(x)).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+  const doneToday=S.tasks.filter(x=>(x.done&&x.doneAt===t||x.lastDone===t)&&visibleToday(x));
   const rems=S.reminders.filter(r=>!r.done&&r.date&&r.date<=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   // Recordatorios con fecha concreta (no se repiten): se destacan como importantes
   // (también los de mañana, para verlos con un día de antelación)
@@ -1171,7 +1174,7 @@ function vHoy(){
   const total=now.length+doneToday.length,done=doneToday.length,pct=total?done/total:0;
   const C=113.1;
   const stat=(n,l,v)=>`<button class="hstat" data-act="tab" data-v="${v}"><b>${n}</b><small>${l}</small></button>`;
-  const msg=!total&&!late.length?'Hoy no tienes tareas: día libre ✨':done===total&&!late.length?'¡Todo hecho por hoy! 🎉':late.length?`Tienes ${late.length} atrasada${late.length>1?'s':''} 👀`:`Te ${total-done===1?'queda':'quedan'} ${total-done} para hoy 💪`;
+  const msg=S.cook?.lightDay===t?'Hoy, solo lo que has elegido. El resto tiene su hueco.':'Lo básico para hoy. La limpieza a fondo puede esperar a su momento.';
   let h=`<div class="hoy-hero">
     <div class="hoy-top"><span class="hoy-greet">${greet} 👋</span>
       <div class="ring-box" aria-label="${done} de ${total} tareas de hoy hechas"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" stroke-dasharray="${(pct*C).toFixed(1)} ${C}"${pct?'':' style="opacity:0"'}/></svg><span class="ring-n">${done}/${total}</span></div></div>
@@ -1192,12 +1195,12 @@ function vHoy(){
   const lateRows=late.filter(x=>!x.urgent),nowRows=[...now.filter(x=>!x.urgent&&!todayImpTasks.includes(x)),...doneToday];
   // Lo atrasado no se lista en Hoy: solo un aviso que lleva a Tareas, donde sí aparece
   if(lateRows.length)h+=`<button class="late-note" data-act="tab" data-v="tareas"><span aria-hidden="true">⚠️</span><span><b>Tareas atrasadas · ${lateRows.length}</b><small>Están en Tareas</small></span><span aria-hidden="true">›</span></button>`;
-  h+=sec('✅','Para hoy','var(--c-tareas)',nowRows.length?ul(nowRows.map(x=>taskRow(x,x.done?null:t))):`<div class="empty">${total?'Lo de hoy está arriba, en Importante.':'Nada pendiente para hoy.'}</div>`);
-  h+=cleaningSection(true);
+  h+=sec('✅','Para hoy','var(--c-tareas)',nowRows.length?ul(nowRows.map(x=>x.lastDone===t?tzRow(x,{done:true}):taskRow(x))):`<div class="empty">${total?'Lo de hoy está arriba, en Importante.':'Nada pendiente para hoy.'}</div>`);
+  h+=`<div class="task-options"><p class="hint">La limpieza completa está en Tareas. Puedes elegir qué hacer sin terminarlo todo hoy.</p><button class="btn sec" data-act="skipCleaningDay">Saltar hoy · solo lo básico</button><button class="link" data-act="tab" data-v="tareas">Ver limpieza</button></div>`;
   if(repRems.length)h+=sec('⏰','Recordatorios','var(--c-recordar)',ul(repRems.map(remRow)));
   const petSoon=S.pet.filter(x=>{const dd=petDue(x);return dd&&dd<=addDays(t,3)&&!(x.urgent&&dd<=t)&&!todayPetAppts.includes(x)}).sort((a,b)=>petDue(a).localeCompare(petDue(b)));
   if(petSoon.length)h+=sec('🐶','Ringo','var(--c-ringo)',ul(petSoon.map(petRow)),'<button class="link" data-act="tab" data-v="ringo">Ver todo</button>');
-  const nd=S.tasks.filter(x=>!x.done&&!x.date),pnd=S.pet.filter(x=>!petDue(x));
+  const nd=S.tasks.filter(x=>!x.done&&!x.date&&!CasaCleaningPace.cleaning(x)),pnd=S.pet.filter(x=>!petDue(x));
   if(nd.length||pnd.length)h+=sec('📌','Sin fecha','var(--c-hoy)',ul([...nd.slice(0,5).map(x=>taskRow(x)),...pnd.map(petRow)]),nd.length>5?`<button class="link" data-act="tab" data-v="tareas">Ver las ${nd.length}</button>`:'');
   if(low.length)h+=sec('🛒','Se está acabando','var(--c-compras)',`<div class="staples">`+low.map(stapleCard).join('')+`</div>`);
   return h;
@@ -1618,6 +1621,7 @@ function render(){
   // Rutinas de limpieza repetidas (mismo nombre) se juntan en una
   if(houseMergeRoutines())return;
   if(housePlanRebalance())return;
+  if(cleaningDatesRepair())return;
   const notice=new URLSearchParams(location.search),noticeId=notice.get('noticeId'),noticeKind=notice.get('noticeKind');
   if(noticeId&&['task','reminder'].includes(noticeKind)&&find(noticeKind==='task'?S.tasks:S.reminders,noticeId)){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>answerNotice({kind:noticeKind,id:noticeId}),0)}
   const v={hoy:vHoy,tareas:vTareas,compras:()=>ui.ckTab&&ui.ckTab!=='lista'?vCocina():vCompras(),semana:vSemana,recordar:vRecordar,ringo:vRingo}[ui.view]||vHoy;
@@ -1960,6 +1964,7 @@ const canUndoDone=t=>!!t&&(t.done||!!(t.undoPrev&&t.undoPrev.day===today()&&t.la
 function quickNoDate(){const el=$('#qNoDate');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:'',who:'yo',repeat:'none',notes:'',done:false});el.value='';save();toast('Añadida a «Sin fecha»')}
 function quickTask(){const el=$('#qTask');const v=el.value.trim();if(!v)return;S.tasks.push({id:uid(),title:v,date:today(),who:'yo',repeat:'none',notes:'',done:false});el.value='';save()}
 const ACT={
+  skipCleaningDay:()=>skipCleaningDay(),
   taskFilters:()=>taskFilters(),
   cleaningView:d=>{if(!['today','frequency','zone','all'].includes(d.v))return;ui.cleaningView=d.v;render()},
   homeContacts:()=>contactsHub(), newHomeContact:()=>contactEdit(),

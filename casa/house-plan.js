@@ -182,7 +182,7 @@
   const out=[];
   for(const t of state.tasks||[]){
    // Las urgentes (❗) no se posponen nunca: se quedan como están
-   if(t.plan!=='casa'||t.done||t.urgent||!validDate(t.date))continue;
+   if(t.plan!=='casa'||t.done||t.urgent||t.lastDone||t.lastSkipped||!validDate(t.date))continue;
    const item=ITEMS.find(i=>i.key===baseKey(t.planKey));if(!item)continue;
    let day=null,period=1;
    if(item.kind==='week'||item.kind==='fortnight'||item.kind==='month4'){day=item.day;period={week:1,fortnight:2,month4:4}[item.kind]}
