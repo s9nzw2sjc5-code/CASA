@@ -202,6 +202,27 @@ const { chromium } = require("playwright"),
       S.routines = []; save(); render();
     });
     const awayBefore = await p.evaluate(() => JSON.stringify(S.tasks));
+    // La limpieza no se amontona el día de la vuelta: se reparte y las repetidas saltan la vez perdida.
+    {
+      const res = await p.evaluate(() => {
+        const keep = JSON.stringify(S.tasks), t = today(), add = (n) => addDays(t, n), base = { who: "yo", notes: "", done: false };
+        S.tasks = [
+          ...Array.from({ length: 6 }, (_, i) => ({ ...base, id: "c" + i, title: "Limpiar zona " + i, repeat: "none", date: add(-1) })),
+          { ...base, id: "c-week", title: "Limpiar baño", repeat: "weekly", date: add(-6) },
+          { ...base, id: "c-cita", title: "Cita médico", repeat: "none", date: add(2) },
+        ];
+        S.routines = [];
+        const r = awayTasks(5), dates = Object.fromEntries(S.tasks.map((x) => [x.id, x.date]));
+        S.tasks = JSON.parse(keep);
+        return { r, dates, back: add(5), cita: add(7), week: add(8) };
+      });
+      const loose = Object.entries(res.dates).filter(([k]) => /^c\d$/.test(k)).map(([, v]) => v);
+      assert.ok(loose.every((d) => d >= res.back), "nada antes de volver");
+      assert.ok(loose.filter((d) => d === res.back).length <= 4, "no se amontona todo el día de la vuelta");
+      assert.equal(res.dates["c-cita"], res.cita, "las citas se corren los días de fuera");
+      assert.equal(res.dates["c-week"], res.week, "la semanal salta la vez perdida y sigue su ritmo");
+      assert.equal(res.r.spread, 7);
+    }
     await p.evaluate(() => document.querySelectorAll("details.task-options").forEach((d) => (d.open = true))); await p.locator("#app [data-act=reorgStart]:visible").first().click();
     await p.locator("#reorgAway").fill("5");
     await p.locator("[data-act=reorgAway]").click();

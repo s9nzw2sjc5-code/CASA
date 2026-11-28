@@ -8,7 +8,7 @@ assert.equal(await p.locator('[data-act=toggleTask][data-id=b0]').count(),0);
 assert(await p.locator('[data-act=toggleTask][data-id=u]').count());
 await p.locator('[data-act=skipCleaningDay]').click();assert(await p.locator('[data-light-keep=k]').isChecked());await p.locator('.overlay [data-s=ok]').click();
 assert(await p.evaluate(()=>S.tasks.filter(t=>t.id.startsWith('b')).every(t=>t.date>today()&&!t.done&&t.skippedCount===1)&&S.tasks.find(t=>t.id==='u').date===today()));
-assert(await p.evaluate(()=>new Set(S.tasks.filter(t=>t.id.startsWith('b')).map(t=>t.date)).size>=3));
+assert(await p.evaluate(()=>{const by={};S.tasks.filter(t=>t.id.startsWith('b')).forEach(t=>by[t.date]=(by[t.date]||0)+1);return Object.keys(by).length>=2&&Object.entries(by).every(([d,n])=>n<=CasaCleaningPace.capFor(d).count)}));
 await p.locator('.check[data-act=toggleTask][data-id=k]').click();assert(await p.evaluate(()=>S.tasks.find(t=>t.id==='k').lastDone===today()));
 assert.equal(await p.locator('.check[data-act=toggleTask][data-id=k]').count(),0);await p.screenshot({path:'/tmp/casa-light-day.png'});await p.evaluate(()=>{ui.view='tareas';ui.taskView='todas';render()});assert(await p.getByText('Cambiar sábanas',{exact:true}).count());
 for(const width of [320,390]){await p.setViewportSize({width,height:844});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}

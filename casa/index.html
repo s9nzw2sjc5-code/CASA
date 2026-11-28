@@ -826,32 +826,32 @@ body[data-view="tareas"] .cleaning-group>summary{min-height:52px;padding:8px 0;f
 
 <!-- Fuera de Claude: configuración y sincronización propias -->
 <script src="config.js"></script>
-<script src="push.js?v=177"></script>
-<script src="sync.js?v=177"></script>
-<script src="receipts.js?v=177"></script>
-<script src="receipt-image.js?v=177"></script>
-<script src="receipt-layout.js?v=177"></script>
-<script src="receipt-ocr.js?v=177"></script>
-<script src="product-photo.js?v=177"></script>
-<script src="product-photo-ui.js?v=177"></script>
-<script src="shopping-recommendations.js?v=177"></script>
-<script src="household-insights.js?v=177"></script>
-<script src="document-files.js?v=177"></script>
-<script src="document-photo.js?v=177"></script>
-<script src="cleaning-pace.js?v=177"></script>
-<script src="cleaning-links.js?v=177"></script>
-<script src="home-model.js?v=177"></script>
-<script src="cocina.js?v=177"></script>
-<script src="cleaning-view.js?v=177"></script>
-<script src="home-ui.js?v=177"></script>
-<script src="household-ui.js?v=177"></script>
-<script src="receipt-extras.js?v=177"></script>
-<script src="house-plan.js?v=177"></script>
-<script src="house-plan-ui.js?v=177"></script>
-<script src="lidl-ui.js?v=177"></script>
-<script src="mama.js?v=177"></script>
-<script src="avisos.js?v=177"></script>
-<script src="tasks-ui.js?v=177"></script>
+<script src="push.js?v=178"></script>
+<script src="sync.js?v=178"></script>
+<script src="receipts.js?v=178"></script>
+<script src="receipt-image.js?v=178"></script>
+<script src="receipt-layout.js?v=178"></script>
+<script src="receipt-ocr.js?v=178"></script>
+<script src="product-photo.js?v=178"></script>
+<script src="product-photo-ui.js?v=178"></script>
+<script src="shopping-recommendations.js?v=178"></script>
+<script src="household-insights.js?v=178"></script>
+<script src="document-files.js?v=178"></script>
+<script src="document-photo.js?v=178"></script>
+<script src="cleaning-pace.js?v=178"></script>
+<script src="cleaning-links.js?v=178"></script>
+<script src="home-model.js?v=178"></script>
+<script src="cocina.js?v=178"></script>
+<script src="cleaning-view.js?v=178"></script>
+<script src="home-ui.js?v=178"></script>
+<script src="household-ui.js?v=178"></script>
+<script src="receipt-extras.js?v=178"></script>
+<script src="house-plan.js?v=178"></script>
+<script src="house-plan-ui.js?v=178"></script>
+<script src="lidl-ui.js?v=178"></script>
+<script src="mama.js?v=178"></script>
+<script src="avisos.js?v=178"></script>
+<script src="tasks-ui.js?v=178"></script>
 <script>
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
@@ -906,7 +906,7 @@ function toast(msg,undo,ms){
 }
 
 /* ---------- estado y guardado ---------- */
-const APP_VERSION=177;
+const APP_VERSION=178;
 const LS='casa-app-v1';
 function fresh(){return{v:1,updated:0,
   people:[{id:'yo',name:'Mari'},{id:'juanma',name:'Juanma'}],
@@ -1231,7 +1231,7 @@ function reorgPanel(pend){
       <div class="reorg-date"><input class="field" type="date" id="reorgDate" aria-label="Fecha concreta"><button class="btn sec" data-act="reorgMove" data-v="date"${dis}>Mover a esa fecha</button></div>
     </div>
     <div class="reorg-bar reorg-away">
-      <div class="reorg-away-title"><b>✈️ Estoy fuera</b><span>Todo lo que toca mientras estás fuera se corre esos días; lo atrasado pasa al día de la vuelta.</span></div>
+      <div class="reorg-away-title"><b>✈️ Estoy fuera</b><span>Lo que toca mientras estás fuera se corre esos días. La limpieza no se amontona: se reparte desde el día de la vuelta.</span></div>
       <div class="reorg-date"><label class="reorg-days"><input class="field" type="number" inputmode="numeric" min="1" max="90" id="reorgAway" value="7" aria-label="Días fuera"><span>días</span></label><button class="btn" data-act="reorgAway">Reprogramar todo</button></div>
     </div>
     ${rows.length?ul(rows.map(reorgRow)):'<div class="empty">No hay tareas pendientes que reorganizar.</div>'}
@@ -1256,17 +1256,28 @@ function moveTasks(ids,date){
   save();
   toastUndo(`${n} ${n===1?'tarea movida':'tareas movidas'} a ${relDate(date).toLowerCase()}${note}`,6000);
 }
-// «Estoy fuera N días»: lo de hoy y atrasado pasa al día de la vuelta y lo que cae mientras se está fuera se corre N días.
+// «Estoy fuera N días»: lo que no es limpieza (citas, papeles…) se corre N días y lo atrasado pasa al día de la vuelta.
+// La limpieza no se amontona en la vuelta: se reparte desde ese día con el reparto suave (y salta las veces perdidas).
 // Solo las tareas de la persona elegida en el filtro; las urgentes (❗) no se posponen. Un solo guardado, con «Deshacer».
 function awayTasks(days){
-  const t=today(),back=addDays(t,days),last=addDays(t,days-1),moved=[],blocked=[];
-  S.tasks.filter(x=>!x.done&&forPerson(x)&&x.date&&x.date<=last).forEach(x=>{
-    const nd=addDays(x.date<t?t:x.date,days);
-    if(CasaHousePlan.blocksPostpone(x,nd,t))blocked.push(x);else{x.date=nd;moved.push(x.id)}
-  });
+  const t=today(),back=addDays(t,days),last=addDays(t,days-1),moved=[],blocked=[],soft=new Set();
+  const mine=S.tasks.filter(x=>!x.done&&forPerson(x)),inWindow=mine.filter(x=>x.date&&x.date<=last);
+  const isSoft=x=>CasaCleaningPace.cleaning(x);
+  // 1) Lo que no es limpieza, como siempre
+  const shifted=new Map();
+  inWindow.filter(x=>!isSoft(x)).forEach(x=>{const nd=addDays(x.date<t?t:x.date,days);if(CasaHousePlan.blocksPostpone(x,nd,t))blocked.push(x);else shifted.set(x.id,nd)});
+  // 2) La limpieza, repartida desde la vuelta contando lo ya programado
+  let plan=[];
+  if(inWindow.some(isSoft)){
+    const view=mine.map(x=>shifted.has(x.id)?{...x,date:shifted.get(x.id)}:x.date&&!tzDate(x.date)?{...x,date:''}:x);
+    try{plan=CasaCleaningPace.plan(view,last,nextOcc,prioMinutes,{start:back}).plan}
+    catch(e){plan=inWindow.filter(isSoft).map(x=>({id:x.id,to:addDays(x.date<t?t:x.date,days)}))}
+  }
+  for(const p of plan){if(!shifted.has(p.id)){shifted.set(p.id,p.to);soft.add(p.id)}}
+  for(const [id,d] of shifted){const x=find(S.tasks,id);if(x){x.date=d;moved.push(id)}}
   const ids=new Set(moved);
   (S.routines||[]).forEach(r=>{if(r.linkedTasks&&!r.archived&&(r.taskIds||[]).some(id=>ids.has(id)))r.date=CasaCleaningLinks.effectiveDate(S,r)});
-  return{moved:moved.length,blocked:blocked.length,back};
+  return{moved:moved.length,blocked:blocked.length,back,spread:soft.size};
 }
 // Vista completa de Tareas (la de siempre): es la pestaña «Todas» y la pantalla de «Reorganizar pendientes»
 function vTareasAll(inTabs){
@@ -1978,11 +1989,11 @@ const ACT={
     if(reorgSel===null)return;
     const days=Math.round(Number($('#reorgAway')?.value));
     if(!(days>=1&&days<=90)){toast('Pon cuántos días vas a estar fuera (1 a 90)');return}
-    const{moved:n,blocked,back}=awayTasks(days);
+    const{moved:n,blocked,back,spread}=awayTasks(days);
     const note=blocked?` · ${blocked} urgente${blocked===1?'':'s'} ❗ sin posponer`:'';
     if(!n){toast(blocked?`Solo hay urgentes ❗ y no se posponen`:'No hay nada pendiente en esos días');return}
     reorgSel=new Set();save();
-    toastUndo(`✈️ ${n} ${n===1?'tarea reprogramada':'tareas reprogramadas'} · vuelves ${relDate(back).toLowerCase()}${note}`,8000);
+    toastUndo(`✈️ ${n} ${n===1?'tarea reprogramada':'tareas reprogramadas'} · vuelves ${relDate(back).toLowerCase()}${spread?` · limpieza repartida desde la vuelta`:''}${note}`,8000);
   },
   reorgMove:d=>{
     if(reorgSel===null)return;
